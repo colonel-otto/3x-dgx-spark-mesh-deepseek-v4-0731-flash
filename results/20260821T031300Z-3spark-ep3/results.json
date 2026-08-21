@@ -1,0 +1,91 @@
+{
+  "captured_utc": "2026-08-21T03:13:00Z",
+  "model": "DeepSeek-V4-Flash-0731",
+  "vllm_version": "0.25.2.dev0+g752a3a504.d20260714",
+  "image": "ghcr.io/anemll/dspark-vllm-gx10:0.1.1",
+  "hardware": "3x NVIDIA DGX Spark (GB10), 121 GiB unified memory each",
+
+  "shared_engine_args": {
+    "max_model_len": 460800,
+    "max_num_seqs": 16,
+    "max_num_batched_tokens": 8192,
+    "gpu_memory_utilization": 0.85,
+    "kv_cache_dtype": "nvfp4_ds_mla",
+    "block_size": 256,
+    "speculative": {"method": "dspark", "num_speculative_tokens": 5},
+    "enable_prefix_caching": true,
+    "async_scheduling": true,
+    "enable_chunked_prefill": true
+  },
+
+  "configurations": [
+    {
+      "id": "baseline-tp2",
+      "nodes": 2,
+      "parallelism": {"tp_size": 2, "pp_size": 1, "dp_size": 1, "ep_size": 1, "use_ep": false},
+      "moe_backend": "flashinfer_b12x",
+      "transport": "RoCE (NCCL IB) over a single direct cable",
+      "kv_cache_tokens": 1771152,
+      "max_concurrency_at_460800": 3.84,
+      "decode_tok_s": {"min": 49, "max": 55, "note": "frozen baseline, PR #2"},
+      "reference": "results/20260821T001024Z-2spark-baseline"
+    },
+    {
+      "id": "ep2",
+      "nodes": 2,
+      "parallelism": {"tp_size": 1, "pp_size": 1, "dp_size": 2, "ep_size": 2, "use_ep": true},
+      "moe_backend": "auto",
+      "transport": "NCCL_NET=Socket (TCP over fabric)",
+      "experts_per_rank": [128, 128],
+      "kv_cache_tokens": 1632510,
+      "max_concurrency_at_460800": 3.54,
+      "decode_tok_s": {"mt128": 22.03, "mt256": 21.01},
+      "ttft_ms": {"mt128": 452.4, "mt256": 414.4},
+      "purpose": "CONTROL: isolates MoE kernel from node count by holding nodes at 2"
+    },
+    {
+      "id": "ep3",
+      "nodes": 3,
+      "parallelism": {"tp_size": 1, "pp_size": 1, "dp_size": 3, "ep_size": 3, "use_ep": true},
+      "moe_backend": "auto",
+      "transport": "NCCL_NET=Socket (TCP over fabric); RoCE unusable, see topology",
+      "experts_per_rank": [86, 85, 85],
+      "kv_cache_tokens": 4065871,
+      "max_concurrency_at_460800": 8.82,
+      "decode_tok_s": {"mt128": 19.96, "mt256": 19.21},
+      "ttft_ms": {"mt128": 1408.7, "mt256": 1443.7},
+      "concurrency_sweep": [
+        {"concurrent": 1,  "aggregate_tok_s": 17.23, "per_stream_tok_s": 17.23},
+        {"concurrent": 4,  "aggregate_tok_s": 49.37, "per_stream_tok_s": 12.34},
+        {"concurrent": 8,  "aggregate_tok_s": 95.57, "per_stream_tok_s": 11.95},
+        {"concurrent": 16, "aggregate_tok_s": 138.42, "per_stream_tok_s": 8.65}
+      ]
+    }
+  ],
+
+  "conclusion": {
+    "sharding": "CONFIRMED. 256 experts split 86/85/85 across EP ranks 0/1/2 on a live engine.",
+    "speed": "REGRESSION. EP is ~2.5x slower per stream than the b12x baseline.",
+    "attribution": "The regression is the MoE KERNEL, not node count. EP=2 on the same two nodes as the baseline yields 21-22 tok/s, statistically identical to EP=3's 19-20. Adding the third node costs only ~10% (21 -> 19).",
+    "root_cause": "flashinfer_b12x refuses expert parallelism by design: b12x_mxfp4_moe.py:597-603 requires use_ep == False and ep_size <= 1. Enabling EP forces a fallback to a generic kernel.",
+    "trade": "2.30x KV cache capacity for 2.5x per-stream speed."
+  },
+
+  "rdma_link_bandwidth_gbits": {
+    "method": "ib_write_bw -x <gid> -F --report_gbits -D 4, 65536B messages, single QP (untuned)",
+    "cable_A_sparkmain_f0_spark1_f0": 109.25,
+    "cable_B_sparkmain_f1_sparksep_f0": 109.08,
+    "cable_C_spark1_f1_sparksep_f1": 109.07,
+    "caveat": "Single-QP default. ~55% of 200 Gb/s line rate. NOT re-tested with -q 4/8, so this may be a test-harness ceiling rather than a hardware one."
+  },
+
+  "untested": [
+    "Multi-QP RDMA (ib_write_bw -q 4/8) to determine whether 109 Gb/s is a harness or hardware ceiling",
+    "Actual TCP throughput of the NCCL_NET=Socket path (the transport EP=3 actually uses)",
+    "Explicit alternative EP-capable MoE kernels: triton, deep_gemm, machete",
+    "Which kernel --moe-backend auto actually selected",
+    "EP=3 with speculative decoding disabled",
+    "Long-context workloads, which is the ONLY regime where 8.82x concurrency pays off",
+    "Raising --max-num-seqs above 16 to convert spare KV headroom into aggregate throughput"
+  ]
+}
