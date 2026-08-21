@@ -13,24 +13,38 @@
 #
 # Without the peer-to-peer routes below, Gloo falls back to WiFi and stalls with
 # local=[192.168.1.x] to a fabric remote.
+# Physical reference: https://github.com/NVIDIA/dgx-spark-playbooks/tree/main/nvidia/connect-three-sparks
+# NCCL ring settings: https://github.com/NVIDIA/dgx-spark-playbooks/tree/main/nvidia/nccl
 set -euo pipefail
 M=192.168.200.1
+targets=()
 
 case "$(hostname)" in
   node0)   # head: owns the master identity, directly on both cables
     sudo ip addr replace ${M}/32 dev lo
+    sudo ip route replace 192.168.102.1/32 via 192.168.100.2 dev enp1s0f0np0
+    sudo ip route replace 192.168.102.2/32 via 192.168.101.2 dev enp1s0f1np1
+    targets=(192.168.100.2 192.168.101.2 192.168.102.1 192.168.102.2)
     ;;
   node1)    # spark1: head on f1 (.100), spark-sep on f0 (.102)
     sudo ip route replace ${M}/32          via 192.168.100.1 dev enp1s0f1np1
     sudo ip route replace 192.168.101.1/32 via 192.168.100.1 dev enp1s0f1np1
     sudo ip route replace 192.168.101.2/32 via 192.168.102.2 dev enp1s0f0np0
+    targets=(${M} 192.168.100.1 192.168.101.1 192.168.101.2 192.168.102.2)
     ;;
   node2)    # spark-sep: head on f0 (.101), spark1 on f1 (.102)
     sudo ip route replace ${M}/32          via 192.168.101.1 dev enp1s0f0np0
     sudo ip route replace 192.168.100.1/32 via 192.168.101.1 dev enp1s0f0np0
     sudo ip route replace 192.168.100.2/32 via 192.168.102.1 dev enp1s0f1np1
+    targets=(${M} 192.168.100.1 192.168.100.2 192.168.101.1 192.168.102.1)
     ;;
   *) echo "unknown host $(hostname)" >&2; exit 1 ;;
 esac
-ping -c1 -W2 ${M} >/dev/null 2>&1 && echo "$(hostname): mesh routing OK" \
-  || { echo "$(hostname): master ${M} UNREACHABLE" >&2; exit 1; }
+
+for target in "${targets[@]}"; do
+  if ! ping -c1 -W2 "${target}" >/dev/null 2>&1; then
+    echo "$(hostname): required mesh endpoint ${target} UNREACHABLE" >&2
+    exit 1
+  fi
+done
+echo "$(hostname): all required mesh endpoints reachable (${#targets[@]} checked)"
