@@ -1,131 +1,167 @@
-# DGX Spark Three-Node Lab
+# DeepSeek-V4-Flash on three DGX Sparks
 
-Reproducible before/after validation for running `deepseek-ai/DeepSeek-V4-Flash-0731` on DGX Spark.
+A reproducible recipe and controlled benchmark for serving DeepSeek-V4-Flash on three
+NVIDIA DGX Spark systems with tensor parallelism (`TP=3`) over a switchless 200 GbE
+RoCE ring.
 
-The repository records the full experiment sequence rather than only the winning
-configuration: a frozen 2-Spark baseline, unsuccessful 3-Spark EP and PP approaches,
-and the working 3-Spark TP configuration. See
-[`docs/EXPERIMENT-LOG.md`](docs/EXPERIMENT-LOG.md) for the decision trail and PR map.
+The useful result is not merely that TP=3 starts. With the attention-group padding
+patch and subnet-aware RoCE, TP=3 retains the B12X MXFP4 MoE kernel and MTP, passes the
+correctness suite, and outperforms our matched two-Spark baseline. The complete decision
+trail—including the unsuccessful EP and PP paths—is retained in
+[`docs/EXPERIMENT-LOG.md`](docs/EXPERIMENT-LOG.md).
 
-The repository separates **fabric validation** from **model validation** so an NCCL/network problem is not confused with a vLLM/model problem.
+## Measured result
 
-## Results so far
+| Configuration | Decode median | TTFT | KV cache | Concurrency @ 460,800 | Correctness |
+|---|---:|---:|---:|---:|---:|
+| 2 Spark, TP=2, RoCE | 48.23 tok/s | 154 ms | 1,855,255 tokens | ~3.9x | 7/7 |
+| 3 Spark, TP=3, TCP control | 24.59 tok/s | 323 ms | 3,579,619 tokens | 7.77x | 7/7 |
+| 3 Spark, TP=3, RoCE, canonical ring, prose prompt | 53.95–56.63 tok/s | — | ~3.6M tokens | ~7.8x | 7/7 |
+| 3 Spark, TP=3, RoCE, upstream/code prompt | **79.0–79.3 tok/s** | ~105–115 ms | same engine | same engine | 7/7 deployment |
+| 3 Spark, TP=3, RoCE, earlier cable rotation | 57.73 tok/s | 186 ms | 3,598,182 tokens | 7.81x | 7/7 |
 
-| Document | Finding |
+On the matched prose workload, TP=3 RoCE delivered:
+
+- **11.9–17.4% higher single-stream decode throughput**
+- **1.94x KV-cache capacity**
+- approximately **2x concurrency** at the configured maximum context
+- **about 2.2–2.3x the throughput of the TP=3 TCP control**, isolating transport as the
+  important performance difference
+
+Prompt shape materially changes MTP acceptance: the same live engine reached about
+49 tok/s on difficult prose and 79–82 tok/s on code-shaped prompts. The upstream-harness
+result closes the apparent 75–79 tok/s comparison gap; it was a workload mismatch, not
+a hardware shortfall. See
+[`docs/BENCHMARK-METHODOLOGY.md`](docs/BENCHMARK-METHODOLOGY.md).
+
+These are measurements from one cluster, not universal product specifications. The
+raw samples from the original exploratory run were not all retained, so the historical
+summary is published separately from future evidence bundles. See
+[`docs/results.md`](docs/results.md) and [`benchmarks/summary.csv`](benchmarks/summary.csv).
+
+## Why a patch is required
+
+DeepSeek-V4-Flash has eight output attention groups. Eight is not divisible by three.
+The TP=3 patch pads the group count from 8 to 9 and the corresponding head count from
+64 to 72 while keeping eight heads per group unchanged. The added group is masked out
+of the model result.
+
+That last invariant matters: the checkpoint's output projection expects eight heads
+per group. A TP=3 speed number is not credible without correctness validation.
+
+This repository pins the upstream implementation rather than silently copying a moving
+target:
+
+- Patch project: [`localaiguyy/DeepSeek-V4-Flash-DSpark-3x-DGX-Spark`](https://github.com/localaiguyy/DeepSeek-V4-Flash-DSpark-3x-DGX-Spark)
+- Pinned publication revision: `496c6a146a383f1b7c3f5991f4f1930091420720`
+
+See [`docs/patch.md`](docs/patch.md).
+
+## Hardware topology
+
+Use NVIDIA's canonical cross-connected ring:
+
+```text
+Node 1 port 0  <---->  Node 2 port 1
+Node 2 port 0  <---->  Node 3 port 1
+Node 3 port 0  <---->  Node 1 port 1
+```
+
+Port 0 is the CX-7 connector nearest the ordinary Ethernet connector. Port 1 is the
+CX-7 connector farther away. Double-check with LLDP before assigning addresses.
+
+Our example address plan gives each point-to-point cable its own subnet:
+
+| Cable | Node-side addresses |
 |---|---|
-| [`docs/BASELINE-2SPARK.md`](docs/BASELINE-2SPARK.md) | Frozen 2-Spark baseline: 90 requests, 0 failures, 100% needle retrieval, ~49–55 tok/s single-stream |
-| [`docs/EP3-EXPERT-PARALLEL.md`](docs/EP3-EXPERT-PARALLEL.md) | **3-node sharding works** via expert parallelism (86/85/85 experts, 2.3x KV) but is **2.5x slower** — and the cause is the MoE kernel, not the node count |
-| [`docs/PP3-PIPELINE-PARALLEL.md`](docs/PP3-PIPELINE-PARALLEL.md) | **The fast B12X kernel survives pipeline parallelism** — but PP is blocked before serving a token by MTP (no `SupportsPP`) and a DSA compressor stride constraint. Blocked, not slow: no PP throughput number exists yet |
-| [`docs/TP3-TUNING.md`](docs/TP3-TUNING.md) | TP=3 plus the attention-group padding patch is correct; canonical-ring profiles measured 53.95–56.63 tok/s and the earlier cable rotation reached a historical 57.73 tok/s |
+| Node 1 p0 <-> Node 2 p1 | `192.168.100.1` <-> `192.168.100.2` |
+| Node 1 p1 <-> Node 3 p0 | `192.168.101.1` <-> `192.168.101.2` |
+| Node 2 p0 <-> Node 3 p1 | `192.168.102.1` <-> `192.168.102.2` |
 
-Findings that changed the plan in this README:
+Follow [`docs/topology.md`](docs/topology.md) and NVIDIA's
+[`Connect Three DGX Spark in a Ring Topology`](https://github.com/NVIDIA/dgx-spark-playbooks/blob/main/nvidia/connect-three-sparks/README.md).
 
-1. **All three parallel strategies remain part of the record.** EP=3 shards experts but
-   loses the fast MoE path; PP=3 retains B12X but is blocked before serving; TP=3 is the
-   working performance route after padding the attention-group geometry.
-2. ~~`TP=3` is genuinely impossible~~ — **wrong.** Stock vLLM in the tested image first
-   rejects 64 attention heads divided across TP=3. If only that validation is bypassed,
-   later floor divisions represent six of eight global attention groups and lose two.
-   Padding 8 → 9 groups makes TP=3 boot and pass correctness checks.
-3. ~~RoCE does not work across all three nodes~~ — **wrong.** NVIDIA's switchless-ring
-   settings, `NCCL_IB_SUBNET_AWARE_ROUTING=1` and `NCCL_NET_PLUGIN=none`, made RDMA work
-   across the point-to-point triangle.
-4. **The B12X limitation is specific to *expert* parallelism.** PP=3 loads
-   `B12X_MXFP4` on three nodes. The gate reads only `use_ep` / `ep_size` /
-   `use_all2all_kernels` / `enable_eplb` — never `pipeline_parallel_size`. So this is
-   a current software limit on EP, not an inherent property of MXFP4 or MoE.
-5. **Speculation (MTP) and pipeline parallelism are mutually exclusive in the tested
-   model path.**
-   `DeepSeekMTP` does not implement `SupportsPP`, so any PP run must disable MTP —
-   which also means PP can never be compared directly against the MTP-on baseline.
-6. **24.59 tok/s is the TP=3 TCP/Socket control, not the RoCE result.** On RoCE the
-   retained medians range from 53.95 to 57.73 tok/s.
+## Working configuration
 
-## What is measured
-
-- exact software/environment snapshot per node
-- CX-7 link state and addresses
-- NCCL 3-node ring correctness and bandwidth
-- Ray node/GPU visibility
-- OpenAI-compatible endpoint health
-- time to first token (TTFT)
-- end-to-end latency
-- decode tokens/second per request
-- aggregate output tokens/second at concurrency 1 / 3 / 6
-- actual prompt/output token counts reported by the server
-- deterministic long-context needle retrieval
-- before/after delta report
-
-## Upstream facts this experiment relies on
-
-As of August 2026:
-
-- NVIDIA's [three-Spark connection playbook](https://github.com/NVIDIA/dgx-spark-playbooks/tree/main/nvidia/connect-three-sparks)
-  documents the physical ring.
-- NVIDIA's [NCCL playbook](https://github.com/NVIDIA/dgx-spark-playbooks/tree/main/nvidia/nccl)
-  and [ring launcher](https://github.com/NVIDIA/dgx-spark-playbooks/blob/main/nvidia/nccl/assets/launch.sh)
-  set `NCCL_IB_SUBNET_AWARE_ROUTING=1` and `NCCL_NET_PLUGIN=none` for three nodes.
-- vLLM supports multi-node pipeline parallel serving and uneven layer splits.
-- DeepSeek-V4-Flash-0731 declares 43 hidden layers.
-
-The example configs pin NVIDIA `dgx-spark-playbooks` to commit
-`1fb66f059ee427c5a3678b3117ef73aab042b458` so a rerun can distinguish the version
-used in the experiment from later upstream changes.
-
-## Safety rule
-
-**Do not alter the working 2-Spark deployment while collecting the baseline.** Record it first. The candidate launch should use the same model revision, vLLM build/container, tokenizer, KV-cache settings, max model length and sampling settings wherever possible.
-
-## Quick start
-
-Copy the examples and fill in your real node addresses / endpoint:
+The essential TP=3/RoCE settings are:
 
 ```bash
-cp configs/2spark.env.example configs/2spark.env
-cp configs/3spark.env.example configs/3spark.env
+TP_SIZE=3
+PP_SIZE=1
+NNODES=3
+MOE_BACKEND=flashinfer_b12x
+
+NCCL_IB_DISABLE=0
+NCCL_NET=IB
+NCCL_IB_SUBNET_AWARE_ROUTING=1
+NCCL_NET_PLUGIN=none
+NCCL_IB_HCA=rocep1s0f0,rocep1s0f1
+NCCL_NVLS_ENABLE=0
+NCCL_IB_ADDR_FAMILY=AF_INET
+NCCL_IB_ROCE_VERSION_NUM=2
 ```
 
-Collect the current 2-Spark baseline while its API is running:
+The measured serving profile used:
 
 ```bash
-make baseline CONFIG=configs/2spark.env
+MAX_MODEL_LEN=460800
+MAX_NUM_SEQS=8
+GPU_MEMORY_UTILIZATION=0.85
+MTP_NUM_TOKENS=4
+VLLM_USE_BREAKABLE_CUDAGRAPH=0
 ```
 
-After cabling/configuring the third Spark, capture the complete fabric test:
+Use `NCCL_DEBUG=INFO` and `NCCL_DEBUG_SUBSYS=INIT,NET,GRAPH` for the first validation
+launch. The log must show `NET/IB`; `NET/Socket` is a TCP fallback. Return to
+`NCCL_DEBUG=WARN` for normal serving.
+
+Environment-file values do nothing unless Compose forwards them into the container.
+Always inspect the rendered configuration before launch:
 
 ```bash
-make fabric CONFIG=configs/3spark.env
+docker compose --env-file config/node0.env -f docker-compose.yml config \
+  | grep -E 'SUBNET_AWARE|NCCL_NET|NCCL_IB_HCA|tensor-parallel'
 ```
 
-If NCCL/nccl-tests are not installed yet, first run `make nccl-bootstrap CONFIG=configs/3spark.env` from Spark 1.
+Start workers first and the HTTP-serving head last. See [`docs/setup.md`](docs/setup.md)
+and the sanitized templates in [`config/`](config/).
 
-Start the 3-node vLLM deployment using the documented multi-node `mp` path (or Ray if you are preserving an existing Ray baseline), then measure it:
+## Reproducing the comparison
 
-```bash
-make candidate CONFIG=configs/3spark.env
+1. Update all three systems through the NVIDIA-supported update path and verify that
+   OS, driver, kernel and CX-7 firmware versions match.
+2. Cable and address the official ring; prove each direct edge before involving vLLM.
+3. Run NVIDIA's NCCL tests and capture a log showing `NET/IB`.
+4. Pin the container image, checkpoint revision and TP=3 patch revision.
+5. Launch three identical ranks, changing only rank-specific identity and interfaces.
+6. Run correctness before performance.
+7. Benchmark TP=2 RoCE, TP=3 TCP and TP=3 RoCE with the same prompt, sampling settings,
+   context profile and harness revision.
+8. Save a complete artifact bundle; do not publish only the best run.
+
+Detailed reproduction protocol:
+[`docs/reproduction-methodology.md`](docs/reproduction-methodology.md).
+
+## Repository map
+
+```text
+config/       sanitized env and Compose-forwarding examples
+docs/         setup, topology, results, patch explanation and troubleshooting
+scripts/      environment/fabric collection and benchmark helpers
+benchmarks/   machine-readable historical summary
+artifacts/    schema for complete future run bundles
 ```
 
-Compare the latest baseline and candidate:
+## Privacy and safety
 
-```bash
-make compare
-```
+The examples deliberately use generic node names and RFC1918 fabric addresses. Before
+publishing artifacts, remove management-network addresses, MAC addresses, usernames,
+SSH material, registry credentials, absolute model paths and container environment
+secrets. See [`SECURITY.md`](SECURITY.md).
 
-For a longer context sweep:
+## Primary references
 
-```bash
-CONTEXTS=2048,8192,32768,65536,131072 make candidate CONFIG=configs/3spark.env
-```
-
-## Acceptance order
-
-1. `preflight` passes on every node.
-2. NVIDIA NCCL ring test completes with `#wrong = 0`.
-3. Ray reports 3 alive nodes and 3 GPUs.
-4. `NCCL_DEBUG=INFO` identifies `NET/IB` rather than `NET/Socket` for the model run.
-5. vLLM starts with the intended parallel and speculative-decoding settings on every rank.
-6. API smoke and correctness tests succeed at the chosen context sizes.
-7. Repeated-run medians are compared with the frozen 2-Spark baseline and the raw
-   artifacts are retained.
-
-Do not optimize until all seven are reproducible.
+- [NVIDIA: Connect Three DGX Spark in a Ring Topology](https://github.com/NVIDIA/dgx-spark-playbooks/blob/main/nvidia/connect-three-sparks/README.md)
+- [NVIDIA: NCCL for Multiple Sparks](https://github.com/NVIDIA/dgx-spark-playbooks/blob/main/nvidia/nccl/README.md)
+- [NVIDIA: DGX Spark OS and Component Update Guide](https://docs.nvidia.com/dgx/dgx-spark/os-and-component-update.html)
+- [NVIDIA: DGX Spark Release Notes](https://docs.nvidia.com/dgx/dgx-spark/release-notes.html)

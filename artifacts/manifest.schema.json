@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/colonel-otto/3spark-dsv4/artifacts/manifest.schema.json",
+  "title": "3spark-dsv4 benchmark artifact manifest",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "schema_version",
+    "run_id",
+    "collected_utc",
+    "configuration",
+    "nodes",
+    "software",
+    "model",
+    "serving",
+    "benchmark"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "run_id": {"type": "string", "minLength": 1},
+    "collected_utc": {"type": "string", "format": "date-time"},
+    "configuration": {
+      "type": "string",
+      "enum": ["tp2-roce", "tp3-socket", "tp3-roce"]
+    },
+    "nodes": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "type": "object",
+        "required": ["anonymous_id", "role", "dgx_os", "kernel", "driver", "cx7_firmware"],
+        "properties": {
+          "anonymous_id": {"type": "string"},
+          "role": {"type": "string", "enum": ["head", "worker"]},
+          "dgx_os": {"type": "string"},
+          "kernel": {"type": "string"},
+          "driver": {"type": "string"},
+          "cx7_firmware": {"type": "string"}
+        }
+      }
+    },
+    "software": {
+      "type": "object",
+      "required": ["container_image_digest", "vllm_revision", "nccl_runtime"],
+      "properties": {
+        "container_image_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+        "vllm_revision": {"type": "string"},
+        "nccl_runtime": {"type": "string"}
+      }
+    },
+    "model": {
+      "type": "object",
+      "required": ["checkpoint", "revision", "patch_revision", "patch_sha256"],
+      "properties": {
+        "checkpoint": {"type": "string"},
+        "revision": {"type": "string"},
+        "patch_revision": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "patch_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    },
+    "serving": {
+      "type": "object",
+      "required": ["tp", "pp", "max_model_len", "max_num_seqs", "gpu_memory_utilization", "mtp_tokens"],
+      "properties": {
+        "tp": {"type": "integer", "minimum": 1},
+        "pp": {"type": "integer", "minimum": 1},
+        "max_model_len": {"type": "integer", "minimum": 1},
+        "max_num_seqs": {"type": "integer", "minimum": 1},
+        "gpu_memory_utilization": {"type": "number", "exclusiveMinimum": 0, "maximum": 1},
+        "mtp_tokens": {"type": "integer", "minimum": 0}
+      }
+    },
+    "benchmark": {
+      "type": "object",
+      "required": ["harness_revision", "warmups", "repetitions", "prompt_sha256"],
+      "properties": {
+        "harness_revision": {"type": "string"},
+        "warmups": {"type": "integer", "minimum": 0},
+        "repetitions": {"type": "integer", "minimum": 1},
+        "prompt_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    }
+  }
+}
