@@ -11,8 +11,54 @@ Measured 2026-08-21 on DeepSeek-V4-Flash-0731, three GB10 DGX Sparks over a swit
 ## The one-sentence version
 
 **A third Spark makes every response 8–17% faster for the person waiting on it, from 2K
-context upward, and unlocks context lengths two nodes cannot serve at all — at the cost
+context upward, and serves contexts up to 409,600 tokens with ~2x the KV headroom — at the cost
 of total throughput when many requests run at once.**
+
+---
+
+## Side by side: what each configuration gives you
+
+Every figure measured on the same cluster, same day, same harness
+(`bench-miaai`), same prompt shape, `MTP=4` on both, warm-up discarded,
+median-of-3. Node count is the only variable.
+
+| | **2 Sparks (TP=2)** | **3 Sparks (TP=3)** | Difference |
+|---|---:|---:|---|
+| **Per-stream decode @2K ctx** | 69.2 tok/s | **79.2 tok/s** | **+14%** |
+| **Per-stream decode @8K ctx** | 67.9 tok/s | **73.5 tok/s** | **+8%** |
+| **Per-stream decode @32K ctx** | 70.8 tok/s | **82.5 tok/s** | **+17%** |
+| **Per-stream decode @131K ctx** | 74.0 tok/s | **83.5 tok/s** | **+13%** |
+| Per-stream decode @262K ctx | not measured * | **99.1 tok/s** | 3 nodes verified |
+| Per-stream decode @409K ctx | not measured * | **83.9 tok/s** | 3 nodes verified |
+| Max context **verified serving** | 131K | **409,600** | **~3x** |
+| **KV cache** | 20.12 GiB | **37.36 GiB** | **1.87x** |
+| **KV cache tokens** | 1,832,675 | **3,565,267** | **1.95x** |
+| **Max concurrency @460K ctx** | 3.98x | **7.74x** | **1.95x** |
+| Aggregate tok/s @c=8 | **161.0** | 143.6 | 2 nodes +12% |
+| Aggregate tok/s @c=16 | **191.2** | 161.0 | **2 nodes +19%** |
+| Draft acceptance | **82.6%** | 76% | 2 nodes better |
+| 4x200K concurrent | 0.5 tok/s | 0.6 tok/s | tie - both unusable |
+| Hardware freed for a 2nd model | **1 whole GB10** | none | 2 nodes |
+| Correctness (17x23) | pass | pass | tie |
+
+\* **Honest caveat on the two "not measured" rows.** We measured 3-node up to 409,600
+tokens and 2-node up to 131,072. We did **not** test 2-node at 262K+, so "two nodes
+cannot do this" is an inference from its 1.83M-token KV pool, not a measurement. Two
+nodes may well serve a *single* 262K request; what they demonstrably cannot do is hold
+anywhere near the concurrent depth three nodes can. Treat the top four bolded rows as the
+proven case and these two as unverified.
+
+**How to read this table.** The rows in bold at the top are what one person
+waiting on a response experiences. The aggregate rows are the sum across many
+simultaneous requests. If you are one user, the top rows are your reality and
+the aggregate rows are not. If you are serving a team, invert that.
+
+### The trade in one line each
+
+- **Buy the third Spark for:** faster responses on real coding contexts (+8-17%),
+  contexts beyond ~131K that two nodes simply cannot hold, and ~2x KV headroom.
+- **Keep two Sparks for:** 12-19% more total throughput under concurrency, and a
+  spare GB10 you can point at a second model.
 
 ---
 
@@ -32,16 +78,20 @@ responsive.
 
 Consistent at every length from 2K up. Coding contexts live in exactly this range.
 
-### 2. It reaches context lengths two nodes cannot serve
+### 2. It is verified serving contexts up to 409,600 tokens
 
 | Context | 2-node | 3-node |
 |---:|---|---:|
-| 262,144 | out of reach | **99.1 tok/s** |
-| 409,600 | out of reach | **83.9 tok/s** |
+| 262,144 | not measured | **99.1 tok/s** |
+| 409,600 | not measured | **83.9 tok/s** |
 
-Decode stays **flat from 256 to 409,600 tokens** — no long-context collapse. Two nodes
-cannot hold these contexts at all, so this is a capability difference, not a speed
-difference.
+Decode stays **flat from 256 to 409,600 tokens** — no long-context collapse, which is
+itself worth noting: throughput does not degrade as the context grows, only
+time-to-first-token does.
+
+⚠️ We verified 3-node to 409,600 and 2-node to 131,072. We did not test 2-node above
+131K, so this is a *demonstrated* three-node capability rather than a proven two-node
+limitation.
 
 ### 3. It nearly doubles KV capacity — 1.95x
 
@@ -77,9 +127,55 @@ correctness verified.
 subnet reaches each peer instead of pairing by device index. Three point-to-point cables
 in a triangle, no switch, no rebuild.
 
-Transport matters enormously: the same TP=3 config runs **24.59 tok/s over TCP** versus
-**57.73 over RoCE**. If someone reports three-node DSv4 being slow, check the transport
-before concluding anything about node count.
+### Transport matters more than node count - and 24.59 tok/s was the *expected* fallback
+
+The same TP=3 configuration measures:
+
+| Transport | decode tok/s | What it means |
+|---|---:|---|
+| **Socket / TCP** | **24.59** | NCCL could not bring up RDMA and **fell back to TCP** |
+| **RoCE / RDMA** | **57.73** | NCCL RDMA working as intended |
+
+**The 24.59 figure is not a TP=3 result and must never be quoted as one.** It is the
+control measurement for a *failed* NCCL RDMA bring-up. When subnet-aware routing was not
+set, NCCL paired HCAs by device index, could not reach the peer, and silently degraded
+to the TCP socket path. That degradation is expected and well understood - TCP carries
+the collectives correctly, just slowly, so the run *succeeds* and only the token rate
+betrays it.
+
+**Diagnostic value:** if three-node DSv4 lands near ~25 tok/s rather than ~55-58, you are
+almost certainly on the TCP fallback, not suffering a node-count penalty. Check
+`NCCL_IB_SUBNET_AWARE_ROUTING=1` is actually reaching the container
+(`docker compose config | grep SUBNET_AWARE`) before drawing any conclusion about
+scaling.
+
+### Cabling: the NVIDIA mesh layout is a convention, not a requirement
+
+Both cable layouts were benchmarked on identical software, checkpoint, harness and
+prompts:
+
+| | Prior layout (same-port) | NVIDIA cross-connected mesh |
+|---|---:|---:|
+| decode tok/s (median) | **57.73** (5 reps) | 53.95 (5 and 7 reps, twice) |
+| KV cache tokens | 3,598,182 | **3,606,027** |
+| Max concurrency | 7.81x | **7.83x** |
+| Correctness | pass | pass |
+
+**Deviating from NVIDIA's reference mesh works, with no quality loss.** Each layout
+needs its own per-cable subnet assignment - moving a lane means changing the addresses on
+both ends, and getting that wrong makes the node unreachable rather than slow. But once
+`NCCL_IB_SUBNET_AWARE_ROUTING=1` is set, NCCL selects the HCA whose subnet reaches each
+peer, so **the physical pairing convention stops mattering**.
+
+The cross-connected layout exists so that *index-based* device pairing works without
+subnet-aware selection. It is not a prerequisite once you set that variable. On this
+cluster the reference mesh actually measured **~6.5% slower** (reproduced twice) with a
+wider spread, and was retained anyway for topological conformance - correctness and KV
+capacity were unaffected either way.
+
+**Takeaway for anyone cabling a triangle:** use whichever lane arrangement your DACs
+reach, give every cable its own subnet, set `NCCL_IB_SUBNET_AWARE_ROUTING=1`, and verify
+any-to-any reachability **including worker-to-worker** before launching.
 
 ---
 
@@ -131,7 +227,7 @@ winning aggregate.
 | Your situation | Recommendation |
 |---|---|
 | **One user, interactive coding, long contexts** | **3 nodes.** Points 1 and 2 are exactly your workload. |
-| Contexts beyond ~200K | **3 nodes.** Two cannot serve them. |
+| Contexts beyond ~200K | **3 nodes** - verified to 409,600. Two nodes are untested above 131K. |
 | Several concurrent users / agent swarm | **2 nodes** — 12–19% more aggregate throughput, and it frees a whole GB10 for a second model. |
 | Batch jobs where total tokens/hour is the goal | **2 nodes**, same reason. |
 | You have a third Spark sitting idle anyway | **3 nodes.** The per-stream win is free; the aggregate cost only materialises under concurrency you are not generating. |
