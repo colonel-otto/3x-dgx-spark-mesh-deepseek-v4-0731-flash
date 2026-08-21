@@ -1,0 +1,107 @@
+{
+  "run_label": "3spark-pp3",
+  "captured": "2026-08-21",
+  "model": "deepseek-v4-flash-0731",
+  "image": "ghcr.io/anemll/dspark-vllm-gx10:0.1.1",
+  "vllm": "0.25.2.dev0+g752a3a504.d20260714",
+  "nodes": [
+    {"name": "sparkmain", "host": "spark-5fa1", "gpu": "NVIDIA GB10", "mem_gib": 121},
+    {"name": "spark1", "host": "gx10-e146", "gpu": "NVIDIA GB10", "mem_gib": 121},
+    {"name": "spark-sep", "host": "gx10-6b41", "gpu": "NVIDIA GB10", "mem_gib": 121}
+  ],
+  "model_facts": {
+    "num_hidden_layers": 43,
+    "n_routed_experts": 256,
+    "num_attention_heads": 64,
+    "hidden_size": 4096,
+    "num_nextn_predict_layers": 1,
+    "checkpoint_bytes_gb": 156
+  },
+  "headline": "B12X survives pipeline parallelism. PP is blocked by two constraints unrelated to the MoE kernel, so no tok/s figure was produced.",
+  "runs": [
+    {
+      "config": "pp3",
+      "tp": 1, "pp": 3, "nodes": 3, "mtp": true,
+      "layer_partition": "14,15,14",
+      "moe_backend_requested": "flashinfer_b12x",
+      "moe_backend_selected": null,
+      "outcome": "fail",
+      "failure_stage": "engine_config",
+      "error": "NotImplementedError: Pipeline parallelism is not supported for this model. Supported models implement the `SupportsPP` interface.",
+      "root_cause": "DeepSeekMTP (deepseek_mtp.py:223) does not implement SupportsPP; raised from create_speculative_config -> draft model verify_with_parallel_config (config/model.py:1223)",
+      "decode_tps": null
+    },
+    {
+      "config": "pp3-nomtp",
+      "tp": 1, "pp": 3, "nodes": 3, "mtp": false,
+      "layer_partition": "14,15,14",
+      "weights_per_node_gb_approx": 52,
+      "moe_backend_requested": "flashinfer_b12x",
+      "moe_backend_selected": "B12X_MXFP4",
+      "moe_backend_evidence": "(Worker_PP0) INFO [mxfp4.py:426] Using 'B12X_MXFP4' Mxfp4 MoE backend.",
+      "outcome": "fail",
+      "failure_stage": "warmup",
+      "error": "ValueError: Invalid state_cache.strides[0] ... expected to be divisible by 16",
+      "error_tensor": "state_cache: Tensor([n0, n1, 2048], float32)",
+      "error_site": "sparse_attn_compress_cutedsl.py:2058 via compressor.py:372 via attention.py:366",
+      "failing_rank": "Worker_PP0",
+      "decode_tps": null
+    },
+    {
+      "config": "pp2-tp1",
+      "tp": 1, "pp": 2, "nodes": 2, "mtp": false,
+      "layer_partition": "22,21",
+      "weights_per_node_gb_approx": 78,
+      "moe_backend_requested": "flashinfer_b12x",
+      "moe_backend_selected": "B12X_MXFP4",
+      "outcome": "fail",
+      "failure_stage": "warmup",
+      "error": "ValueError: Invalid state_cache.strides[0] ... expected to be divisible by 16",
+      "purpose": "control: identical failure at PP=2 rules out node count and layer split",
+      "decode_tps": null
+    },
+    {
+      "config": "tp1-solo",
+      "tp": 1, "pp": 1, "nodes": 1, "mtp": false,
+      "outcome": "invalid",
+      "note": "DO NOT RUN. Asks one 121 GiB GB10 to hold a 156 GB checkpoint. Wedged the node past SSH recovery; required a power cycle.",
+      "decode_tps": null
+    },
+    {
+      "config": "pp2-tp2",
+      "tp": 2, "pp": 2, "nodes": 2, "mtp": false,
+      "outcome": "not_run",
+      "note": "Would need 2 ranks per single-GPU node. Prepared but not launched after the tp1-solo wedge.",
+      "decode_tps": null
+    }
+  ],
+  "baseline_verification": {
+    "config": "2spark-tp2-production",
+    "before_experiment": {
+      "decode_tps_median": 49.12, "decode_tps_min": 46.76, "decode_tps_max": 50.59,
+      "ttft_s_median": 0.209, "kv_tokens": 1776414
+    },
+    "after_restore": {
+      "decode_tps_median": 48.23, "decode_tps_min": 46.83, "decode_tps_max": 50.2,
+      "ttft_s_median": 0.154, "kv_tokens": 1855255
+    },
+    "note": "Within run-to-run variance. Production restored and re-verified, B12X active.",
+    "method": "3 reps, 256 max_tokens, temperature 0, streaming, server-reported completion_tokens / decode wall-clock"
+  },
+  "source_findings": [
+    {
+      "claim": "The B12X gate ignores pipeline parallelism",
+      "evidence": "b12x_mxfp4_moe.py:596-603 _supports_parallel_config reads only use_ep, ep_size, use_all2all_kernels, enable_eplb; fused_moe/config.py:1190 derives use_ep = (dp*pcp*tp > 1) and enable_expert_parallel. pipeline_parallel_size appears in neither.",
+      "verified": "live engine, TP=1/PP=3/nnodes=3"
+    },
+    {
+      "claim": "The target model supports PP but the MTP draft does not",
+      "evidence": "DeepseekV2ForCausalLM (deepseek_v2.py:1777-1779) implements SupportsPP; DeepSeekMTP (deepseek_mtp.py:223) subclasses only nn.Module and DeepseekV2MixtureOfExperts."
+    }
+  ],
+  "untested": [
+    "--block-size sweep (cheapest candidate fix for the stride constraint)",
+    "TP=2 / PP=2 (the clean control for the TP=1 theory)",
+    "any PP throughput measurement whatsoever"
+  ]
+}
