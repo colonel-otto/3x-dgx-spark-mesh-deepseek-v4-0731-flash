@@ -35,6 +35,95 @@ Correctness verified (17×23 → 391).
 
 ---
 
+## `tp2-matched-mtp4` — the matched 2-node vs 3-node comparison — 2026-08-21
+
+**The first like-for-like test of node count.** Everything before this compared configs
+that also differed in prompt, harness, or engine settings. This one does not: same
+cluster, same afternoon, same harness (`bench-miaai`), same prompt shape
+(`synthetic-numbered-words`), warm-up sweep discarded, median-of-3. Both sides passed
+correctness (17×23 → 391).
+
+2 nodes, `tp_size 2`, `pp_size 1`, `max_model_len 460800`, `max_num_seqs 16`,
+`gpu_mem_util 0.85`. KV cache **20.12 GiB / 1,832,675 tokens / 3.98x max concurrency**,
+against the 3-node's 37.36 GiB / 3,565,267 tokens / 7.74x — a **1.95x** KV advantage for
+3 nodes.
+
+### MTP was temporarily changed 5 → 4 for parity
+
+The frozen `ours-2spark-tp2-baseline` ran `MTP_NUM_TOKENS=5`; the 3-node production
+config runs `4`. Comparing them directly would have confounded node count with MTP depth,
+so MTP was set to **4 on both** for this test. **Node count is the only variable.**
+
+The originals are backed up on the nodes and must be restored to return the 2-node config
+to its frozen baseline:
+
+| node | backup |
+|---|---|
+| sparkmain | `config/head.env.bak-mtp5-20260821-155903` |
+| spark1 | `config/worker.env.bak-mtp5-20260821-155903` |
+
+### Result — read all three lines, not just the first
+
+**1. 2-node WINS aggregate throughput.** At the shared `c=16` cap: **191.2 vs 161.0
+tok/s, +19%.** Three trials read 190.8 / 192.6 / 191.2 — a **1% spread, so this is not
+noise**. 2-node also leads at `c=8` (161.0 vs 143.6, **+12%**).
+
+**2. 3-node WINS per-stream decode at long context**, consistently **+8–17% from 2K to
+131K**:
+
+| prompt tokens | 2-node (`tp2-matched-mtp4`) | 3-node | 3-node gain |
+|---:|---:|---:|---:|
+| 2,048 | 69.2 | 79.2 | +14% |
+| 8,192 | 67.9 | 73.5 | +8% |
+| 32,768 | 70.8 | 82.5 | +17% |
+| 131,072 | 74.0 | 83.5 | +13% |
+
+> The 3-node context sweep rows sit under `config_id` **`tp3-seqs8`** in
+> `measurements.csv`, not `tp3-seqs16`. Same 3-node TP=3 shape; the two differ only in
+> `max_num_seqs` (8 vs 16), which is documented below as not moving single-stream decode.
+> `summary.csv` states this sourcing explicitly in the row's notes rather than relabelling
+> the config.
+
+**3. The 1.95x KV advantage did NOT convert at deep concurrency.** Four concurrent
+**200,000-token** prompts were run on each config:
+
+| | 2-node | 3-node |
+|---|---:|---:|
+| decode tok/s | 0.5 | 0.6 |
+| aggregate tok/s | 0.6 | 0.6 |
+| TTFT | 539,666 ms | 553,113 ms |
+| wall | 14.5 min | 14.4 min |
+| preemptions | **0** | **0** |
+
+**Equally unusable on both.** Nearly double the KV cache bought essentially nothing. With
+preemptions at 0 on both sides, the engine never had to evict a block on either config —
+the bottleneck is **serialized long prefill**, not KV capacity.
+
+### ⚠️ This CORRECTS an earlier claim
+
+Earlier write-ups described the doubled KV cache as *"the third node's real structural
+payoff."* **That framing was wrong and is retracted.** The doubling is real and is still
+recorded as a capacity metric — but it has **never been the binding constraint**.
+`vllm:num_preemptions_total` has read **0 in every test to date**, including concurrency
+32 and including the 4×200K deep-concurrency test above, which was designed specifically
+to make KV bite and did not. Capacity that is never reached is not a payoff. The 3-node
+payoff that is actually measurable is the long-context per-stream decode win in point 2.
+
+### Which win matters here
+
+This deployment's workload is **single-user interactive coding**. That is
+**per-stream-latency-bound**, not aggregate-throughput-bound — one caller waiting on one
+stream, not sixteen streams sharing the cluster. So the **3-node long-context per-stream
+win is the one that matters for this deployment**, and the 2-node aggregate win, while
+larger in percentage terms, is throughput this workload does not consume.
+
+**A multi-user workload inverts that conclusion.** With several concurrent callers, 2-node
+is the better configuration: +19% aggregate at the cap, and it frees **spark-sep** to host
+a second model. Anyone re-deciding this should decide it on their own workload shape, not
+on these percentages in isolation.
+
+---
+
 ## `tp3-seqs8` → `tp3-seqs16` — 2026-08-21
 
 **Changed: exactly one setting.**
