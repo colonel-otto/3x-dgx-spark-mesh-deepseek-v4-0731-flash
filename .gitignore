@@ -3,5 +3,8 @@ __pycache__/
 *.log
 .env
 config/*.env
+configs/*.env
+!configs/*.env.example
 artifacts/*/environment-unredacted.txt
 vendor/
+.venv/
