@@ -152,6 +152,111 @@ def build():
                           "prompt - a 1.65x swing"),
             })
 
+    # --- The MATCHED 2-node vs 3-node comparison (the headline result). ---
+    # Same cluster, same afternoon, same harness and prompt shape, MTP=4 on both,
+    # so node count is the only variable. Values are QUERIED from measurements.csv
+    # rather than restated here, so the summary cannot drift from its source.
+
+    # Aggregate at the shared c=16 sequence cap. 2-node wins this by ~19%.
+    for cfg, rid in (("tp2-matched-mtp4", "tp2-matched-c16-aggregate"),
+                     ("tp3-seqs16", "tp3-seqs16-c16-aggregate")):
+        r = pick(cfg, "bench-miaai", "synthetic-numbered-words", "16",
+                 "aggregate_tok_s")
+        if r:
+            out.append({
+                "result_id": rid,
+                "source_file": "measurements.csv",
+                "config_id": cfg,
+                "metric": "aggregate_tok_s",
+                "statistic": r["statistic"],
+                "value": r["aggregate_tok_s"],
+                "prompt_shape": r["prompt_shape"],
+                "harness": r["harness"],
+                "comparability": "prompt-matched",
+                "evidence_status": "raw-measurements",
+                "notes": ("matched 2-vs-3-node comparison at the shared c=16 cap "
+                          "(MTP=4 on both); 2-node leads by ~19%, a 1% trial "
+                          "spread, so not noise"),
+            })
+
+    # Per-stream decode at 131K context, c=1. 3-node wins this.
+    # The 3-node 131K point was measured on tp3-seqs8, not tp3-seqs16 - stated in
+    # the note rather than silently relabelled.
+    long_ctx = [
+        ("tp2-matched-c1-decode-131k", ["tp2-matched-mtp4"]),
+        ("tp3-seqs16-c1-decode-131k", ["tp3-seqs16", "tp3-seqs8"]),
+    ]
+    for rid, prefer in long_ctx:
+        hit = None
+        for cfg in prefer:
+            for r in m:
+                if (r["config_id"] == cfg and r["harness"] == "bench-miaai"
+                        and r["prompt_shape"] == "synthetic-numbered-words"
+                        and r["prompt_tokens"] == "131072"
+                        and r["concurrency"] == "1"
+                        and r["reverted"] == "false" and r["decode_tok_s"]):
+                    hit = (cfg, r)
+                    break
+            if hit:
+                break
+        if not hit:
+            continue
+        cfg, r = hit
+        note = ("matched 2-vs-3-node comparison; per-stream decode at 131,072-token "
+                "context, c=1 (MTP=4 on both); 3-node leads by ~13% here and by "
+                "8-17% across 2K-131K")
+        if cfg != prefer[0]:
+            note += (" | NOTE: not present under " + prefer[0] + "; sourced from "
+                     "config_id " + cfg + ", which is the same 3-node TP=3 shape "
+                     "differing only in max_num_seqs (8 vs 16) - a setting shown "
+                     "not to move single-stream decode")
+        out.append({
+            "result_id": rid,
+            "source_file": "measurements.csv",
+            "config_id": cfg,
+            "metric": "decode_tok_s",
+            "statistic": r["statistic"],
+            "value": r["decode_tok_s"],
+            "prompt_shape": r["prompt_shape"],
+            "harness": r["harness"],
+            "comparability": "prompt-matched",
+            "evidence_status": "raw-measurements",
+            "notes": note,
+        })
+
+    # --- Deep concurrency: 4 x 200,000-token prompts. The negative result. ---
+    # BOTH configs are unusable here. The 3-node's 1.95x KV cache did NOT convert,
+    # because the bottleneck is serialized long prefill, not KV capacity
+    # (preemptions were 0 on both).
+    for cfg, rid, label in (
+            ("tp2-matched-mtp4", "tp2-matched-deep-concurrency", "2-node TP=2"),
+            ("tp3-seqs16", "tp3-seqs16-deep-concurrency", "3-node TP=3")):
+        r = None
+        for cand in m:
+            if (cand["config_id"] == cfg and cand["prompt_tokens"] == "200000"
+                    and cand["concurrency"] == "4"
+                    and cand["reverted"] == "false" and cand["decode_tok_s"]):
+                r = cand
+                break
+        if r:
+            out.append({
+                "result_id": rid,
+                "source_file": "measurements.csv",
+                "config_id": cfg,
+                "metric": "decode_tok_s",
+                "statistic": r["statistic"],
+                "value": r["decode_tok_s"],
+                "prompt_shape": r["prompt_shape"],
+                "harness": r["harness"],
+                "comparability": "prompt-matched",
+                "evidence_status": "raw-measurements",
+                "notes": (label + ", 4 concurrent 200,000-token prompts: UNUSABLE "
+                          "on both (~14.5 min wall, TTFT " + (r["ttft_ms"] or "?")
+                          + " ms). The 3-node's 1.95x KV cache did NOT help - "
+                          "preemptions were 0 on both, so the bottleneck is "
+                          "serialized long prefill, not KV capacity."),
+            })
+
     # --- KV capacity: the structural 3-node result, prompt-independent. ---
     for cfg, label in (("ours-2spark-tp2-baseline", "2-node TP=2"),
                        ("tp3-seqs16", "3-node TP=3")):
