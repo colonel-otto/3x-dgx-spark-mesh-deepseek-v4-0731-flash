@@ -16,16 +16,24 @@ The repository separates **fabric validation** from **model validation** so an N
 | [`docs/BASELINE-2SPARK.md`](docs/BASELINE-2SPARK.md) | Frozen 2-Spark baseline: 90 requests, 0 failures, 100% needle retrieval, ~49–55 tok/s single-stream |
 | [`docs/EP3-EXPERT-PARALLEL.md`](docs/EP3-EXPERT-PARALLEL.md) | **3-node sharding works** via expert parallelism (86/85/85 experts, 2.3x KV) but is **2.5x slower** — and the cause is the MoE kernel, not the node count |
 
-Two findings from the EP=3 run change the plan in this README:
+Findings that changed the plan in this README. **Two earlier conclusions here have since
+been disproven by measurement** — corrected below:
 
 1. **`PP=3` is not the only route.** Expert parallelism shards 256 experts 86/85/85
-   across three nodes. `TP=3` is genuinely impossible (64 heads / 4096 hidden / 256
-   experts are all indivisible by 3), but EP sidesteps that entirely.
-2. **RoCE does not work across all three nodes on this cluster.** The CX-7 cabling is
-   a triangle of point-to-point links, not a switched fabric, so NCCL's RDMA path
-   cannot pair devices correctly. 3-node collectives currently run over TCP
-   (`NCCL_IB_DISABLE=1`, `NCCL_NET=Socket`). See the topology section in
-   `docs/EP3-EXPERT-PARALLEL.md`.
+   across three nodes.
+2. ~~`TP=3` is genuinely impossible~~ — **wrong, and the truth is worse.** The blocker is
+   `o_groups = 8`, not the head count, and stock vLLM does not refuse TP=3: it computes
+   `n_local_groups = 8 // 3 == 2` **silently**, drops six of eight attention groups, and
+   serves fluent nonsense. Padding the group count 8 → 9 (heads 64 → 72, heads/group
+   held at 8) makes it correct. See [`docs/TP3-TUNING.md`](docs/TP3-TUNING.md).
+3. ~~RoCE does not work across all three nodes~~ — **wrong; it works.** The point-to-point
+   triangle means each node uses a different device per peer, so NCCL's default
+   index-based pairing attempts NIC pairs with no cable between them
+   (`ibv_modify_qp ... INIT -> RTR` timeout). Setting
+   **`NCCL_IB_SUBNET_AWARE_ROUTING=1`** makes NCCL select the HCA whose subnet matches
+   the peer, and RDMA works switchlessly. No rebuild, no switch, no re-cabling required.
+4. **Do not quote 24.59 tok/s as a TP=3 result.** That figure is a TCP/Socket fallback
+   measurement. On RDMA the same build serves 53.9–57.7 tok/s.
 
 ## What is measured
 
