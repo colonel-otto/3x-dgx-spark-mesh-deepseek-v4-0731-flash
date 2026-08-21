@@ -1,0 +1,47 @@
+{
+  "target": "http://127.0.0.1:8100",
+  "model": "deepseek-v4-flash-0731",
+  "max_tokens": 256,
+  "results": [
+    {
+      "concurrency": 1,
+      "ok": 1,
+      "of": 1,
+      "wall_s": 3.26,
+      "output_tokens": 256,
+      "aggregate_tok_s": 78.6,
+      "per_stream_tok_s": 78.6,
+      "mean_latency_s": 3.26
+    },
+    {
+      "concurrency": 2,
+      "ok": 2,
+      "of": 2,
+      "wall_s": 5.11,
+      "output_tokens": 512,
+      "aggregate_tok_s": 100.3,
+      "per_stream_tok_s": 50.1,
+      "mean_latency_s": 5.11
+    },
+    {
+      "concurrency": 4,
+      "ok": 4,
+      "of": 4,
+      "wall_s": 10.88,
+      "output_tokens": 1024,
+      "aggregate_tok_s": 94.1,
+      "per_stream_tok_s": 23.9,
+      "mean_latency_s": 10.73
+    },
+    {
+      "concurrency": 8,
+      "ok": 8,
+      "of": 8,
+      "wall_s": 14.03,
+      "output_tokens": 2048,
+      "aggregate_tok_s": 145.9,
+      "per_stream_tok_s": 18.6,
+      "mean_latency_s": 13.77
+    }
+  ]
+}

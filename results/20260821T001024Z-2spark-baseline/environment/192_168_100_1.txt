@@ -1,0 +1,81 @@
+## hostname
+node0
+## date
+2026-08-21T00:10:24Z
+## dgx-release
+DGX_NAME="DGX Spark"
+DGX_PRETTY_NAME="NVIDIA DGX Spark"
+DGX_SWBUILD_DATE="2025-09-10-13-50-03"
+DGX_SWBUILD_VERSION="7.2.3"
+DGX_COMMIT_ID="833b4a7"
+DGX_PLATFORM="DGX Server for KVM"
+DGX_SERIAL_NUMBER="<redacted>"
+
+DGX_OTA_VERSION="7.5.0"
+DGX_OTA_DATE="Sat Aug  8 21:46:13 EDT 2026"
+## os-release
+PRETTY_NAME="Ubuntu 24.04.4 LTS"
+NAME="Ubuntu"
+VERSION_ID="24.04"
+VERSION="24.04.4 LTS (Noble Numbat)"
+VERSION_CODENAME=noble
+ID=ubuntu
+ID_LIKE=debian
+HOME_URL="https://www.ubuntu.com/"
+SUPPORT_URL="https://help.ubuntu.com/"
+BUG_REPORT_URL="https://bugs.launchpad.net/ubuntu/"
+PRIVACY_POLICY_URL="https://www.ubuntu.com/legal/terms-and-policies/privacy-policy"
+UBUNTU_CODENAME=noble
+LOGO=ubuntu-logo
+## uname
+Linux node0 6.17.0-1029-nvidia #29-Ubuntu SMP PREEMPT_DYNAMIC Wed Jul  1 00:13:52 UTC 2026 aarch64 aarch64 aarch64 GNU/Linux
+## nvidia-smi
+Thu Aug 20 20:10:24 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 580.173.02             Driver Version: 580.173.02     CUDA Version: 13.0     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA GB10                    On  |   0000000F:01:00.0 Off |                  N/A |
+| N/A   47C    P0             11W /  N/A  | Not Supported          |      0%      Default |
+|                                         |                        |                  N/A |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|    0   N/A  N/A           18447      C   VLLM::Worker_TP0                      10746... |
++-----------------------------------------------------------------------------------------+
+## free
+               total        used        free      shared  buff/cache   available
+Mem:     130663170048 126894829568  1599852544  3833483264  7629193216  3768340480
+Swap:    17179865088  4113326080 13066539008
+## ibdev2netdev
+rocep1s0f0 port 1 ==> enp1s0f0np0 (Up)
+rocep1s0f1 port 1 ==> enp1s0f1np1 (Up)
+roceP2p1s0f0 port 1 ==> enP2p1s0f0np0 (Up)
+roceP2p1s0f1 port 1 ==> enP2p1s0f1np1 (Up)
+## ip
+lo               UNKNOWN        127.0.0.1/8 ::1/128 
+enP7s7           DOWN           
+enp1s0f0np0      UP             192.168.100.1/24 <link-local> 
+enp1s0f1np1      UP             192.168.101.1/30 <link-local> 
+enP2p1s0f0np0    UP             <link-local> 
+enP2p1s0f1np1    UP             <link-local> 
+wlP9s9           UP             192.168.10.1/24 <link-local> 
+docker0          DOWN           172.17.0.1/16 
+## docker
+Docker version 29.2.1, build a5c7197
+## docker-images
+ghcr.io/open-webui/open-webui main sha256:6a773e5c3a246b65cbe74ce942b294292c0e5f81c138f703d111bc162f7d7c3d 6d8efb3fc96c
+ghcr.io/anemll/dspark-vllm-gx10 0.1.1 sha256:a83948492cf13df455170fb42885f5ef4db54fefe0feff0f841ecbff464ac9d8 3430d6614a8e
+nvcr.io/nvidia/vllm 25.11-py3 sha256:c94cef75a33ff40dd34d45429809d840b64f416f957fbe73af11944213b6b994 d33d4cadbe0f
+## python
+Python 3.12.3
+## torch
+## vllm
+## ray

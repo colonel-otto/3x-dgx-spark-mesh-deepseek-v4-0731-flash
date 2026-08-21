@@ -1,0 +1,1 @@
+scripts/run_experiment.sh: line 18: ray: command not found

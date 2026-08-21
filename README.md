@@ -5,8 +5,10 @@ NVIDIA DGX Spark systems with tensor parallelism (`TP=3`) over a switchless 200 
 RoCE ring.
 
 The useful result is not merely that TP=3 starts. With the attention-group padding
-patch and subnet-aware RoCE, TP=3 retains the B12X MXFP4 MoE kernel and five-token MTP,
-passes the correctness suite, and outperforms our matched two-Spark baseline.
+patch and subnet-aware RoCE, TP=3 retains the B12X MXFP4 MoE kernel and MTP, passes the
+correctness suite, and outperforms our matched two-Spark baseline. The complete decision
+trail—including the unsuccessful EP and PP paths—is retained in
+[`docs/EXPERIMENT-LOG.md`](docs/EXPERIMENT-LOG.md).
 
 ## Measured result
 
@@ -14,15 +16,23 @@ passes the correctness suite, and outperforms our matched two-Spark baseline.
 |---|---:|---:|---:|---:|---:|
 | 2 Spark, TP=2, RoCE | 48.23 tok/s | 154 ms | 1,855,255 tokens | ~3.9x | 7/7 |
 | 3 Spark, TP=3, TCP control | 24.59 tok/s | 323 ms | 3,579,619 tokens | 7.77x | 7/7 |
-| **3 Spark, TP=3, RoCE** | **57.73 tok/s** | **186 ms** | **3,598,182 tokens** | **7.81x** | **7/7** |
+| 3 Spark, TP=3, RoCE, canonical ring, prose prompt | 53.95–56.63 tok/s | — | ~3.6M tokens | ~7.8x | 7/7 |
+| 3 Spark, TP=3, RoCE, upstream/code prompt | **79.0–79.3 tok/s** | ~105–115 ms | same engine | same engine | 7/7 deployment |
+| 3 Spark, TP=3, RoCE, earlier cable rotation | 57.73 tok/s | 186 ms | 3,598,182 tokens | 7.81x | 7/7 |
 
-Compared with TP=2, TP=3 RoCE delivered:
+On the matched prose workload, TP=3 RoCE delivered:
 
-- **19.7% higher single-stream decode throughput**
+- **11.9–17.4% higher single-stream decode throughput**
 - **1.94x KV-cache capacity**
 - approximately **2x concurrency** at the configured maximum context
-- **2.35x the throughput of the TP=3 TCP control**, isolating transport as the
+- **about 2.2–2.3x the throughput of the TP=3 TCP control**, isolating transport as the
   important performance difference
+
+Prompt shape materially changes MTP acceptance: the same live engine reached about
+49 tok/s on difficult prose and 79–82 tok/s on code-shaped prompts. The upstream-harness
+result closes the apparent 75–79 tok/s comparison gap; it was a workload mismatch, not
+a hardware shortfall. See
+[`docs/BENCHMARK-METHODOLOGY.md`](docs/BENCHMARK-METHODOLOGY.md).
 
 These are measurements from one cluster, not universal product specifications. The
 raw samples from the original exploratory run were not all retained, so the historical
@@ -95,9 +105,10 @@ The measured serving profile used:
 
 ```bash
 MAX_MODEL_LEN=460800
-MAX_NUM_SEQS=16
+MAX_NUM_SEQS=8
 GPU_MEMORY_UTILIZATION=0.85
-MTP_NUM_TOKENS=5
+MTP_NUM_TOKENS=4
+VLLM_USE_BREAKABLE_CUDAGRAPH=0
 ```
 
 Use `NCCL_DEBUG=INFO` and `NCCL_DEBUG_SUBSYS=INIT,NET,GRAPH` for the first validation
@@ -128,7 +139,8 @@ and the sanitized templates in [`config/`](config/).
    context profile and harness revision.
 8. Save a complete artifact bundle; do not publish only the best run.
 
-Detailed protocol: [`docs/benchmark-methodology.md`](docs/benchmark-methodology.md).
+Detailed reproduction protocol:
+[`docs/reproduction-methodology.md`](docs/reproduction-methodology.md).
 
 ## Repository map
 
