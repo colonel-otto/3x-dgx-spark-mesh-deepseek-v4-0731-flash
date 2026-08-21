@@ -147,7 +147,17 @@ def scan_identity():
 
 HOOK = """#!/bin/sh
 # Installed by scripts/check_no_sensitive.py --install-hook
-exec python3 "$(git rev-parse --show-toplevel)/scripts/check_no_sensitive.py" --staged
+# Resolve an interpreter portably: `python3` is absent on Windows/Git-Bash,
+# where the launcher is `py`.
+ROOT="$(git rev-parse --show-toplevel)"
+for PY in python3 py python; do
+  if command -v "$PY" >/dev/null 2>&1 && "$PY" -c "" >/dev/null 2>&1; then
+    exec "$PY" "$ROOT/scripts/check_no_sensitive.py" --staged
+  fi
+done
+echo "pre-commit: no working Python interpreter found; skipping leak scan" >&2
+echo "            run 'make check-sensitive' manually before pushing" >&2
+exit 0
 """
 
 
