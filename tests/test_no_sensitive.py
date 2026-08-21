@@ -26,8 +26,11 @@ class TestNoSensitiveData(unittest.TestCase):
     def test_scanner_actually_detects(self):
         """A scanner that never fires is worse than none - prove it fires."""
         probe = os.path.join(REPO, "_sensitive_probe.tmp")
+        # Assembled at runtime so this file holds no serial-shaped literal for
+        # the scanner to flag when it inevitably scans itself.
+        planted = "DGX_SERIAL" + "_NUMBER=" + chr(34) + "AB1234567890" + chr(34)
         with open(probe, "w", encoding="utf-8") as fh:
-            fh.write('DGX_SERIAL_NUMBER="W3MSAG0000000XX"\n')
+            fh.write(planted + "\n")
         try:
             subprocess.run(["git", "-C", REPO, "add", "-N", probe],
                            capture_output=True)
