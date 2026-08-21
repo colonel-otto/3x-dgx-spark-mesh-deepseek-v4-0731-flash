@@ -1,0 +1,4 @@
+date,configuration,transport,node_count,tp,decode_median_tok_s,decode_min_tok_s,decode_max_tok_s,repetitions,ttft_s,kv_cache_tokens,max_concurrency_at_460800,engine_init_s,moe_backend,mtp_tokens,correctness_passed,correctness_total,evidence_status
+2026-08-21,tp2-roce,RoCE,2,2,48.23,46.8,50.2,3,0.154,1855255,3.9,92.0,B12X_MXFP4,5,7,7,historical-summary
+2026-08-21,tp3-socket,Socket,3,3,24.59,24.0,25.5,3,0.323,3579619,7.77,167.9,B12X_MXFP4,5,7,7,historical-summary
+2026-08-21,tp3-roce-rotated,RoCE,3,3,57.73,52.6,59.3,5,0.186,3598182,7.81,103.7,B12X_MXFP4,5,7,7,historical-summary
