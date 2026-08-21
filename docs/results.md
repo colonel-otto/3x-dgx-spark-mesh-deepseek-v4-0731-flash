@@ -1,5 +1,10 @@
 # Controlled result and experiment progression
 
+> This page freezes the earlier MTP=5 result on the pre-rewire cable rotation. For the
+> canonical-ring tuning results, see [`TP3-TUNING.md`](TP3-TUNING.md). For the later
+> prompt-matched 79.0–79.3 tok/s result and raw sweeps, see
+> [`BENCHMARK-METHODOLOGY.md`](BENCHMARK-METHODOLOGY.md).
+
 ## Summary
 
 | Metric | TP=2 RoCE | TP=3 TCP control | TP=3 RoCE |

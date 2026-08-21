@@ -1,4 +1,4 @@
-# Benchmark methodology
+# Reproduction methodology
 
 ## Comparison matrix
 
@@ -47,7 +47,7 @@ tokens. Store prompt generator, random seed and tokenizer revision. For each len
 - perform needle retrieval at early, middle and late positions;
 - report prefill throughput and TTFT separately from decode;
 - capture peak memory and KV allocation;
-- test concurrent long-context requests only within `MAX_NUM_SEQS=16`.
+- test concurrent long-context requests only within the configured `MAX_NUM_SEQS`.
 
 This is necessary to demonstrate the practical benefit of the larger TP=3 KV pool;
 short-prompt decode alone does not establish long-context capacity.
