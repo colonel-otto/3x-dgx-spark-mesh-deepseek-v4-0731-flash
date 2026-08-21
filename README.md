@@ -15,27 +15,31 @@ The repository separates **fabric validation** from **model validation** so an N
 |---|---|
 | [`docs/BASELINE-2SPARK.md`](docs/BASELINE-2SPARK.md) | Frozen 2-Spark baseline: 90 requests, 0 failures, 100% needle retrieval, ~49–55 tok/s single-stream |
 | [`docs/EP3-EXPERT-PARALLEL.md`](docs/EP3-EXPERT-PARALLEL.md) | **3-node sharding works** via expert parallelism (86/85/85 experts, 2.3x KV) but is **2.5x slower** — and the cause is the MoE kernel, not the node count |
+| [`docs/PP3-PIPELINE-PARALLEL.md`](docs/PP3-PIPELINE-PARALLEL.md) | **The fast B12X kernel survives pipeline parallelism** — but PP is blocked before serving a token by MTP (no `SupportsPP`) and a DSA compressor stride constraint. Blocked, not slow: no PP throughput number exists yet |
 | [`docs/TP3-TUNING.md`](docs/TP3-TUNING.md) | TP=3 plus the attention-group padding patch is correct; canonical-ring profiles measured 53.95–56.63 tok/s and the earlier cable rotation reached a historical 57.73 tok/s |
 
-Findings that changed the plan in this README. **Two earlier conclusions here have since
-been disproven by measurement** — corrected below:
+Findings that changed the plan in this README:
 
-1. **`PP=3` is not the only route.** Expert parallelism shards 256 experts 86/85/85
-   across three nodes.
+1. **All three parallel strategies remain part of the record.** EP=3 shards experts but
+   loses the fast MoE path; PP=3 retains B12X but is blocked before serving; TP=3 is the
+   working performance route after padding the attention-group geometry.
 2. ~~`TP=3` is genuinely impossible~~ — **wrong.** Stock vLLM in the tested image first
    rejects 64 attention heads divided across TP=3. If only that validation is bypassed,
-   later floor divisions such as `8 // 3` represent six of the eight global attention
-   groups, losing two. The padding patch changes 8 → 9 groups (64 → 72 heads while
-   holding eight heads/group) and makes TP=3 boot and pass correctness checks. See
-   [`docs/TP3-TUNING.md`](docs/TP3-TUNING.md).
-3. ~~RoCE does not work across all three nodes~~ — **wrong; it works.** The point-to-point
-   triangle means each node uses a different device per peer, so NCCL's default
-   index-based pairing can select NIC pairs with no direct cable
-   (`ibv_modify_qp ... INIT -> RTR` timeout). NVIDIA's ring launcher sets
-   **`NCCL_IB_SUBNET_AWARE_ROUTING=1`** and `NCCL_NET_PLUGIN=none`; those settings made
-   RDMA work on this switchless ring.
-4. **24.59 tok/s is the TP=3 TCP/Socket control, not the RoCE result.** On RoCE the
-   measured range was 53.95–57.73 tok/s, depending on run and physical cable rotation.
+   later floor divisions represent six of eight global attention groups and lose two.
+   Padding 8 → 9 groups makes TP=3 boot and pass correctness checks.
+3. ~~RoCE does not work across all three nodes~~ — **wrong.** NVIDIA's switchless-ring
+   settings, `NCCL_IB_SUBNET_AWARE_ROUTING=1` and `NCCL_NET_PLUGIN=none`, made RDMA work
+   across the point-to-point triangle.
+4. **The B12X limitation is specific to *expert* parallelism.** PP=3 loads
+   `B12X_MXFP4` on three nodes. The gate reads only `use_ep` / `ep_size` /
+   `use_all2all_kernels` / `enable_eplb` — never `pipeline_parallel_size`. So this is
+   a current software limit on EP, not an inherent property of MXFP4 or MoE.
+5. **Speculation (MTP) and pipeline parallelism are mutually exclusive in the tested
+   model path.**
+   `DeepSeekMTP` does not implement `SupportsPP`, so any PP run must disable MTP —
+   which also means PP can never be compared directly against the MTP-on baseline.
+6. **24.59 tok/s is the TP=3 TCP/Socket control, not the RoCE result.** On RoCE the
+   retained medians range from 53.95 to 57.73 tok/s.
 
 ## What is measured
 
