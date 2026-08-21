@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+*.log
+.env
+config/*.env
+artifacts/*/environment-unredacted.txt
+vendor/
