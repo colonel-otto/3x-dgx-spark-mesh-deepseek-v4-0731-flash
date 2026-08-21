@@ -15,17 +15,28 @@ The repository separates **fabric validation** from **model validation** so an N
 |---|---|
 | [`docs/BASELINE-2SPARK.md`](docs/BASELINE-2SPARK.md) | Frozen 2-Spark baseline: 90 requests, 0 failures, 100% needle retrieval, ~49–55 tok/s single-stream |
 | [`docs/EP3-EXPERT-PARALLEL.md`](docs/EP3-EXPERT-PARALLEL.md) | **3-node sharding works** via expert parallelism (86/85/85 experts, 2.3x KV) but is **2.5x slower** — and the cause is the MoE kernel, not the node count |
+| [`docs/PP3-PIPELINE-PARALLEL.md`](docs/PP3-PIPELINE-PARALLEL.md) | **The fast B12X kernel survives pipeline parallelism** — but PP is blocked before serving a token by MTP (no `SupportsPP`) and a DSA compressor stride constraint. Blocked, not slow: no PP throughput number exists yet |
 
-Two findings from the EP=3 run change the plan in this README:
+Findings that change the plan in this README:
 
 1. **`PP=3` is not the only route.** Expert parallelism shards 256 experts 86/85/85
    across three nodes. `TP=3` is genuinely impossible (64 heads / 4096 hidden / 256
    experts are all indivisible by 3), but EP sidesteps that entirely.
-2. **RoCE does not work across all three nodes on this cluster.** The CX-7 cabling is
-   a triangle of point-to-point links, not a switched fabric, so NCCL's RDMA path
-   cannot pair devices correctly. 3-node collectives currently run over TCP
-   (`NCCL_IB_DISABLE=1`, `NCCL_NET=Socket`). See the topology section in
-   `docs/EP3-EXPERT-PARALLEL.md`.
+2. **RoCE does not work across all three nodes *in the configuration tested*.** The
+   CX-7 cabling is a triangle of point-to-point links, not a switched fabric, and
+   NCCL's RDMA path could not pair devices correctly, so 3-node collectives currently
+   run over TCP (`NCCL_IB_DISABLE=1`, `NCCL_NET=Socket`). **This does not establish
+   that a switch is required:** NVIDIA supports a switchless three-Spark ring
+   (`--topology ring` with `NCCL_IB_SUBNET_AWARE_ROUTING=1` and
+   `NCCL_NET_PLUGIN=none`), and neither of those variables appears in the falsified
+   list. Test the official ring before buying hardware.
+3. **The B12X limitation is specific to *expert* parallelism.** PP=3 loads
+   `B12X_MXFP4` on three nodes. The gate reads only `use_ep` / `ep_size` /
+   `use_all2all_kernels` / `enable_eplb` — never `pipeline_parallel_size`. So this is
+   a current software limit on EP, not an inherent property of MXFP4 or MoE.
+4. **Speculation (MTP) and pipeline parallelism are mutually exclusive here.**
+   `DeepSeekMTP` does not implement `SupportsPP`, so any PP run must disable MTP —
+   which also means PP can never be compared directly against the MTP-on baseline.
 
 ## What is measured
 
