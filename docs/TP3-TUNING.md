@@ -39,9 +39,77 @@ Starting point: `MTP_NUM_TOKENS=5`, `MAX_NUM_SEQS=16`,
 
 | # | MTP | max_num_seqs | decode tok/s (median) | acceptance | KV tokens | graph capture | Notes |
 |--:|---:|---:|---:|---:|---:|---|---|
-| 0 | 5 | 16 | **53.95** · 53.95 | 3.21 | 3,606,027 | 11 s / 1.89 GiB | baseline; two runs agreed exactly |
-| 1 | 4 | 8 | **56.63** · 55.68 | 3.02–3.13 | 3,592,058 | 9 s / 0.99 GiB | **+4.2% avg**; half the graph memory |
-| 2 | 3 | 8 | *pending* | | | | testing whether draft 4 also earns its keep |
+| 0 | 5 | 16 | 53.95 · 53.95 | 3.21 | 3,606,027 | 11 s / 1.89 GiB | starting point |
+| 1 | **4** | **8** | **56.63 · 55.68** | 3.02–3.13 | 3,592,058 | 9 s / 0.99 GiB | ⭐ **best: +4.2%**, half the graph memory |
+| 2 | 3 | 8 | 40.19 · 39.57 | **2.73–2.83** | 3,603,348 | 10 s / 1.86 GiB | **−29%** — well past the knee |
+
+**The optimum is bracketed: `MTP_NUM_TOKENS=4`.** Going 5→4 gained ~4%; going 4→3 lost
+29%. Four independent 7-rep runs support the MTP=3 result (two by the operator, two by a
+separate measuring agent, medians 40.94/39.73 and 40.19/39.57 — agreement within 2%).
+
+### `VLLM_USE_BREAKABLE_CUDAGRAPH=0` — tested, no measurable gain here
+
+vLLM **auto-enables** breakable CUDA graphs for DeepSeek-V4 when the variable is absent,
+and says so explicitly at startup:
+
+```
+Auto-enabling VLLM_USE_BREAKABLE_CUDAGRAPH=1. Set VLLM_USE_BREAKABLE_CUDAGRAPH=0 to opt out.
+WARNING: VLLM_USE_BREAKABLE_CUDAGRAPH is set, disabling vLLM's torch.compile pipeline.
+         Equivalent to -cc.mode=none.
+```
+
+**Absent is not the same as 0** for this flag. Our config never set it, so every run
+above used the breakable path. MiaAI-Lab measured a **28.6%** gain from opting out on
+2-Spark TP=2 (74.55 → 95.9 tok/s), so this looked like the single biggest remaining lever.
+
+Clean A/B — only this variable changed, everything else identical:
+
+| | breakable (auto) | **explicit 0** |
+|---|---:|---:|
+| decode tok/s (median, 2x7 reps) | 56.63 · 55.68 | **55.26 · 57.50** |
+| graph capture | 9 s / 0.99 GiB | **5 s / 0.44 GiB** |
+| acceptance | 3.02–3.13 | 3.03–3.13 |
+| KV tokens | 3,592,058 | 3,591,962 |
+| `cudagraph_mode` | FULL_AND_PIECEWISE | FULL_AND_PIECEWISE |
+
+**Result: within run-to-run noise (~56 tok/s both ways).** The 28.6% uplift did not
+transfer to this TP=3 deployment.
+
+The graph capture is genuinely different — 5 s / 0.44 GiB versus 9 s / 0.99 GiB, less
+than half the memory — so the flag *is* taking effect. But decode throughput did not
+move, and the startup log shows why:
+
+```
+WARNING: `torch.compile` is turned on, but the model /models/dsv4-abliterated
+         does not support it.
+```
+
+Opting out of breakable mode re-enables the torch.compile pipeline, but **this
+checkpoint's model class does not support torch.compile**, so the pipeline has nothing
+to contribute. `cudagraph_mode` stays `FULL_AND_PIECEWISE` in both cases — the graphs
+were never the bottleneck here.
+
+**Keep the flag set to 0 anyway.** It halves graph-capture memory and time at no cost,
+and it removes an implicit auto-enabled behaviour from the configuration. Just do not
+expect the 28.6%.
+
+⚠️ This also means the projection `57.73 × 1.286 ≈ 74 tok/s` — which appeared to explain
+the gap to the upstream 75–79 tok/s TP=3 figures — **does not hold**. The remaining gap
+is something else, still unidentified.
+
+### Acceptance explains the whole curve
+
+| MTP | acceptance | what the marginal draft token does |
+|---:|---:|---|
+| 5 | 3.21 | draft #5 almost never lands — pure waste |
+| **4** | **3.02–3.13** | **removing #5 costs ~0.1 acceptance and saves a forward pass** |
+| 3 | 2.73–2.83 | draft #4 *was* landing — removing it costs real throughput |
+
+Acceptance barely moved 5 → 4 (−0.1) but fell sharply 4 → 3 (−0.3). That is the
+signature of a knee: the fifth draft token was speculative overhead, the fourth was
+productive work. **Acceptance length is the metric to tune against**, not tok/s alone —
+it explains *why* a setting is fast or slow, and it is visible live in the
+`SpecDecoding metrics` log lines.
 
 Two independent 7-rep runs per configuration — run-to-run spread is material on this
 cluster (individual reps range ~41–61 tok/s), so single runs are not trustworthy.
