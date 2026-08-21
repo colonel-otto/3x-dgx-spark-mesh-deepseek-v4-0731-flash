@@ -4,6 +4,15 @@ Incremental, controlled measurements on the 3-node TP=3 deployment. Every row is
 same harness, checkpoint, prompt, `temperature=0`, 256 output tokens, on otherwise
 identical software.
 
+> ⚠️ **Read [`BENCHMARK-METHODOLOGY.md`](BENCHMARK-METHODOLOGY.md) before quoting any
+> absolute number from this page.** All figures here use one dense-prose prompt, which
+> is the *worst case* for MTP speculative decoding. The same engine measures **~79
+> tok/s** on a code-shaped prompt and on the upstream harness — a 1.65x swing driven
+> purely by draft-acceptance rate.
+>
+> Because every row uses the same prompt, **the relative comparisons below are valid.**
+> The absolute values describe hard-prose workloads only.
+
 **Workload this is tuned for:** a single user with several concurrent conversations,
 mostly well under the full context window. Not a many-tenant serving deployment.
 
