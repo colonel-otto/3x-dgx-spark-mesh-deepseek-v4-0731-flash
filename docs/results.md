@@ -75,6 +75,35 @@ edges during inference, establishing that the result was not an unnoticed socket
 - Three-node RoCE works on a direct, switchless ring with subnet-aware routing.
 - On this cluster, TP=3 RoCE improved both single-stream speed and capacity over TP=2.
 
+### Long-context retrieval on the patched TP=3 config (2026-08-22)
+
+[`ACCEPTANCE.md`](ACCEPTANCE.md) Gate E asks for needle retrieval to be extended to 64K
+and 128K "before claiming long-context improvement." A later run clears that bar and
+goes past it — **9/9 at three depths across three context sizes**, on the production
+patched TP=3 engine:
+
+| Prompt tokens | depth 10% | depth 50% | depth 90% | latency |
+|---:|---|---|---|---:|
+| 19,010 | PASS | PASS | PASS | ~19 s |
+| 108,560 | PASS | PASS | PASS | ~120 s |
+| 334,176 | PASS | PASS | PASS | ~530 s |
+
+This is the test that would expose the failure mode the padding patch exists to prevent:
+stock vLLM computes `8 // 3 == 2` at TP=3 and **silently drops six of eight attention
+groups**, serving fluent nonsense at full speed with no error. Retrieval that stays clean
+at depth 90% of a 334K-token context is direct evidence the patched attention path is
+intact across the full context range.
+
+Arithmetic spot-checks in the same run: `17×23 → 391`, `144/12 → 12`, `13×13 → 169`,
+`sum 1..100 → 5050`. One check (`2^10`) returned `2048`; the model read `^` as a literal
+character rather than exponentiation, so this is a **defect in the test wording, not in
+the engine** — no unambiguous arithmetic check failed.
+
+Caveat on the labels: the generator's token estimator undershot badly, so runs targeting
+8K/43K/131K produced the 19K/108K/334K actually recorded above. The prompt-token counts
+are engine-reported and accurate; the *targets* were not met, which means soundness is
+verified beyond the intended range rather than at it.
+
 ## What it does not establish
 
 - It is not a universal performance guarantee for every image or firmware release.

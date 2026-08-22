@@ -257,11 +257,43 @@ both readings are single samples drawn from the same wide distribution.
 out of the **same memory pool as the KV cache** at a fixed
 `gpu_memory_utilization=0.85`, so every byte given to batching buffers is taken from KV.
 
-### Do not re-run this
+### Scope: this result is decode-bound, and that assumption has since changed
 
-The only scenario where it might pay is heavy **concurrent long prefill**, which is not
-this deployment's workload. Anyone revisiting it must weigh it against losing half the KV
-capacity, and must re-measure rather than trusting the upstream profile.
+The measurement above stands. What has changed is the sentence that scoped it: *"the only
+scenario where it might pay is heavy concurrent long prefill, which is not this
+deployment's workload."* **As of 2026-08-22 it is.** A bulk code-audit workload
+(~1000 files, ~43K tokens each) now runs against this cluster, and it is **93–100%
+prefill by token count** — the exact case this section flagged as untested.
+
+That does not overturn the result: the KV cost is structural (batching buffers and KV
+share one pool at fixed `gpu_memory_utilization`) and would be paid again. It means the
+*benefit* side was never measured on a prefill-bound workload, so the "do not re-run"
+guidance no longer covers the deployment's actual traffic.
+
+**Live evidence that the batching path is the constraint** (production engine, unchanged
+`8192`, from `docker logs` and the `request_prefill_*` metrics):
+
+| Observation | Value |
+|---|---|
+| End-to-end prefill (`prompt_tokens ÷ wall-clock`) | ~855–960 tok/s |
+| True engine rate (`request_prefill_kv_computed_tokens_sum ÷ request_prefill_time_seconds_sum`) | **9,000–33,440 tok/s** |
+| Engine state during the gap | `Running: 1`, `Avg prompt throughput: 0.0`, GPU util 96% |
+
+A 108K-token prompt needs ~13 sequential scheduler passes at `8192`, and the batch is not
+filled between them. The ~30x gap between the two rates is idle time, not compute.
+
+**Still unmeasured — do not read this as a recommendation.** No A/B has been run on the
+prefill-bound workload. The honest claim is that the negative result is **decode-bound and
+does not generalize**, not that raising the value helps. Anyone testing it must:
+
+- run one variable, same harness, same day, against the audit workload — not the
+  `bench-miaai` sweep, which is decode-shaped;
+- measure the **true** prefill rate, not the wall-clock one (see
+  [`../docs/BENCHMARK-METHODOLOGY.md`](../docs/BENCHMARK-METHODOLOGY.md));
+- weigh any gain against losing ~43% of KV capacity — though note `num_preemptions_total`
+  has been **0 in every test on this cluster**, including 4×200K concurrent, so KV
+  headroom is currently unused;
+- re-measure rather than trusting the upstream profile.
 
 **Corollary:** the `max_num_scheduled_tokens=8144` startup warning is **known and
 accepted**. Raising `max_num_batched_tokens` to silence it *is* the regression documented

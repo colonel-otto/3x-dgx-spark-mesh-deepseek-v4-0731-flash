@@ -130,3 +130,33 @@ The warning becomes relevant again if `MAX_NUM_SEQS` is raised substantially.
 3. Run on the **head node**; verify `num_requests_running 0` first.
 4. Discard one sweep; repeat until two agree. Mandatory if `MAX_NUM_SEQS` is raised.
 5. Compare configurations only against the **same prompt**.
+6. **State the denominator on every prefill figure.** Two different rates exist and they
+   differ by ~30x on this cluster — see below.
+
+---
+
+## A prefill number without its denominator is not a measurement
+
+The same rule that governs tok/s and prompt shape applies to prefill, for a different
+reason. Two rates are both correct and answer different questions:
+
+| Rate | Formula | Observed (2026-08-22) | Answers |
+|---|---|---:|---|
+| **End-to-end** | `prompt_tokens_total ÷ wall-clock` | ~855–960 tok/s | How long will my job take? |
+| **True engine** | `request_prefill_kv_computed_tokens_sum ÷ request_prefill_time_seconds_sum` | **9,000–33,440 tok/s** | What can the hardware do? |
+
+The gap is idle time between scheduler passes, not compute. It is directly visible in
+`docker logs` as `Running: 1` with `Avg prompt throughput: 0.0` while GPU utilisation
+reads 96%: at `MAX_NUM_BATCHED_TOKENS=8192` a 108K-token prompt takes ~13 sequential
+passes, and the batch is not filled between them.
+
+**Why this matters.** Quoting the end-to-end figure as engine capability understates the
+hardware by ~30x and makes prefill look like a hard wall rather than a scheduling
+problem. Quoting the true rate as job throughput understates completion time by the same
+factor. Both errors are easy to make from the same `/metrics` scrape.
+
+The engine's own log line (`Avg prompt throughput`) reports the **true** rate, sampled
+only while a batch is in flight — it is not comparable to a rate you compute by dividing
+a counter delta by a wall-clock window.
+
+**Rule:** report both, label which is which, and never compare one to the other.
