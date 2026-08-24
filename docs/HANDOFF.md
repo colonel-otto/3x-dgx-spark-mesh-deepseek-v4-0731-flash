@@ -48,15 +48,33 @@ KV pool has to fit in that. This is the single most important constraint on issu
 
 ## 2. How to operate the cluster
 
-### ⚠️ The service scripts are STALE — do not use them
+### `dsv4.service` now starts the 3-node cluster — FIXED 2026-08-24
 
-`dsv4.service`, `~/bin/dsv4`, and `~/dsv4/dsv4` describe a **2-node TP=2** deployment
-and read `config/head.env`. The running 3-node cluster launches from
-**`config/tp3.env` on each rank** — confirmed via each container's
-`com.docker.compose.project.environment_file` label.
+It previously started a **2-node TP=2** topology from `config/head.env`. It now drives
+`config/tp3.env` on all three ranks:
 
-**`systemctl restart dsv4` or a reboot would start the wrong topology.** Fixing these
-scripts is unclaimed work.
+- `~/bin/dsv4-service-start` — waits for **both** workers' SSH (150 × 4 s; a Spark can
+  take 10–20 min to open port 22 after a cold boot, which is normal), **verifies
+  `tp3.env` is byte-identical across all three ranks**, then starts workers → 15 s →
+  head, and waits for `/health`.
+- `~/bin/dsv4-service-stop` — head first, then workers, best-effort so an unreachable
+  node cannot block teardown. `ExecStop` previously called the 2-node `dsv4 down`.
+- Unit: `TimeoutStartSec` raised 900 → 2400 (900 could not cover a real cold boot).
+
+The config-verification step is the valuable part: a mismatch between ranks otherwise
+hangs startup **forever with no error**, and this turns that into a clear failure in two
+seconds.
+
+Old versions kept as `~/bin/dsv4-service-start.bak-2node-*` and
+`/etc/systemd/system/dsv4.service.bak-2node-*`.
+
+> **`~/bin/dsv4` and `~/dsv4/dsv4` are still the old 2-node launcher** (they are the
+> same file — one is a symlink). The service no longer calls them, but do not invoke
+> them by hand on this cluster.
+
+**Status: `active` but `disabled`** — it will not auto-start on boot. Enabling it is a
+deliberate decision that has not been made; auto-start on boot sits close to the
+standing "no autonomous recovery actions" rule.
 
 ### Config location
 
@@ -215,7 +233,29 @@ cost 1.71 GiB. It plausibly fits, but it is not guaranteed.
 cc=32, the KV pool delta, and single-stream (expected flat — this buys aggregate, not
 latency). **Rollback is a config revert plus one restart.**
 
-### 5b. NVFP4 KV output quality under long context → issue #12
+### 5b. NVFP4 KV output quality → issue #12 — **single-request half DONE 2026-08-24**
+
+**Result: clean through 463,792 prompt tokens.** Needles at 10/50/90% depth all recovered
+exactly at every depth from 2K to 500K, with no garble of any kind. 500K is the depth the
+upstream warning specifically aims at. **Keep `nvfp4_ds_mla`** — the case for switching is
+currently zero on both axes (performance measured identical to fp8; quality shows no
+degradation). Full writeup: [`KV-QUALITY-LONG-CONTEXT.md`](KV-QUALITY-LONG-CONTEXT.md).
+
+**What remains open on #12** — the untested half, and the more likely failure mode:
+
+1. **Concurrency.** Every measurement was a single request against an idle engine. The
+   upstream warning pairs long context *with* concurrency ("clean output **under
+   concurrency**"), and KV pressure is a plausible trigger this test never applied.
+2. **Agentic structure.** Filler was prose, not tool calls / JSON state / multi-turn
+   history. Upstream describes *"heavy agentic context"* specifically.
+3. **Repetitions and temperature > 0.** One prompt shape, one seed, temp 0 — the most
+   favourable case. A rare intermittent failure would not have appeared.
+
+Run `results/20260824-kv-quality/kvquality.py` concurrently (several simultaneous
+long-context requests) as the next probe. **Only if something fails** is an fp8 A/B at
+matched context warranted — there is no effect to attribute otherwise.
+
+<details><summary>Original scoping for this issue (kept for context)</summary>
 
 **Why:** this is a **correctness** test, not a benchmark, and it is the one open risk to
 the 1M context we just adopted. The 2-node repo warns 4-bit KV *"can collapse into salad
@@ -234,6 +274,8 @@ under long, heavy agentic context"* while fp8 stays clean.
 **The decision this informs:** if 4-bit KV is clean at the depths actually used, keep it
 — it is what buys the 5.44M pool. If it degrades, the tradeoff becomes explicit: fp8 for
 clean output at reduced pool, NVFP4 for maximum context.
+
+</details>
 
 ### 5c. Prefill gap → issue #11
 
