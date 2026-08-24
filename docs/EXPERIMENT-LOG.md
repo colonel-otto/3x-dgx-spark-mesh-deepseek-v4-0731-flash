@@ -13,6 +13,7 @@ being repeated.
 | 3 | [#3](https://github.com/colonel-otto/3spark-dsv4/pull/3) | 3-Spark EP=3 | Sharding worked, but the loss of the B12X MoE path made it substantially slower | [`EP3-EXPERT-PARALLEL.md`](EP3-EXPERT-PARALLEL.md) |
 | 4 | [#4](https://github.com/colonel-otto/3spark-dsv4/pull/4) | 3-Spark PP=3 | Correctness path explored; rejected as the performance route | PR artifacts; merge after #3 |
 | 5 | [#6](https://github.com/colonel-otto/3spark-dsv4/pull/6) | 3-Spark TP=3 | Padding patch passed correctness; RoCE made TP=3 faster than the 48.23 tok/s reference and nearly doubled KV capacity | [`TP3-TUNING.md`](TP3-TUNING.md) |
+| 7 | (this branch) | MTP=5 isolation, 1M context, upstream comparison | 1M context is free (KV pool grew to 5.43M tokens); MTP=5 beats MTP=4 by 8–13% single-stream on structured content, unchanged in aggregate | [`MTP5-1M-AND-UPSTREAM-COMPARISON.md`](MTP5-1M-AND-UPSTREAM-COMPARISON.md) |
 | 6 | [#5](https://github.com/colonel-otto/3spark-dsv4/pull/5) | Reproducibility package | Adds a publication-oriented report and artifact schema; integrate after the experiment chain | PR artifacts |
 
 ## Result labels
@@ -26,6 +27,8 @@ Use these labels consistently in reports and filenames:
 | `tp3-roce-rotated` | Historical pre-rewire ring, 57.73 decode tok/s |
 | `tp3-roce-canonical` | NVIDIA physical ring layout, 53.95 decode tok/s in the retained MTP=5 run |
 | `tp3-roce-mtp4-seq8` | Best tested combined profile, medians 56.63 and 55.68 tok/s |
+| `tp3-1m-mtp4-seq16` | 1M context, MTP=4, seqs=16; 374.2 tok/s aggregate at cc=16 |
+| `tp3-1m-mtp5-seq16` | 1M context, MTP=5, seqs=16; **current recommendation** for structured/agentic use |
 
 The 57.73 result is a historical best, not the current canonical-layout result. The
 24.59 result remains useful as a transport control; it must not be presented as RoCE

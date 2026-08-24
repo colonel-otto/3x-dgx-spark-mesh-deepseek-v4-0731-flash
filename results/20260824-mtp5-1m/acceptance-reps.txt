@@ -1,0 +1,58 @@
+Raw acceptance / single-stream output, 2026-08-24.
+Harness: accept.py (this directory). 400 max_tokens, temperature 0.
+Both sides: MAX_MODEL_LEN=1048576, MAX_NUM_SEQS=16, GPU_MEMORY_UTILIZATION=0.85, TP=3.
+Columns: type, tok/s, accept%, accept-len (accepted tokens per draft step, out of k).
+
+=== MTP_NUM_TOKENS=5 (capture 96) ===
+--- rep 0 (initial) ---
+code        86.1     85.5    4.28
+prose       39.6     27.0    1.35
+json        92.0     98.5    4.93
+count       93.7    100.0    5.00
+--- rep 1 ---
+code        85.9     85.5    4.28
+prose       34.4     21.1    1.05
+json        92.1     98.5    4.93
+count       99.6    100.0    5.00
+--- rep 2 ---
+code        86.1     85.5    4.28
+prose       33.1     21.6    1.08
+json        92.5     98.5    4.93
+count       99.3    100.0    5.00
+--- rep 3 ---
+code        86.3     85.5    4.28
+prose       38.8     26.1    1.31
+json        92.3     98.5    4.93
+count       93.8    100.0    5.00
+
+=== MTP_NUM_TOKENS=4 (capture 80) ===
+--- rep 1 ---
+code        76.3     86.1    3.44
+prose       40.6     32.0    1.28
+json        83.6     98.1    3.93
+count       86.8    100.0    4.00
+--- rep 2 ---
+code        72.9     87.4    3.49
+prose       41.2     32.1    1.28
+json        83.3     98.1    3.93
+count       83.2    100.0    4.00
+--- rep 3 ---
+code        78.7     86.1    3.44
+prose       40.8     31.5    1.26
+json        79.3     98.8    3.95
+count       89.6    100.0    4.00
+
+Notes:
+- code/json/count are near-deterministic at temperature 0: accept% and accept-len are
+  identical across reps to 2 decimal places. This is why the MTP conclusion rests on
+  these counters rather than on aggregate throughput.
+- prose is the noisy workload (MTP=5 spans 33.1-39.6 tok/s across reps). Its -15.7%
+  median delta is directionally real but its magnitude is not settled.
+- Medians used in the writeup are over reps 1-3 for both sides.
+
+Engine facts recorded from startup logs:
+  MTP=5: num_spec_tokens=5, max_cudagraph_capture_size=96,
+         GPU KV cache size 5,433,516 tokens, capture 8 s / 1.20 GiB
+  MTP=4: num_spec_tokens=4, max_cudagraph_capture_size=80,
+         GPU KV cache size 5,412,285 tokens, capture 19 s / 1.76 GiB
+         (460,800 baseline for reference: 3,565,267 tokens, capture 11 s / 0.82 GiB)
