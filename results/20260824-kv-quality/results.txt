@@ -1,0 +1,22 @@
+NVFP4 KV-cache quality probe, 2026-08-24.
+Harness: kvquality.py (this directory). Temperature 0, single request, idle engine.
+Config: TP=3, MAX_MODEL_LEN=1048576, MTP_NUM_TOKENS=5, MAX_NUM_SEQS=16,
+        GPU_MEMORY_UTILIZATION=0.85, kv-cache-dtype=nvfp4_ds_mla,
+        KV pool 5,444,869 tokens.
+
+Columns: requested depth | actual prompt tokens | wall | needles found | garble flags
+
+depth~   2000 |    1947 prompt tok |    2.6s | needles 3/3 | garble none | PASS
+depth~   8000 |    7519 prompt tok |   16.0s | needles 3/3 | garble none | PASS
+depth~  32000 |   29774 prompt tok |   33.1s | needles 3/3 | garble none | PASS
+depth~  64000 |   59444 prompt tok |   69.2s | needles 3/3 | garble none | PASS
+depth~ 128000 |  118798 prompt tok |  146.4s | needles 3/3 | garble none | PASS
+depth~ 200000 |  185579 prompt tok |  230.1s | needles 3/3 | garble none | PASS
+depth~ 350000 |  324682 prompt tok |  443.0s | needles 3/3 | garble none | PASS
+depth~ 500000 |  463792 prompt tok |  603.3s | needles 3/3 | garble none | PASS
+
+Needles are placed at 10%, 50% and 90% of context depth. All three recovered exactly
+at every depth. No CJK, no special tokens, no pathological repetition at any depth.
+
+Not established here: behaviour under concurrency, with agentic/tool-call structured
+context, across repetitions, or at temperature > 0. See the doc for scope limits.
