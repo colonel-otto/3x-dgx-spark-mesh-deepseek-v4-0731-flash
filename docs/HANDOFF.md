@@ -1,0 +1,288 @@
+# Handoff — DeepSeek-V4-Flash 3×DGX Spark, as of 2026-08-24
+
+Read this first if you are picking up this work. It states what is running, what is
+settled, what is open, and exactly how to run the next three measurements.
+
+---
+
+## 1. What is running right now
+
+**Verified live 2026-08-24 22:5x UTC.** The cluster is healthy and serving.
+
+| | value |
+|---|---|
+| Endpoint | `http://192.168.10.1:8100` (LAN), `http://localhost:8100` on the head |
+| Model id | `deepseek-v4-flash-0731` |
+| Weights | `/models/dsv4-abliterated` — DeepSeek-V4-Flash-0731, abliterated |
+| Image | `ghcr.io/anemll/dspark-vllm-gx10:0.1.1` |
+| vLLM | `0.25.2.dev0+g752a3a504.d20260714` |
+| Topology | TP=3, PP=1, NNODES=3, `flashinfer_b12x` MoE |
+| `MAX_MODEL_LEN` | **1,048,576** |
+| `MTP_NUM_TOKENS` | **5** |
+| `MAX_NUM_SEQS` | 16 |
+| `GPU_MEMORY_UTILIZATION` | 0.85 |
+| `kv-cache-dtype` | `nvfp4_ds_mla` |
+| CUDA-graph capture | 96 (`16 × (5+1)`), 1.24 GiB / 15 s |
+| GPU KV cache | **5,444,869 tokens** (5.19x concurrency at full context) |
+
+### The three nodes
+
+| rank | host | note |
+|---:|---|---|
+| 0 | `sparkmain` | head — **the only node that serves**; workers emit nothing |
+| 1 | `spark1` (`node1`) | worker |
+| 2 | `spark2` (`node2`) | worker. **`spark2` and `spark-sep` are the same machine** — two aliases, one host. Do not count them as four nodes. |
+
+### Memory headroom — read before raising anything
+
+```
+sparkmain: total 121Gi  used 117Gi  available  3Gi
+spark1:    total 121Gi  used 117Gi  available  4Gi
+spark2:    total 121Gi  used 117Gi  available  4Gi
+```
+
+Roughly **4 GiB available per node**. Any change that grows CUDA-graph capture or the
+KV pool has to fit in that. This is the single most important constraint on issue #10.
+
+---
+
+## 2. How to operate the cluster
+
+### ⚠️ The service scripts are STALE — do not use them
+
+`dsv4.service`, `~/bin/dsv4`, and `~/dsv4/dsv4` describe a **2-node TP=2** deployment
+and read `config/head.env`. The running 3-node cluster launches from
+**`config/tp3.env` on each rank** — confirmed via each container's
+`com.docker.compose.project.environment_file` label.
+
+**`systemctl restart dsv4` or a reboot would start the wrong topology.** Fixing these
+scripts is unclaimed work.
+
+### Config location
+
+`~/localai/dspark-vllm-gx10/config/tp3.env` on **each of the three nodes**, separately.
+
+> **Trap:** a mismatched `MAX_MODEL_LEN` (or any parallelism flag) between nodes hangs
+> startup **forever with no error message**. Always edit all three, then verify all
+> three before restarting.
+
+### Restart procedure — workers first, then head
+
+```bash
+# 1. Edit config on ALL THREE ranks, then verify:
+for h in sparkmain spark1 spark2; do ...grep -E 'MAX_MODEL_LEN|MAX_NUM_SEQS|MTP_NUM_TOKENS|GPU_MEMORY' tp3.env; done
+
+# 2. Down: head first, then workers
+ssh sparkmain "cd ~/localai/dspark-vllm-gx10 && COMPOSE_DISABLE_ENV_FILE=1 \
+  docker compose -p dspark-vllm-gx10 --env-file config/tp3.env -f docker-compose.yml down"
+# then the same on spark1 and spark2
+
+# 3. Up: WORKERS FIRST (rank 1, rank 2), wait ~15s, THEN head (rank 0)
+#    Rank 0 blocks waiting for the workers to join the collective.
+
+# 4. Wait for health. Cold start is ~7 min (375-425s observed).
+curl -sf http://localhost:8100/health
+```
+
+A full restart cycle is **~12 minutes** end to end. Budget for it.
+
+> **Warn the user before restarting.** VS Code Remote-SSH forwards these ports and its
+> session drops when they go away.
+
+### Verify a restart took effect
+
+```bash
+curl -s http://localhost:8100/v1/models | python3 -c \
+  'import json,sys;d=json.load(sys.stdin)["data"][0];print(d["id"],d["max_model_len"])'
+
+docker logs dspark-vllm-gx10-vllm-dspark-1 2>&1 | grep -oE \
+  "num_spec_tokens=[0-9]+|max_cudagraph_capture_size': [0-9]+|GPU KV cache size: [0-9,]+"
+```
+
+Never assume the config applied. Read it back from the engine.
+
+---
+
+## 3. What is settled — do not re-litigate
+
+| Finding | Status |
+|---|---|
+| `MTP_NUM_TOKENS=5` beats `4` | **Settled 2026-08-24** with the matched control (seqs held at 16). +8–13% single-stream on structured/code. Accepted draft length rises ~1 full token while acceptance % stays flat. Prose is the one workload preferring 4. |
+| 1M context is free | **Settled.** KV pool *grew* 3.57M → 5.44M tokens; aggregate unchanged within spread. Never run this cluster at 460,800 again. |
+| Patch 4 (shared expert) | **Does not apply** to vLLM 0.25.2 — the generic substring mapping already catches `.shared_experts.w1/.w3`. Verified three ways. Applying it would be redundant. |
+| KV dtype is not a speed lever | fp8 vs nvfp4 measured **identically** upstream (41.4 vs 41.5). Do not switch KV dtype for throughput reasons. |
+| The 60 tok/s "ceiling" | **False for this cluster.** We measure 93.8 / 92.3 / 86.1 tok/s single-stream. |
+| Aggregate throughput as an MTP signal | **Useless** — every level sits inside its own run spread. Use the acceptance counters. |
+
+Full detail and evidence: [`MTP5-1M-AND-UPSTREAM-COMPARISON.md`](MTP5-1M-AND-UPSTREAM-COMPARISON.md).
+Historical traps and falsified experiments: [`TP3-TUNING.md`](TP3-TUNING.md).
+
+---
+
+## 4. Measurement discipline — read before running anything
+
+These are not style preferences. Each was learned by getting a wrong answer first.
+
+1. **Warm up until two sweeps agree.** A cold sweep reads **~40% low** here — cc=16
+   measured 206–222 tok/s cold against a steady-state 340–375. One warm-up pass is not
+   enough after any change that alters graph capture. Discard warm-up output entirely.
+
+2. **Confirm the endpoint is idle before every run.**
+   ```bash
+   curl -s http://localhost:8100/metrics | grep -E '^vllm:num_requests_running\{'
+   ```
+   One in-flight request from elsewhere skews a level badly.
+
+3. **Change one variable at a time.** The MTP question stayed open for weeks because an
+   earlier sweep moved `MTP_NUM_TOKENS` and `MAX_NUM_SEQS` together. If you must change
+   two, you have produced no answer about either.
+
+4. **Prefer acceptance counters over throughput for spec-decode questions.** At
+   temperature 0 with a fixed prompt they are near-deterministic (identical to 2 decimals
+   across reps), while aggregate throughput spreads 12–34%.
+
+5. **Measure at the head node only.** Under TP the workers serve nothing. Summing
+   per-node double-counts.
+
+6. **Run upstream harnesses unmodified.** Every cross-repo number in this repo comes from
+   running *their* script against our endpoint — never from quoting our harness against
+   their published table. Those measure different things.
+
+7. **State what you did not test.** An unexplained gap recorded honestly beats a
+   fabricated cause.
+
+### The harnesses
+
+| script | source | measures |
+|---|---|---|
+| `/tmp/bench_tp3.py` | `localaiguyy/...-3x-DGX-Spark` | concurrency sweep, aggregate + per-stream |
+| `/tmp/bench_full.py` | `tonyd2wild/...-2x-DGX-Spark` | decode by content type, concurrency, prefill |
+| `results/20260824-mtp5-1m/accept.py` | written here | tok/s + acceptance % + accepted draft length |
+
+`/tmp` is not durable. Re-copy from `results/20260824-mtp5-1m/` or the upstream repos.
+
+---
+
+## 5. Next measurements — in priority order
+
+### 5a. `MAX_NUM_SEQS=32` → issue #10
+
+**Why:** the one upstream number we cannot match. The 3-node repo reports 618 tok/s
+aggregate at seqs=32 versus 431 at seqs=16 (+43%); we measure 374.2 at seqs=16.
+Configuration, not silicon, has been the ceiling through three of their settings.
+
+**The risk, concretely.** Capture size is *derived*:
+
+```
+capture = MAX_NUM_SEQS × (MTP_NUM_TOKENS + 1) = 32 × 6 = 192
+```
+
+That is **double** our current 96. Two things make this riskier for us than for them:
+our `GPU_MEMORY_UTILIZATION` is 0.85 against their 0.80, and we run MTP=5 so the
+multiplier is 6 rather than 6 at their k=5 — same multiplier, but from a higher base.
+**We have ~4 GiB available per node.** Our capture at 96 cost 1.24 GiB; theirs at 192
+cost 1.71 GiB. It plausibly fits, but it is not guaranteed.
+
+**Steps:**
+1. Set `MAX_NUM_SEQS=32` in `config/tp3.env` on all three ranks. Verify all three.
+2. Restart (workers → head). Watch for OOM during capture specifically.
+3. Confirm `max_cudagraph_capture_size: 192` and record the KV pool delta.
+4. Warm at the concurrencies you will measure — **a capture-size change invalidates
+   prior warm-up.** The 3-node repo found sweep 1 read 40% low after exactly this change,
+   which would have hidden the entire gain. Repeat until two sweeps agree.
+5. `python3 /tmp/bench_tp3.py --host localhost:8100 --concurrency 1,8,16,24,32,40 --runs 3 --json /tmp/seqs32.json`
+
+**If capture OOMs:** lower `GPU_MEMORY_UTILIZATION` toward 0.78. **Do not drop
+`MAX_MODEL_LEN` first** — that trades away context for no reason.
+
+**Record:** aggregate at cc=32 with spread, whether saturation moves from cc=16 to
+cc=32, the KV pool delta, and single-stream (expected flat — this buys aggregate, not
+latency). **Rollback is a config revert plus one restart.**
+
+### 5b. NVFP4 KV output quality under long context → issue #12
+
+**Why:** this is a **correctness** test, not a benchmark, and it is the one open risk to
+the 1M context we just adopted. The 2-node repo warns 4-bit KV *"can collapse into salad
+under long, heavy agentic context"* while fp8 stays clean.
+
+**Do not switch KV dtype on throughput grounds** — that rationale is measured false
+(§3). Only quality justifies it.
+
+**Steps:**
+1. Drive genuine agentic context toward 200K, then 500K, then beyond. Watch for
+   multilingual / BOS "salad" and coherence collapse.
+2. Determine whether any degradation correlates with context depth, concurrency, or both.
+3. **Only if degradation appears:** A/B against `fp8_ds_mla` at matched context, holding
+   every other variable fixed, to confirm KV dtype is the cause.
+
+**The decision this informs:** if 4-bit KV is clean at the depths actually used, keep it
+— it is what buys the 5.44M pool. If it degrades, the tradeoff becomes explicit: fp8 for
+clean output at reduced pool, NVFP4 for maximum context.
+
+### 5c. Prefill gap → issue #11
+
+**Why:** the only axis where we trail. 1,512 vs 2,639 tok/s at 100K against the 2-node
+recipe, while leading on every decode metric.
+
+**Already ruled out:** node count (decode leads at TP=3), the shared-expert bug (§3),
+and long-context falloff (prefill is flat ~1,000–1,075 across 25K/50K/100K).
+
+**Already known:** prompt content moves prefill **51%** on the same server, same day —
+random-word filler gives ~1,000 tok/s, repeated-sentence gives 1,512. **Their 2,639 is a
+best case, not a general rate**, so the true gap is smaller than the raw numbers suggest.
+Any retest must hold the prompt constant. Note their harness targets 100,000
+*characters* ≈ 78K tokens — "100K" is not 100K tokens on either side.
+
+**Leads in order:**
+1. **`NCCL_IB_MERGE_NICS=1`** — absent from our env. `NCCL_IB_HCA` already lists both
+   HCAs without the merge flag. Upstream measures 98 → 161 Gb/s busbw (+64%) with both
+   listed *and* merged. **Caveat:** that note targets back-to-back QSFP pairs; our fabric
+   is switched, which they say may be a case where the second NIC is deliberately unused.
+   Cheap: one env var plus a restart. Verify with `NCCL_DEBUG=INFO` whether merge
+   actually engages.
+2. **Runtime version** — we are on 0.25.2, they are on an overlay on 0.21.1rc1. Most
+   likely structural cause, most expensive to test.
+3. **`MAX_NUM_BATCHED_TOKENS`** — both run 8192. Prior work here found 16384 costs 43% of
+   KV for zero gain and reverted it. Retest only in a prefill-specific context, and
+   expect the KV cost.
+
+---
+
+## 6. Where things live
+
+| what | where |
+|---|---|
+| Repo | `github.com/colonel-otto/3spark-dsv4` (working copy lives under the operator's `Local LAN AI` control-room folder) |
+| Open PR | [#9](https://github.com/colonel-otto/3spark-dsv4/pull/9) — this experiment, **open, not merged** |
+| Open issues | [#10](https://github.com/colonel-otto/3spark-dsv4/issues/10) seqs=32 · [#11](https://github.com/colonel-otto/3spark-dsv4/issues/11) prefill · [#12](https://github.com/colonel-otto/3spark-dsv4/issues/12) KV quality |
+| Latest results | `results/20260824-mtp5-1m/` — raw JSON, acceptance reps, `accept.py` |
+| Live config | `~/localai/dspark-vllm-gx10/config/tp3.env` on each of the 3 nodes |
+| Config backups | `tp3.env.bak-*` beside it, timestamped per experiment |
+| Grafana / Prometheus | `sparkmain:3001` / `sparkmain:9090` |
+
+### Before committing
+
+The repo has a pre-commit hook (`.githooks/pre-commit` → `scripts/check_no_sensitive.py`)
+that blocks serials and sensitive data. Run `make install-hooks` after cloning. Verify
+manually with:
+
+```bash
+py scripts/check_no_sensitive.py     # or python3, depending on platform
+```
+
+Docs here contain internal IPs and hostnames, so this matters. It passed clean across
+94 tracked files as of this handoff.
+
+---
+
+## 7. Open questions nobody has answered
+
+- Does prefill parity with the 2-node recipe exist at all on TP=3? **Neither public repo
+  publishes a TP=3 prefill number**, so there is no reference to compare against.
+- Does `max_num_seqs=64` continue the trend past 32? Untested by anyone, including
+  upstream.
+- Is MTP=5 optimal, or would a multiple of 5 (k=10) go further? The 2-node repo reports
+  k=10 boots but crashes every generation on *their* stack; untested on 0.25.2. MTP=5
+  boots and runs cleanly here.
+- What does abliteration cost against the stock checkpoint? Upstream states plainly that
+  no censored-vs-uncensored A/B exists behind their numbers either.
