@@ -185,6 +185,21 @@ These are not style preferences. Each was learned by getting a wrong answer firs
 7. **State what you did not test.** An unexplained gap recorded honestly beats a
    fabricated cause.
 
+8. **Launch long remote runs with `nohup` and redirect to a file.** A benchmark that
+   takes more than a few minutes must survive its launcher dying:
+   ```bash
+   ssh sparkmain "nohup python3 /tmp/thing.py args > /tmp/thing.log 2>&1 &"
+   ```
+   On 2026-08-24 a ~25-minute run was launched through a plain `ssh` pipe. The local
+   wrapper was torn down; the **remote process kept running** (found alive 17 minutes
+   later, still mid-request) but its stdout went to a dead pipe, so every result it had
+   produced was unrecoverable. Prefer small batches per invocation too, so a loss costs
+   one depth rather than all of them.
+
+   If a background task reports "stopped" with no completion record, check
+   `pgrep -af <script>` on the remote host before assuming it never ran — and note that
+   a killed client can leave an in-flight request on the server for minutes afterwards.
+
 ### The harnesses
 
 | script | source | measures |
@@ -198,6 +213,13 @@ These are not style preferences. Each was learned by getting a wrong answer firs
 ---
 
 ## 5. Next measurements — in priority order
+
+> **START HERE: §5a (`MAX_NUM_SEQS=32`, issue #10) is the next task.** §5b's
+> single-request half is done and settled — 500K passed clean, which was accepted as
+> sufficient. §5c is open but lower priority.
+>
+> The cluster is **idle, healthy, and serving** at 1M context / MTP=5 as of handoff.
+> Nothing is mid-experiment; no cleanup is pending.
 
 ### 5a. `MAX_NUM_SEQS=32` → issue #10
 
@@ -254,6 +276,9 @@ degradation). Full writeup: [`KV-QUALITY-LONG-CONTEXT.md`](KV-QUALITY-LONG-CONTE
 Run `results/20260824-kv-quality/kvquality.py` concurrently (several simultaneous
 long-context requests) as the next probe. **Only if something fails** is an fp8 A/B at
 matched context warranted — there is no effect to attribute otherwise.
+
+Depths above ~464K were not measured: a 700K/900K run was started and deliberately
+abandoned once 500K passed, since 500K is the depth the upstream warning targets.
 
 <details><summary>Original scoping for this issue (kept for context)</summary>
 

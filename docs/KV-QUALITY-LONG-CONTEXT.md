@@ -89,8 +89,11 @@ intermittent failure would not appear. Temperature 0 is the most favourable samp
 effect to attribute. If a failure is ever found, the A/B at matched context is the required
 next step before blaming the KV dtype.
 
-**Depths above ~464K are covered separately** — see the follow-up rows if present, or rerun
-`kvquality.py 700000 900000`.
+**Depths above ~464K were not measured.** A 700K/900K run was started and deliberately
+abandoned: 500K is the depth the upstream warning targets, it passed cleanly, and that was
+accepted as sufficient to settle the question. If a future workload genuinely runs past
+~500K, rerun `kvquality.py 700000 900000` — do not assume the clean trend continues to the
+1,048,576 ceiling.
 
 ## Reproducing
 
