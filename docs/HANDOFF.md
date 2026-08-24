@@ -103,6 +103,22 @@ Never assume the config applied. Read it back from the engine.
 
 ---
 
+### The 2-node fallback is intact
+
+A complete **TP=2 profile** survived the move to three nodes and is verified coherent as
+of 2026-08-24: `config/head.env` on the head plus `config/worker.env` on worker 1, with
+worker 2 simply unused. It runs on a separate fabric path and needs **no padding patch**
+(64 heads divide by 2 cleanly), which makes it a genuinely simpler fallback.
+
+Neither file sets `TP_SIZE` or `NNODES` — compose defaults them to 2
+(`${TP_SIZE:-2}`, `${NNODES:-2}`). **That absence is load-bearing, not a bug.**
+
+Keep it for **availability**, not performance: TP=3 currently *leads* the published
+2-node recipe on decode (peak 91.1 vs 84.3, mean 76.0 vs 67.6). The real cost of falling
+back is KV capacity — roughly 1.86M tokens against 5.44M.
+
+Full rollback procedure in the operator's `docs\dsv4-2node-fallback.md`.
+
 ## 3. What is settled — do not re-litigate
 
 | Finding | Status |
