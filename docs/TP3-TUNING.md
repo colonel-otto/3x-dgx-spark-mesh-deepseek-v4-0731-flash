@@ -57,6 +57,17 @@ Starting point: `MTP_NUM_TOKENS=5`, `MAX_NUM_SEQS=16`,
 | 1 | **4** | **8** | **56.63 · 55.68** | 3.02–3.13 | 3,592,058 | 9 s / 0.99 GiB | **best tested combined profile**, half the graph memory |
 | 2 | 3 | 8 | 40.19 · 39.57 | **2.73–2.83** | 3,603,348 | 10 s / 1.86 GiB | **−29%** — well past the knee |
 
+> **2026-08-24 — the missing control was run; see
+> [`MTP5-1M-AND-UPSTREAM-COMPARISON.md`](MTP5-1M-AND-UPSTREAM-COMPARISON.md).**
+> With sequence count held constant at 16 and only `MTP_NUM_TOKENS` changing,
+> **MTP=5 beats MTP=4** by 8–13% single-stream on deterministic, JSON, and code
+> content. Accepted draft length rises by almost exactly one token (4.00→5.00,
+> 3.93→4.93, 3.44→4.28) while acceptance *percentage* is flat, so the fifth draft
+> is being accepted rather than merely offered. The speculation below that "the
+> marginal fifth draft appears to have low acceptance" is therefore **withdrawn** —
+> it was an artifact of the confounded seq count. Prose is the one workload that
+> prefers MTP=4. Aggregate throughput does not distinguish the two settings.
+
 `MTP_NUM_TOKENS=4`, `MAX_NUM_SEQS=8` is the best tested combined profile. The sweep
 isolates MTP=4 versus MTP=3 because both use eight scheduler slots, and MTP=3 is about
 29% slower. It does **not** isolate MTP=4 versus MTP=5 because the MTP=5 row used 16
@@ -130,8 +141,8 @@ is something else, still unidentified.
 
 | MTP | acceptance | what the marginal draft token does |
 |---:|---:|---|
-| 5 | 3.21 | the marginal fifth draft appears to have low acceptance; seq count is confounded |
-| **4** | **3.02–3.13** | **best tested profile; requires MTP=5/seqs=8 to isolate the fifth draft** |
+| 5 | 3.21 | ~~the marginal fifth draft appears to have low acceptance~~ — **withdrawn 2026-08-24**; the matched control shows the fifth draft *is* accepted (see banner above) |
+| **4** | **3.02–3.13** | best tested profile *in this confounded sweep*; superseded by the matched MTP=5/seqs=16 control |
 | 3 | 2.73–2.83 | draft #4 *was* landing — removing it costs real throughput |
 
 Acceptance barely moved between the observed MTP=5 and MTP=4 profiles (−0.1) but fell
