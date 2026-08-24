@@ -10,6 +10,15 @@ correctness suite, and outperforms our matched two-Spark baseline. The complete 
 trail—including the unsuccessful EP and PP paths—is retained in
 [`docs/EXPERIMENT-LOG.md`](docs/EXPERIMENT-LOG.md).
 
+> **Picking this work up?** Start with **[`docs/HANDOFF.md`](docs/HANDOFF.md)** — what is
+> running, how to operate it, what is settled, and step-by-step instructions for the next
+> three measurements.
+>
+> **The table below predates 2026-08-24 and describes the 460,800-context, MTP=4 era.**
+> The cluster now runs **1M context with `MTP_NUM_TOKENS=5`**, measuring 93.8 / 92.3 /
+> 86.1 tok/s single-stream (count / JSON / code) with a 5,444,869-token KV pool. See
+> [`docs/MTP5-1M-AND-UPSTREAM-COMPARISON.md`](docs/MTP5-1M-AND-UPSTREAM-COMPARISON.md).
+
 ## Measured result
 
 | Configuration | Decode median | TTFT | KV cache | Concurrency @ 460,800 | Correctness |
