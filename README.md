@@ -77,9 +77,12 @@ Each of these cost real time here, and none announced itself.
 5. **Init success is not health.** All ranks can complete NCCL init and every container
    stay `running` while live RDMA completions fail. There is no container health check.
    Check `IBV_WC_*_ERR` in the engine log, not `docker ps`.
-6. **Do not add the `roceP2p` HCAs.** They genuinely double per-port bandwidth
-   (+56% measured) but have no IPv4 on this cluster, so NCCL picks them and wedges.
-   See [`docs/HANDOFF.md`](docs/HANDOFF.md) §4b.
+6. **The `roceP2p` HCAs double bandwidth — but only once they are addressed.** Each QSFP
+   port is two ~100G controllers; using all four takes pairs 4.6 → 9.7 GB/s and the 3-rank
+   collective 2.85 → 5.80. Enabling them *before* giving the upper pair IPv4, routes and
+   netplan persistence **wedges the cluster** with `IBV_WC_RETRY_EXC_ERR` while every
+   container still reports `running`. See
+   [`results/20260825-upper-mesh/`](results/20260825-upper-mesh).
 7. **JIT compiles land *during* inference** — one measured at 5 s inside a request. Warm
    every shape you intend to measure, and discard sweeps containing a `jit_monitor`
    warning.

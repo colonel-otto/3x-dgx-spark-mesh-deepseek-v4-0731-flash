@@ -40,7 +40,7 @@ speed knob only. Raising it cannot buy accuracy.
 
 | Knob | Value | Settled by | If you change it |
 |---|---|---|---|
-| `NCCL_IB_HCA` | `rocep1s0f0,rocep1s0f1` | Widening **wedged the cluster** once — but see below | ⚠️ **Under active re-test.** The upper mesh now has IPv4 and measures **2.0x** bandwidth, gate-clean. Not adopted until it survives an engine run — [`../results/20260825-upper-mesh/`](../results/20260825-upper-mesh) |
+| `NCCL_IB_HCA` | **all four** (`rocep1s0f0,rocep1s0f1,roceP2p1s0f0,roceP2p1s0f1`) | Upper mesh addressed 2026-08-25: **2.0x** bandwidth, live gate 21/21 with `rdma:*` **0 errors** | ⚠️ Prerequisite is IPv4 + routing + persistence on the upper pair. Without it NCCL picks the pair anyway and wedges under load while every container stays `running`. Soak pending — [#17](../../issues/17) |
 | `NCCL_NET` | `IB` | — | ⚠️ A **request, not a guarantee.** On failure NCCL falls back to sockets and reports a plausible number. We measured `NET/Socket` at 0.44 GB/s and it looked real. Always confirm `via NET/IB/x` |
 | `NCCL_IB_SUBNET_AWARE_ROUTING` | `1` | Required on a switchless ring | Undocumented in NVIDIA's public env reference, but present in the NCCL 2.30.7 binary |
 | subnet masks | **`/30` on all six** | Consistency | Mixed masks on a fabric are a latent trap even when they cannot overlap |
@@ -52,7 +52,7 @@ speed knob only. Raising it cannot buy accuracy.
 |---|---|---|
 | Healthy pair busbw @64MiB | **~4.6 GB/s** | ~0.7 means a degraded node — reboot it |
 | Healthy 3-rank busbw | **2.85–3.25 GB/s** | Two HCAs. Supersedes the 0.49 figure, which was 6.6x pessimistic |
-| 3-rank busbw, **four HCAs** | **5.80 GB/s** | Upper mesh addressed. Gate-clean but **not yet validated under an engine** |
+| 3-rank busbw, **four HCAs** | **5.80 GB/s** | Upper mesh addressed. Validated under a live engine, `rdma:*` clean. **This is allgather busbw** — see the note below |
 | KV envelope, DeepSeek-V4 | **584 B/token** | 448 NoPE + 128 RoPE + 8 fp8 scale. **Identical for `fp8_ds_mla` and `nvfp4_ds_mla`** |
 | Tokens per word, filler prompt | **1.2056** | Measured against `/tokenize`, flat 150K–240K. **Do not estimate this** |
 | Idle TTFT penalty | **~22 ms** | Why a keep-alive ping is not worth it |
@@ -70,3 +70,20 @@ speed knob only. Raising it cannot buy accuracy.
 | Lower concurrency for accuracy | Batch size changes **reproducibility**, not average quality. `VLLM_BATCH_INVARIANT=1` is the real fix but does not support MTP yet |
 | KV offload to use spare RAM | Extends the **prefix cache**, not single-request capacity. We have 4x headroom and have never preempted |
 | Keep-alive ping for TTFT | Buys ~22 ms and adds a permanent load source that contaminates benchmarks |
+
+---
+
+## A note on comparing bandwidth numbers
+
+Our figures are **`all_gather` busbw**: `nbytes * (world-1)/world / dt`, where `nbytes` is
+the **per-rank input**. That convention matters enormously when comparing against a
+published number, because the same physical wire speed can be quoted three ways:
+
+| convention | world=2 | world=3 |
+|---|---:|---:|
+| `all_gather` **busbw** (what we report) | 9.70 | 5.80 |
+| `all_gather` **algbw** (`= busbw * w/(w-1)`) | **19.40** | 8.70 |
+| `all_reduce` **busbw** (`= 2x` allgather busbw) | **19.40** | 11.60 |
+
+A **3.2x spread from bookkeeping alone.** Always state collective, message size, rank
+count, and algbw-vs-busbw before comparing.
