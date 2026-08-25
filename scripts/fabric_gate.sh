@@ -143,18 +143,18 @@ done
 echo "-- fabric addressing (duplicate/overlapping subnets)"
 for n in "${NODES[@]}"; do
   dup=$(ssh_node "$n" \
-    "ip -o -4 addr show 2>/dev/null | awk '\$2 ~ /^(enp1s0f|roceP2p)/ {print \$4}' \
+    "ip -o -4 addr show 2>/dev/null | awk '\$2 ~ /^(enp1s0f|enP2p1s0f)/ {print \$4}' \
      | sort | uniq -d" 2>/dev/null)
   # Same address on two fabric NICs is the exact failure we hit.
   same=$(ssh_node "$n" \
-    "ip -o -4 addr show 2>/dev/null | awk '\$2 ~ /^(enp1s0f|roceP2p)/ {split(\$4,a,\"/\"); print a[1]}' \
+    "ip -o -4 addr show 2>/dev/null | awk '\$2 ~ /^(enp1s0f|enP2p1s0f)/ {split(\$4,a,\"/\"); print a[1]}' \
      | sort | uniq -d" 2>/dev/null)
   if [[ -n "$same" ]]; then
     bad "$n: address on MULTIPLE fabric NICs: $(echo "$same" | tr '\n' ' ')" "subnet:$n" "$same"
   elif [[ -n "$dup" ]]; then
     bad "$n: duplicate fabric CIDR: $(echo "$dup" | tr '\n' ' ')" "subnet:$n" "$dup"
   else
-    addrs=$(ssh_node "$n" "ip -o -4 addr show 2>/dev/null | awk '\$2 ~ /^(enp1s0f|roceP2p)/ {print \$2\"=\"\$4}' | tr '\n' ' '" 2>/dev/null)
+    addrs=$(ssh_node "$n" "ip -o -4 addr show 2>/dev/null | awk '\$2 ~ /^(enp1s0f|enP2p1s0f)/ {print \$2\"=\"\$4}' | tr '\n' ' '" 2>/dev/null)
     ok "$n fabric addressing clean: ${addrs}" "subnet:$n" "$addrs"
   fi
 done
@@ -218,7 +218,7 @@ echo "-- fabric config persistence (survives reboot?)"
 for n in "${NODES[@]}"; do
   missing=""
   # Every fabric address the node currently holds must appear in /etc/netplan.
-  live=$(ssh_node "$n" "ip -o -4 addr show 2>/dev/null | awk '\$2 ~ /^(enp1s0f|roceP2p)/ {print \$4}'" 2>/dev/null)
+  live=$(ssh_node "$n" "ip -o -4 addr show 2>/dev/null | awk '\$2 ~ /^(enp1s0f|enP2p1s0f)/ {print \$4}'" 2>/dev/null)
   # ...plus this node's own advertised fabric address, which may be on loopback.
   self=$(fabric_addr_for "$n")
   for a in $live "$self"; do
