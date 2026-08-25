@@ -2,12 +2,24 @@
 
 Issue #11 asked why our prefill (1,512 tok/s) trails a 2-node reference (2,639 tok/s).
 
-**The comparison was invalid.** Both numbers were produced by a harness that measures
-HTTP wall-clock on prompts that hit the prefix cache, at different prompt depths. Once
-the measurement is corrected, most of the gap disappears and what remains is a
-*methodology* difference, not a hardware one.
+**Two things are true.** First, the published comparison was invalid: both numbers came
+from a harness that measures HTTP wall-clock on prompts that hit the prefix cache, at
+different prompt depths. Second, a real gap remains after correcting for that, and part
+of it *was* fixable.
 
-**No config change was needed and none was made.** Decode is untouched.
+**Shipped fix: `GPU_MEMORY_UTILIZATION` 0.85 -> 0.80**, worth **+14% prefill at 78K**
+(1,295 -> 1,472 tok/s), reproduced across two restarts. **Decode verified unaffected**
+(cc=1 83.2 vs 80.4 baseline; cc=16 peak 398.3 vs 374.2). See the ADDENDUM for the full
+A/B.
+
+The residual short-depth gap is **structural**: the FlashInfer SM120 kernel only exists at
+head widths {8,16,32,64,128}, so TP=3's 24 heads/rank snap to 32 and **50% of attention
+compute is dead** — where TP=2's 32 heads/rank land exactly with 0% waste. No config can
+recover that.
+
+> **Sections 1-6 below were written before the A/B and describe the pre-fix state.**
+> Section 6's "do not fix by changing config" was superseded: one of the two flags it
+> proposed testing turned out to be a real win. Read the ADDENDUM for current state.
 
 ---
 
@@ -206,3 +218,106 @@ What would actually settle it, in order:
 cache-contaminated baseline that exposed the artifact, and the scripts
 (`pf3.py` cache-defeated, `pf4.py` matched-upstream, `pf5.py` streaming TTFT,
 `tcpbw.sh` fabric legs).
+
+---
+
+# ADDENDUM — the A/B, and a fix that shipped
+
+Section 6 above recommended A/B'ing the reference's serve flags rather than assuming the
+gap was purely methodological. That was done. **One of the two flags is a real, shipped
+improvement; the residual gap at short depth is structural and not fixable by config.**
+
+## The A/B
+
+Matched-upstream method, 3 passes each, cold base per pass, same warm cluster.
+
+| depth | seqs=16 / 0.85 (before) | seqs=6 / 0.85 | **seqs=16 / 0.80 (SHIPPED)** | reference |
+|---|---:|---:|---:|---:|
+| ~6.3K | 1,073 | 1,082 | 1,081 | 1,513 |
+| ~24.9K | 1,247 | 1,259 | **1,349** | 2,284 |
+| ~77.8K | 1,295 | 1,170 | **1,472** | 2,639 |
+
+- **`MAX_NUM_SEQS=6` — falsified.** 1,082 vs 1,073 at 8K is inside noise. Reverted to 16.
+- **`GPU_MEMORY_UTILIZATION=0.80` — real.** +8% at 32K, **+14% at 78K**, reproduced
+  across two independent restarts (78K: 1,507/1,507 then 1,452/1,450/1,472). **Shipped.**
+
+Cost: GPU KV cache 5,424,080 -> 4,499,499 tokens (-17%), still 4.3x concurrency at full
+1M context. That is a good trade for a 14% prefill gain given nothing was near the KV
+ceiling.
+
+**Decode verified unaffected** (warm, 3 reps): cc=1 median **83.2** tok/s vs 80.4
+baseline; cc=16 peak **398.3** vs the 374.2 baseline. No regression on either.
+
+## Why short-depth prefill cannot reach parity: the kernel snaps 24 heads to 32
+
+Read from the live container,
+`vllm/models/deepseek_v4/nvidia/flashinfer_sparse.py:592-603`:
+
+```python
+@classmethod
+def get_padded_num_q_heads(cls, num_heads: int) -> int:
+    # FlashInfer's native SM120/SM121 DSv4 sparse backend supports these
+    # widths directly. TP2 uses 32 heads per rank, so avoid needless 64-head
+    # padding while retaining the general next-supported-width behavior.
+    for supported_heads in (8, 16, 32, 64, 128):
+        if num_heads <= supported_heads:
+            return supported_heads
+```
+
+The kernel exists only at head widths `{8, 16, 32, 64, 128}`. So:
+
+| | logical heads/rank | **kernel width** | ranks | head-slots executed | real heads | waste |
+|---|---:|---:|---:|---:|---:|---:|
+| TP=2 | 32 | **32** | 2 | 64 | 64 | **0%** |
+| TP=3 | 24 | **32** | 3 | 96 | 64 | **50%** |
+
+Two effects compound: the TP=3 patch pads groups 8->9 (heads 64->72, 1.125x), then the
+kernel snaps 24->32 per rank (a further 1.333x). Net **1.5x**. The comment in the source
+says the quiet part out loud — TP=2 lands *exactly* on 32 by construction.
+
+Prefill pays this in full: `_forward_prefill` uses the same sparse-MLA call as decode,
+the q buffer is allocated at the padded width, and the kernel is dense over heads, so
+the pad lanes are computed and then discarded. It is not maskable, there is no 24-head
+kernel, and uneven 3/3/2 sharding is impossible because the o_proj BMM contract requires
+uniform `heads_per_group` (vLLM closed non-divisible TP as not-planned,
+[#11797](https://github.com/vllm-project/vllm/issues/11797)).
+
+**This is a second, independent structural penalty for TP=3, alongside the documented
+B12X/EP finding.** It also explains the shape of the existing "+8-17% per-stream but only
+2 GPUs' worth of aggregate" result: the third node adds memory and KV headroom while its
+attention math runs 50% dead.
+
+At 78K we now measure 1,472 against the reference's 2,639 — but their number is
+cache-assisted (§1) and their honest 8K figure is 1,513. **The 1.5x attention tax is
+almost exactly the residual gap.** Config cannot close it; only a 24-head kernel, or
+TP=2, would.
+
+## Falsified along the way
+
+- **`PREFILL_CHUNK_SIZE`** was suggested as a lever. It exists **only in the AMD ROCm
+  backend** (`models/deepseek_v4/amd/rocm.py`); our SM120 path never reads it. No-op.
+- **Fixed per-request overhead** was hypothesised to explain the server-vs-client gap. It
+  is not: a 26-token prompt returns in **0.136 s**, and the rate converges smoothly to
+  ~890 tok/s. Prefill is genuinely compute-bound, not overhead-bound.
+
+## Current shipped config
+
+| var | value | change |
+|---|---|---|
+| `MAX_NUM_SEQS` | 16 | unchanged (6 falsified) |
+| `GPU_MEMORY_UTILIZATION` | **0.80** | **changed from 0.85** |
+| `MAX_MODEL_LEN` | 1048576 | unchanged |
+| `MTP_NUM_TOKENS` | 5 | unchanged |
+
+GPU KV cache 4,499,499 tokens. Backups: `tp3.env.bak-preSeqs6` on all three ranks.
+
+## Still not tested
+
+- vLLM 0.21.1rc1 vs our 0.25.2, and flashinfer 0.6.15 vs their 0.6.18.dev (which carries
+  topk 192/256 specialisations we lack). This is the one remaining non-structural
+  candidate and the most expensive to test.
+- `gpu_memory_utilization` below 0.80 — the trend suggests looking, but KV falls further.
+- Whether `cudagraph_mode=FULL_AND_PIECEWISE` is safe here; vLLM
+  [#40969](https://github.com/vllm-project/vllm/issues/40969) reports hangs and another
+  GB10 recipe reports silent correctness bugs above 2 sequences with it. **This is a
+  correctness question, unrelated to speed, and deserves its own check.**

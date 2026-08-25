@@ -1,0 +1,16 @@
+warm
+### REP 1
+words=    10 ~tok=      26 ttft=  1.537s rate~      17
+words=    50 ~tok=     130 ttft=  7.476s rate~      17
+words=   200 ~tok=     520 ttft=  0.713s rate~     729
+words=   800 ~tok=    2080 ttft=  2.494s rate~     834
+words=  2400 ~tok=    6240 ttft=  7.490s rate~     833
+words=  9600 ~tok=   24960 ttft= 28.014s rate~     891
+### REP 2
+words=    10 ~tok=      26 ttft=  0.136s rate~     191
+words=    50 ~tok=     130 ttft=  0.306s rate~     424
+words=   200 ~tok=     520 ttft=  0.675s rate~     771
+words=   800 ~tok=    2080 ttft=  2.415s rate~     861
+words=  2400 ~tok=    6240 ttft=  7.831s rate~     797
+words=  9600 ~tok=   24960 ttft= 28.280s rate~     883
+DONE
