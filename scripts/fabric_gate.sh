@@ -235,11 +235,37 @@ for n in "${NODES[@]}"; do
   fi
 done
 
+engine_up() { ssh_node "$1" 'sudo docker ps --format "{{.Names}}" 2>/dev/null | grep -q vllm-dspark'; }
+
+# ---- 3e. RDMA completion errors in a RUNNING engine -------------------------
+# NCCL init succeeding does NOT mean the fabric is healthy. On 2026-08-25 all
+# three ranks completed init and every container stayed `running` while live
+# RDMA completions failed with IBV_WC_RETRY_EXC_ERR -- the engine simply never
+# finished loading. The container has no health check, so Docker could not flag
+# it, and `docker ps` looked perfectly normal.
+#
+# So when an engine is up, read its log for completion errors rather than
+# trusting its state.
+echo "-- engine rdma health (if running)"
+for n in "${NODES[@]}"; do
+  if ! engine_up "$n"; then
+    skip "$n: no engine running (nothing to check)" "rdma:$n" ""
+    continue
+  fi
+  errs=$(ssh_node "$n" "sudo docker logs --tail 2000 \$(sudo docker ps --format '{{.Names}}' | grep vllm-dspark | head -1) 2>&1 \
+      | grep -cE 'IBV_WC_RETRY_EXC_ERR|IBV_WC_[A-Z_]*ERR|GID table changed'" </dev/null 2>/dev/null)
+  errs=${errs:-0}
+  if [[ "$errs" -gt 0 ]] 2>/dev/null; then
+    bad "$n: $errs RDMA completion errors in engine log -- fabric is degraded despite the container running" "rdma:$n" "$errs"
+  else
+    ok "$n: engine log clean of RDMA completion errors" "rdma:$n" "0"
+  fi
+done
+
 # ---- 4. NCCL collective bandwidth ------------------------------------------
 # The only check that would have caught the 2026-08-25 degradation.
 echo "-- nccl collective bandwidth"
 
-engine_up() { ssh_node "$1" 'sudo docker ps --format "{{.Names}}" 2>/dev/null | grep -q vllm-dspark'; }
 
 busy=0
 for n in "${NODES[@]}"; do engine_up "$n" && busy=1; done
