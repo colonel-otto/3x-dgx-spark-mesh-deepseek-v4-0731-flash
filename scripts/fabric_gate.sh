@@ -159,6 +159,48 @@ for n in "${NODES[@]}"; do
   fi
 done
 
+# ---- 3c. Fabric ARP: every peer on its correct port -------------------------
+# Recurring symptom. After the duplicate-address bug (192.168.100.2 on both of
+# spark1's NICs) the kernel kept FAILED entries for fabric peers on the WRONG
+# port on all three nodes, and those outlived the misconfiguration itself.
+#
+# A neighbour entry is a port-to-MAC mapping: there is exactly one correct
+# answer, decided by which cable is plugged in. An entry naming a port the peer
+# is not cabled to is not "stale", it is WRONG, and a wrong entry has no value
+# worth preserving -- so this deletes it rather than merely reporting it. That
+# is not a configuration change: the kernel immediately re-ARPs out the correct
+# port. Every deletion is logged, never silent.
+#
+# STALE/DELAY on the RIGHT port is normal for an idle link and is left alone.
+echo "-- fabric arp (peer on correct port)"
+for n in "${NODES[@]}"; do
+  # The port a peer is cabled to is the one whose subnet contains it -- ask the
+  # routing table rather than hardcoding the topology.
+  bad_entries=""
+  for p in "${NODES[@]}"; do
+    [[ "$n" == "$p" ]] && continue
+    paddr=$(fabric_addr_for "$p")
+    # Loopback-hosted addresses (sparkmain's /32) have no single cabled port.
+    expect=$(ssh_node "$n" "ip route get $paddr 2>/dev/null | grep -oE 'dev [^ ]+' | head -1 | cut -d' ' -f2" 2>/dev/null)
+    [[ -z "$expect" || "$expect" == lo ]] && continue
+    while read -r dev state; do
+      [[ -z "$dev" ]] && continue
+      if [[ "$dev" != "$expect" ]]; then
+        bad_entries+="$paddr@$dev(want $expect) "
+        ssh_node "$n" "sudo ip -4 neigh del $paddr dev $dev" </dev/null >/dev/null 2>&1
+      elif [[ "$state" == FAILED || "$state" == INCOMPLETE ]]; then
+        bad_entries+="$paddr@$dev=$state "
+        ssh_node "$n" "sudo ip -4 neigh del $paddr dev $dev" </dev/null >/dev/null 2>&1
+      fi
+    done < <(ssh_node "$n" "ip -4 neigh show | awk '\$1==\"$paddr\" {print \$3, \$NF}'" 2>/dev/null)
+  done
+  if [[ -n "$bad_entries" ]]; then
+    bad "$n: wrong-port/failed ARP for a fabric peer, FLUSHED: $bad_entries" "arp:$n" "$bad_entries"
+  else
+    ok "$n: every fabric peer on its cabled port" "arp:$n" ""
+  fi
+done
+
 # ---- 4. NCCL collective bandwidth ------------------------------------------
 # The only check that would have caught the 2026-08-25 degradation.
 echo "-- nccl collective bandwidth"
