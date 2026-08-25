@@ -50,7 +50,7 @@ itemized in [`DEGRADED-DATA-CATALOGUE.md`](DEGRADED-DATA-CATALOGUE.md).
 
 | Question | Tracked | Why it matters |
 |---|---|---|
-| ~~3-rank collective is 3.25 GB/s vs published 18–21~~ **mostly explained** | [#11](https://github.com/colonel-otto/3spark-dsv4/issues/11) | Four HCAs gave 2.0x (→5.80); the rest is **convention + message size**, not hardware. Our w=2 algbw is 19.40. See [`BANDWIDTH-COMPARISON.md`](BANDWIDTH-COMPARISON.md) |
+| 3-rank collective **5.80 GB/s** vs a published ring at **18.70 @32MB** | [#11](https://github.com/colonel-otto/3spark-dsv4/issues/11) | **Still ~3.2x, still open.** Four HCAs gave a real 2.0x. Live lead is HCA **pairing** (same-port vs cross-port), not count — see [`BANDWIDTH-COMPARISON.md`](BANDWIDTH-COMPARISON.md) |
 | `seqs=32` decided against a 6.6x-too-small budget | [#10](https://github.com/colonel-otto/3spark-dsv4/issues/10) | May have been rejected for a reason that no longer exists |
 | `nvfp4_ds_mla` vs `fp8_ds_mla` quality | [#16](https://github.com/colonel-otto/3spark-dsv4/issues/16) | **Memory-identical**, so the choice is free — make it on evidence |
 | 13% of decode runs still stall after warming | [#16](https://github.com/colonel-otto/3spark-dsv4/issues/16) | Warm-up does not cover every shape |

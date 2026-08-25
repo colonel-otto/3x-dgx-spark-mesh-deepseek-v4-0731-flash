@@ -132,7 +132,21 @@ Channel 00/0 : 2[0] -> 0[0] [receive] via NET/IB/2
 400 Gb/s virtual device. Setting the flag changes nothing because the merge is
 already on. The upstream +64% claim targets a configuration where it was off.
 
-**Do not re-open this lead.** It is measured, on our hardware, both ways, same day.
+> [!CAUTION]
+> **RE-OPENED 2026-08-25. This falsification does not hold.**
+>
+> Every number in the table above is **0.47-0.52 GB/s** — measured entirely on the
+> degraded fabric, where one bad link paced every collective. **No flag could have shown
+> an effect at that speed.** The test had no power.
+>
+> It also never tested the configuration published configs actually use: merging the two
+> PCIe domains of the **same physical port** (`rocep1s0f1,roceP2p1s0f1`) with
+> `NCCL_IB_MERGE_NICS=1` and `NCCL_IB_GID_INDEX=3`. The virtual device our log shows
+> (`rocep1s0f0+rocep1s0f1`) merges two **different** ports — which on a ring face
+> different neighbours.
+>
+> See [`BANDWIDTH-COMPARISON.md`](BANDWIDTH-COMPARISON.md). Tracked in
+> [#11](../../issues/11).
 
 ## 3. The real ceiling: no GPUDirect RDMA
 
