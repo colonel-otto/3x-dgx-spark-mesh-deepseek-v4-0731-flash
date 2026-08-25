@@ -106,6 +106,41 @@ noise**. 2-node also leads at `c=8` (161.0 vs 143.6, **+12%**).
 preemptions at 0 on both sides, the engine never had to evict a block on either config —
 the bottleneck is **serialized long prefill**, not KV capacity.
 
+> ### ⚠️ RE-RUN 2026-08-25 on healthy fabric — the two halves of this fare differently
+>
+> The rows above were taken on the degraded spark1 fabric ([issue #15](../../../issues/15)).
+> Re-run at matched depth with byte-identical prompts on both arms
+> (`results/20260825-deep-concurrency/`, harness `deepconc.py`):
+>
+> | | 2-node | 3-node |
+> |---|---:|---:|
+> | TTFT | **293,987 ms** (was 539,666) | **396,804 ms** (was 553,113) |
+> | wall | 7.8 min (was 14.5) | 10.2 min (was 14.4) |
+> | improvement | **1.84x** | **1.39x** |
+> | preemptions | **0** | **0** |
+>
+> **"KV capacity is not the binding constraint" SURVIVES.** Preemptions are still 0 on
+> both arms with the pool never filling. That half was an accurate observation and stands.
+>
+> **"Equally unusable on both" does NOT survive.** They are no longer equal: 2-node now
+> reaches first token **1.35x sooner**. The old parity was two different configurations
+> being throttled to a similar floor by the same degraded link — and spark1 was in the
+> 3-node arm, so the handicap fell disproportionately there. Removing it did **not**
+> rescue the 3-node arm; it separated them, in 2-node's favour.
+>
+> **Both remain unusable at this depth.** ~5 and ~6.6 minutes to first token are not
+> workable numbers, so the practical guidance is unchanged.
+>
+> **Depth is steeply non-linear here** — measured on the 3-node arm, TTFT went 275 s at
+> 185.5K to 397 s at 200K: **+44% for +8% depth**. Any comparison at this depth must
+> verify prompt tokens from the engine rather than trusting an estimator; ours are
+> recorded per-run (200,045–200,048 on both arms).
+>
+> Not re-tested: whether the "serialized prefill" mechanism itself is unchanged. Prefill
+> got materially faster, so the *magnitude* attributed to serialization was inflated by
+> the fabric; the mechanism claim was never measured directly and should not be restated
+> as settled without one.
+
 ### ⚠️ This CORRECTS an earlier claim
 
 Earlier write-ups described the doubled KV cache as *"the third node's real structural

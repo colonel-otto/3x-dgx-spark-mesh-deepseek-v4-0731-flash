@@ -1,0 +1,72 @@
+{
+  "tag": "tp3-postfabricfix",
+  "timestamp_utc": "20260825T172252Z",
+  "model": "deepseek-v4-flash-0731",
+  "concurrency": 4,
+  "prompt_tokens_requested": 200000,
+  "prompt_tokens_actual": [
+    172165,
+    172165,
+    172167,
+    172168
+  ],
+  "wall_s": 456.33644437789917,
+  "ttft_s_median": 291.1940506696701,
+  "ttft_ms_median": 291194.0506696701,
+  "decode_tok_s_median": 1.0493066248124034,
+  "aggregate_tok_s": 1.121979202642875,
+  "preemptions_delta": 0.0,
+  "prefix_cache": {
+    "cpu": {
+      "queries": 688665.0,
+      "hits": 0.0
+    },
+    "gpu": {
+      "queries": 0,
+      "hits": 0
+    }
+  },
+  "errors": [],
+  "streams": [
+    {
+      "i": 0,
+      "wall_s": 378.61238145828247,
+      "ttft_s": 233.7048327922821,
+      "chunks": 29,
+      "completion_tokens": 128,
+      "prompt_tokens": 172165,
+      "decode_tok_s": 0.876420870887301,
+      "sample": "1. scheduler\n2. attention\n3. block\n4. speculative\n5. tensor\n6. router\n7. quantized\n8. prefix\n9. continuous\n10. sampler\n11. scheduler\n12. attention\n13. block\n14. speculative\n15. tensor\n16. router\n17. q"
+    },
+    {
+      "i": 1,
+      "wall_s": 260.6144139766693,
+      "ttft_s": 120.23483920097351,
+      "chunks": 28,
+      "completion_tokens": 128,
+      "prompt_tokens": 172165,
+      "decode_tok_s": 0.9046900177816165,
+      "sample": "1. speculative\n2. decoding\n3. proposes\n4. several\n5. tokens\n6. before\n7. the\n8. target\n9. verifies\n10. them\n11. tensor\n12. parallelism\n13. shards\n14. attention\n15. heads\n16. across\n17. the\n18. partici"
+    },
+    {
+      "i": 2,
+      "wall_s": 456.32695055007935,
+      "ttft_s": 454.58423709869385,
+      "chunks": 31,
+      "completion_tokens": 128,
+      "prompt_tokens": 172167,
+      "decode_tok_s": 72.87486069441424,
+      "sample": "1. the\n2. a\n3. of\n4. to\n5. and\n6. in\n7. is\n8. it\n9. for\n10. on\n11. with\n12. as\n13. at\n14. by\n15. from\n16. be\n17. this\n18. that\n19. are\n20. was\n21. have\n22. has\n23. had\n24. not\n25. but\n26. or\n27. if\n28"
+    },
+    {
+      "i": 3,
+      "wall_s": 455.0552668571472,
+      "ttft_s": 348.6832685470581,
+      "chunks": 29,
+      "completion_tokens": 128,
+      "prompt_tokens": 172168,
+      "decode_tok_s": 1.1939232318431905,
+      "sample": "1. the\n2. quick\n3. brown\n4. fox\n5. jumps\n6. over\n7. the\n8. lazy\n9. dog\n10. and\n11. then\n12. runs\n13. away\n14. into\n15. the\n16. woods\n17. where\n18. it\n19. finds\n20. a\n21. hidden\n22. cave\n23. with\n24. a"
+    }
+  ]
+}
