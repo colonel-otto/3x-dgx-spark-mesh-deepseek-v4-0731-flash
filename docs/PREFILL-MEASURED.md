@@ -659,3 +659,85 @@ bandwidth.
 
 **Decode is verified unaffected throughout:** cc=1 median **82.5** tok/s (baseline 80.4),
 cc=16 median **340.1**, both at 2% spread.
+
+---
+
+# ADDENDUM 5 — the maintenance window: one fabric link is 6.8x slower than the other
+
+Addendum 4 named the GDR/DMABUF allgather test as needing a window. The window was taken
+(vLLM stopped, ~117 GiB free on each node) and the test run. **GDR/DMABUF is not the
+lever — but isolating each link pair found something better.**
+
+## Per-pair allgather, vLLM stopped, 64 MiB messages
+
+| pair | path | busbw |
+|---|---|---:|
+| sparkmain <-> **spark2** | f0 <-> f0 | **4.64 GB/s** |
+| sparkmain <-> **spark1** | f0 <-> f1 | **0.69 GB/s** |
+| all three ranks | | **0.49 GB/s** |
+
+**One link is 6.8x slower than the other**, on identical hardware, with all six ports
+negotiating 200,000 Mb/s and every error counter at zero. And because a TP collective is
+paced by its slowest member, the 3-rank number (0.49) sits *below* even the bad pair.
+
+This **vindicates an earlier investigation that flagged the spark1 leg as degraded and
+that I dismissed.** I dismissed it on the strength of a TCP test (858 vs 1,019 MB/s,
+within 1.27x) — but TCP does not exercise the RDMA verbs path, so it was the wrong
+instrument. The NCCL allgather, which is what vLLM actually uses, shows 6.8x.
+
+## GDR / DMABUF: no effect
+
+| config | 64 MiB busbw |
+|---|---:|
+| baseline (service stopped) | 0.49 GB/s |
+| `NCCL_DMABUF_ENABLE=1` + `NCCL_NET_GDR_LEVEL=5` | 0.49 GB/s |
+
+Identical. Rule it out. (GB10 has no GPUDirect regardless — see
+[`SEQS32-AND-NCCL-FABRIC.md`](SEQS32-AND-NCCL-FABRIC.md) §3.)
+
+## A real misconfiguration, fixed — but it was not the cause
+
+The slow link's endpoint had `192.168.100.2/24` on **both** NICs, with a duplicate route
+advertising sparkmain's subnet out the port physically cabled to spark2, masked by
+`rp_filter=2`. The fast link's endpoint (spark2) has clean one-address-per-NIC `/30`s.
+That correlation looked decisive.
+
+Fixed on spark1:
+```bash
+sudo ip addr del 192.168.100.2/24 dev enp1s0f0np0
+sudo ip route del 192.168.100.0/24 dev enp1s0f0np0 metric 100
+sudo ip route del 192.168.102.0/30 dev enp1s0f1np1 metric 101
+```
+Routing now matches spark2's topology exactly.
+
+**Result: no change.** The link still measures 0.69 GB/s and prefill is still 1,074.8
+tok/s at 8K. Correct hygiene, not the fix. **Note this change is not persistent** — it
+will revert on spark1's next reboot unless written into its netplan/network config.
+
+## Where the gap stands
+
+Prefill after the fix: 1,025 / 1,075 / 992 tok/s at 1K / 8K / 32K. Unchanged, still ~2x
+below the 2,033 / 2,184 / 2,176 reference.
+
+**But the cause is now a specific, measurable hardware-level asymmetry** rather than an
+open question: one of two fabric links runs at 15% of its sibling's speed, on a fabric
+where the reference implementation is 2-node and therefore only ever traverses *one*
+link. If their single link performs like our good one (4.64 GB/s) and ours is paced by
+the bad one (0.69), that is a plausible mechanism for the observed factor.
+
+### What to try next, in order
+
+1. **Swap the sparkmain-f0 <-> spark1-f1 cable** with a known-good one, or move that pair
+   onto the unused `roceP2p1s0f*` HCAs. This is now a targeted, one-variable hardware
+   test with a clear predicted outcome (0.69 -> ~4.6 GB/s).
+2. **Re-seat spark1's `rocep1s0f1` port** and check its firmware against the other nodes'.
+3. If the link comes up to 4.64 GB/s, **re-run the prefill benchmark immediately** — that
+   is the test of whether the fabric asymmetry is the prefill gap.
+4. Make the `ip addr`/`ip route` cleanup persistent on spark1 regardless of the outcome.
+
+**Still true and unchanged:** GPU compute (93.3 TFLOP/s), memory bandwidth (236 GB/s),
+GPU clocks (2,470 MHz vs a 2,418 MHz spec) are all healthy, and every software variable
+has been eliminated by measurement.
+
+**Decode verified after the window and the routing change:** cc=1 median **82.6** tok/s
+(baseline 80.4), cc=16 median **341.9**. KV pool 4,604,327.
