@@ -223,40 +223,44 @@ These are not style preferences. Each was learned by getting a wrong answer firs
 
 ## 5. Next measurements — in priority order
 
-> **START HERE: PREFILL SOLVED 2026-08-25 — parity reached. The cause was a degraded
-> RDMA stack on spark1, cleared by a reboot.**
-> Full story: [`PREFILL-MEASURED.md`](PREFILL-MEASURED.md) (7 addenda; Addendum 7 is the
-> resolution).
+> **START HERE: PREFILL PARITY REACHED 2026-08-25 — 95-99% of the upstream reference.**
+> Read [`FABRIC-FIX-PARITY.md`](FABRIC-FIX-PARITY.md) FIRST.
 >
-> **The fix was `ssh spark1 "sudo reboot"`.** Fabric allgather sparkmain<->spark1 went
-> **0.69 -> 4.78 GB/s** (6.9x), matching the healthy sparkmain<->spark2 link (4.60).
+> **Root cause was not software.** spark1 had **silently degraded RDMA fabric**: every
+> collective involving it ran at ~0.7 GB/s vs 4.6 GB/s for the healthy pair (6.8x), with
+> **ZERO error indicators** — ports ACTIVE at 200,000 Mb/s, all error counters 0,
+> identical firmware/PCIe, same NCCL transport. **A reboot of spark1 cleared it.**
 >
-> | input tokens | before | **after** | reference | % of ref |
-> |---:|---:|---:|---:|---:|
-> | 8,192 | 1,075 | **2,089** | 2,184 | **96%** |
-> | 32,768 | 1,034 | **2,037** | 2,176 | **94%** |
+> | | before | after | reference |
+> |---|---:|---:|---:|
+> | prefill @1K | 1,063 | **2,023** | 2,033 |
+> | prefill @8K | 1,075 | **2,070** | 2,184 |
+> | prefill @32K | 1,034 | **2,095** | 2,176 |
+> | decode cc=1 | 80.4 | **85.6** | — |
+> | decode cc=16 | 374.2 | **491** (peak 593) | — |
 >
-> **Decode improved too**: cc=1 80.4 -> **88.4** (+10%), cc=16 374.2 -> **479.1** (+28%).
-> The degraded link had been silently taxing decode as well.
+> **⚠ ALL PRIOR MULTI-NODE NUMBERS ARE SUSPECT — see
+> [issue #14](https://github.com/colonel-otto/3spark-dsv4/issues/14).** Every measurement
+> before 2026-08-25 ran with one of three nodes at 15% collective bandwidth. Especially
+> re-check the **decode baselines** and the **`MAX_NUM_SEQS=32` rejection** — that crash
+> was an `_ALLGATHER_BASE` timeout at KV 2.8%, which a degraded link plausibly caused.
+> **seqs=32 may be viable on a healthy fabric.**
 >
-> **THE DURABLE LESSON:** the degraded node showed **zero** error counters, correct
-> firmware (28.45.4028), correct PCIe (32 GT/s x4), ACTIVE/LinkUp ports at 200,000 Mb/s,
-> and selected the **same** NCCL transport as the healthy pair. TCP testing showed only
-> 1.27x. **Only an RDMA collective benchmark exposed it.** Add a fabric health check to
-> the startup path — run `results/20260824-seqs32-nccl/agbench.py` per pair
-> (WORLD_SIZE=2) and expect ~4.6 GB/s; under ~2 GB/s means that node needs a reboot.
+> **The upside:** we were beating the 2-node reference on decode *while one node ran at
+> 15%*. Every tuning conclusion here was reached under a communication handicap, so
+> re-running the matrix on the healthy fabric is likely to find BETTER settings, not just
+> confirm old ones. The 0.49 GB/s figure behind the "GB10 ~0.5 GB/s ceiling" analysis was
+> itself measured on the degraded fabric.
 >
-> Also shipped: `GPU_MEMORY_UTILIZATION` 0.85 -> **0.80** (+14% prefill at 78K).
+> **PRE-BENCHMARK CHECK (do this before trusting any number):** run
+> `results/20260824-seqs32-nccl/agbench.py` pairwise. Healthy GB10 pair = **~4.6 GB/s**
+> busbw @64 MiB. ~0.7 GB/s = degraded node; reboot it. **TCP throughput is NOT a valid
+> check** — it showed 1.19x while RDMA was 6.8x down.
 >
-> **Withdrawn/corrected:** the earlier "swap the cable" advice (the alternate cable
-> measured identically, 0.68 GB/s) and the "GPU clocks at 82% of rated" claim
-> (2,418 MHz is the application-clock spec; the GPUs were always at spec).
+> Network state is now **persisted** via NetworkManager (master loopback + fabric host
+> routes). It was runtime-only and spark1's reboot took the cluster down until restored.
 >
-> **CAUTION:** `MTP_NUM_TOKENS=0` is invalid (service fails to start); use 1 as a floor.
-> MTP=1 leaves prefill flat but **collapses decode to 46.7 tok/s**.
->
-> Cluster: **healthy and serving** — TP=3, 1M context, MTP=5, seqs=16, 0.80,
-> KV 4,493,602.
+> Cluster: TP=3, 1M context, MTP=5, seqs=16, gpu-mem 0.80, KV 4,493,602.
 
 ### 5a. `MAX_NUM_SEQS=32` → issue #10 — **CLOSED 2026-08-24: REJECTED**
 
