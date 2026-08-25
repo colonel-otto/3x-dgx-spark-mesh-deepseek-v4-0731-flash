@@ -1,0 +1,16 @@
+warming (3 shapes, discarded)
+warm done
+
+### REP 1
+words=  2400 prompt_tok=   7199 served_delta=    7199 client_wall=   7.01s client_rate=   1027
+words=  9600 prompt_tok=  28799 served_delta=   28799 client_wall=  31.05s client_rate=    928
+words= 30000 prompt_tok=  89999 served_delta=   89999 client_wall=  98.73s client_rate=    912
+### REP 2
+words=  2400 prompt_tok=   7199 served_delta=    7199 client_wall=   7.03s client_rate=   1024
+words=  9600 prompt_tok=  28799 served_delta=   28799 client_wall=  30.58s client_rate=    942
+words= 30000 prompt_tok=  89999 served_delta=   89999 client_wall= 105.89s client_rate=    850
+### REP 3
+words=  2400 prompt_tok=   7199 served_delta=    7199 client_wall=   7.05s client_rate=   1021
+words=  9600 prompt_tok=  28799 served_delta=   28799 client_wall=  30.00s client_rate=    960
+words= 30000 prompt_tok=  89999 served_delta=   89999 client_wall=  98.34s client_rate=    915
+DONE

@@ -23,7 +23,7 @@ settled, what is open, and exactly how to run the next three measurements.
 | `GPU_MEMORY_UTILIZATION` | **0.80** |
 | `kv-cache-dtype` | `nvfp4_ds_mla` |
 | CUDA-graph capture | 96 (`16 × (5+1)`), 1.24 GiB / 15 s |
-| GPU KV cache | **4,499,499 tokens** (4.3x concurrency at full context) |
+| GPU KV cache | **4,480,480 tokens** (4.3x concurrency at full context) |
 
 ### The three nodes
 
@@ -150,7 +150,8 @@ Full rollback procedure in the operator's `docs\dsv4-2node-fallback.md`.
 | `NCCL_IB_MERGE_NICS` | **No-op 2026-08-24.** NCCL already merges both HCAs by default; measured identical both ways. |
 | GB10 GPUDirect RDMA | **Absent — architectural.** All inter-node collectives host-stage at ~0.5 GB/s. This is the prefill ceiling. |
 | `GPU_MEMORY_UTILIZATION=0.80` | **Shipped 2026-08-24.** +14% prefill at 78K vs 0.85, decode unaffected. Costs 17% of KV pool. |
-| TP=3 attention head padding | **50% waste, structural.** Kernel widths are {8,16,32,64,128}; 24 heads/rank snap to 32. TP=2 wastes 0%. Not fixable by config. |
+| TP=3 attention head padding | **50% waste is real, but NOT prefill-limiting.** Kernel widths {8,16,32,64,128}; 24 heads/rank snap to 32. But TP=2 and TP=3 measure IDENTICAL prefill at 8K (1,081 both), so this is not the prefill bottleneck. |
+| TP=2 as a prefill fallback | **Rejected 2026-08-25.** Same prefill as TP=3, but decode cc=1 drops 82.4 -> 70.1 and KV 4.48M -> 1.82M. TP=3 is correct. |
 | Aggregate throughput as an MTP signal | **Useless** — every level sits inside its own run spread. Use the acceptance counters. |
 
 Full detail and evidence: [`MTP5-1M-AND-UPSTREAM-COMPARISON.md`](MTP5-1M-AND-UPSTREAM-COMPARISON.md).
@@ -219,23 +220,29 @@ These are not style preferences. Each was learned by getting a wrong answer firs
 
 ## 5. Next measurements — in priority order
 
-> **START HERE: §5a, §5c lead #1, and the §5c prefill question are all CLOSED as of
-> 2026-08-24.** See [`SEQS32-AND-NCCL-FABRIC.md`](SEQS32-AND-NCCL-FABRIC.md) and
-> [`PREFILL-MEASURED.md`](PREFILL-MEASURED.md).
+> **START HERE: §5a and §5c lead #1 are CLOSED. §5c prefill is PARTLY closed — one
+> fix shipped, parity NOT reached, and the remaining cause is unidentified.**
+> See [`SEQS32-AND-NCCL-FABRIC.md`](SEQS32-AND-NCCL-FABRIC.md) and
+> [`PREFILL-MEASURED.md`](PREFILL-MEASURED.md) (read BOTH addenda).
 >
 > - seqs=32 **crashes the engine**; rolled back to 16.
-> - `NCCL_IB_MERGE_NICS` is a **measured no-op** (NCCL already merges both HCAs).
-> - **Prefill fix SHIPPED: `GPU_MEMORY_UTILIZATION` 0.85 -> 0.80, +14% at 78K.**
->   Decode verified unaffected. `MAX_NUM_SEQS=6` was tested and falsified.
-> - The residual prefill gap is **structural**: the FlashInfer SM120 kernel exists only
->   at head widths {8,16,32,64,128}, so TP=3's 24 heads/rank snap to 32 and **50% of
->   attention compute is dead**. TP=2 lands exactly on 32. No config recovers this.
+> - `NCCL_IB_MERGE_NICS` is a **measured no-op**.
+> - **Shipped: `GPU_MEMORY_UTILIZATION` 0.80** (+14% prefill at 78K, decode unaffected).
+> - **Falsified by measurement:** seqs=6, TP=2-vs-TP=3 (identical prefill!), the
+>   `VLLM_SPARSE_INDEXER_MAX_LOGITS_MB` 512 knob, prompt content, and the "server
+>   prefills faster than the client sees" theory (server counters agree with the client).
+> - **The 50%% head-padding tax is real in the kernel but is NOT prefill-limiting** —
+>   TP=2 and TP=3 measure identical at 8K. An earlier claim to the contrary was wrong.
 >
-> **The next open task is §5b's concurrency half** (issue #12) — it needs no restart.
-> The one untested prefill lead left is the **vLLM/flashinfer version delta**
-> (0.25.2 + fi 0.6.15 vs their 0.21.1rc1 + fi 0.6.18.dev).
+> **THE OPEN QUESTION:** we prefill at ~920-1,080 tok/s, flat. anemll publish **2,184
+> tok/s at 8K on the image we run**, and their own A/B says our vLLM version is the
+> faster one. That ~2x is unexplained by anything tested.
 >
-> The cluster is **idle, healthy, and serving** at 1M context / MTP=5 / seqs=16 / 0.80.
+> **NEXT EXPERIMENT: run anemll's `benchmarks/benchmark_prefill.py` unmodified against
+> our endpoint** (§4.6, "run upstream harnesses unmodified"). It measures server-side
+> with warm-up excluded. That is the only remaining apples-to-apples comparison.
+>
+> The cluster is **idle, healthy, and serving**: TP=3, 1M context, MTP=5, seqs=16, 0.80.
 
 ### 5a. `MAX_NUM_SEQS=32` → issue #10 — **CLOSED 2026-08-24: REJECTED**
 
