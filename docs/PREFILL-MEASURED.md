@@ -531,3 +531,131 @@ decode unaffected.
 `results/20260824-prefill/anemll_run.txt` (TP=3), `anemll_tp2.txt` (TP=2), the matching
 `.json` outputs from their harness, and `their_published_baseline.md` copied from their
 repo for direct comparison.
+
+---
+
+# ADDENDUM 4 — byte-identical prompts, healthy silicon, and a per-token constant
+
+Addendum 3 blamed GPU clocks at "82% of rated". **That was wrong** and is corrected here.
+
+## Correction: the GPUs are running at spec
+
+`nvidia-smi -q` distinguishes two numbers I conflated:
+
+```
+Applications Clocks:         Graphics : 2418 MHz     <- the operating spec
+Default Applications Clocks: Graphics : 2418 MHz
+Max Clocks:                  Graphics : 3003 MHz     <- hardware ceiling, not a target
+```
+
+We measure **2,470 MHz under load — above the 2,418 MHz application clock.** The GPUs are
+not throttled and never were. Direct compute probes confirm the silicon is healthy:
+
+| probe | measured | reference |
+|---|---:|---|
+| bf16 8192^3 matmul | **93.3 TFLOP/s** | GB10 dense bf16 peak ~125; best public real-world ~99.8 |
+| memory copy (512 MB bf16) | **235.9 GB/s** | GB10 spec 273 GB/s LPDDR5X |
+| memory read | **236.0 GB/s** | 86% of spec |
+
+93.3 TFLOP/s is 93% of the best measured real-world GB10 figure. **Compute and memory
+bandwidth are both healthy.** The known GB10 "half performance" bug (a USB-PD negotiation
+failure capping the GPU at 513 MHz, ~100 W) does **not** apply — that signature is a
+513/669 MHz clock, and ours is 2,470.
+
+## The comparison is now exact, not approximate
+
+Their harness embeds `token_pool_sha256`. Ours:
+
+```
+our   token_pool_sha256: 487350c5afe54aa29e33ca782811dd011b210d8f5eb75f8105b0a51b8b0c6a1e
+their token_pool_sha256: 487350c5afe54aa29e33ca782811dd011b210d8f5eb75f8105b0a51b8b0c6a1e
+MATCH
+```
+
+**Byte-identical prompt token pools**, same vLLM version string
+(`0.25.2.dev0+g752a3a504.d20260714`), same image, same model architecture, same seed
+(4106). There is no remaining methodological difference of any kind.
+
+## Two more variables eliminated
+
+| change | 8K result | baseline | verdict |
+|---|---:|---:|---|
+| `MAX_MODEL_LEN` 1,048,576 -> **350,000** (their value) | 1,085 | 1,075 | no effect; reverted |
+| `MTP_NUM_TOKENS` 5 -> **1** | 1,092 | 1,075 | no effect on prefill |
+
+MTP=1 is worth noting separately: prefill did not move, but **decode collapsed to 46.7
+tok/s** from 82.5. MTP is load-bearing for decode and irrelevant to prefill. Restored to 5.
+
+`MTP_NUM_TOKENS=0` is **invalid** — vLLM rejects `num_speculative_tokens: 0` and the
+service fails to start. Use 1 as the floor if you ever need to A/B this.
+
+## What the numbers actually say: a fixed per-token cost
+
+Converting to per-token time and subtracting:
+
+| tokens | ours µs/tok | theirs µs/tok | **delta** |
+|---:|---:|---:|---:|
+| 1,024 | 940.7 | 491.9 | **448.8 µs** |
+| 8,192 | 930.2 | 457.9 | **472.4 µs** |
+| 32,768 | 967.1 | 459.5 | **507.6 µs** |
+
+**A flat ~450-508 µs per token across a 32x range of prompt sizes.** A compute deficit
+scales with work; a constant per-token penalty does not. This is the signature of a fixed
+per-token cost — most plausibly per-layer TP collective latency, which is per-token and
+independent of prompt length.
+
+That also explains why every software knob came back null: `MAX_MODEL_LEN`, MTP,
+`max_num_seqs`, `gpu_memory_utilization`, indexer chunk size and prompt content all leave
+per-layer TP collective volume untouched.
+
+**Important caveat on the TP=2 vs TP=3 test:** it showed only 3% difference, which I read
+as "topology is not the factor." If both topologies run over the same degraded transport,
+that comparison is blind to the transport. The variable never varied is the transport
+itself.
+
+## The transport: RDMA is live, but slow
+
+Verified in the live container:
+
+```
+NCCL_NET=IB   NCCL_IB_DISABLE=0   NCCL_IB_HCA=rocep1s0f0,rocep1s0f1
+Using network IB
+768 x  "via NET/IB/2"      <- merged 400 Gb/s virtual device
+```
+
+**Not socket fallback.** But our measured 3-rank allgather busbw is **~0.5 GB/s**, against
+published GB10 figures of 18-23 GB/s with GPUDirect and 10-12 GB/s even on socket
+fallback. **We are an order of magnitude below the socket-fallback figure while running on
+RDMA.** That is the outstanding anomaly, and it is consistent in magnitude with a
+~450-508 µs/token penalty.
+
+The obvious next probe — re-running the allgather benchmark with `NCCL_DMABUF_ENABLE=1`
+and `NCCL_NET_GDR_LEVEL=5` — **could not be run**: live vLLM holds ~119 of 121 GiB of
+unified memory, so a second CUDA context cannot be created on GB10. **It needs a
+maintenance window with the service stopped.**
+
+## Status
+
+**Parity not achieved.** Ours ~1,075 tok/s @ 8K; theirs 2,184. But the cause is no longer
+unknown-and-unbounded — it is localised to a **fixed ~470 µs/token communication cost**,
+with a measured fabric anomaly (0.5 GB/s allgather on live RDMA) of the right magnitude
+to explain it.
+
+**Everything else is excluded by measurement:** harness, prompts (hash-identical), prefix
+caching, topology, head padding, vLLM version, image, checkpoint, context length, MTP,
+seqs, gpu-mem, indexer chunking, prompt content, GPU compute, GPU clocks, and memory
+bandwidth.
+
+### The one experiment left, and it needs a window
+
+1. **Stop vLLM.** Then re-run `results/20260824-seqs32-nccl/agbench.py` with
+   `NCCL_DMABUF_ENABLE=1` and `NCCL_NET_GDR_LEVEL=5`. If allgather rises from 0.5 GB/s
+   toward 10-20 GB/s, that is the fix and it is a config change.
+2. Check whether `nvidia-peermem` failed to load because the GPU driver was installed
+   before MLNX_OFED — a documented GB10 failure mode that forces a GPU->CPU->NIC bounce
+   costing "3-5x" in distributed work.
+3. Only then consider CUDA 13.0 Update 2 (documented cuBLAS BF16/FP8 GEMM improvements on
+   DGX Spark) — a single-digit lever, not a 2x one.
+
+**Decode is verified unaffected throughout:** cc=1 median **82.5** tok/s (baseline 80.4),
+cc=16 median **340.1**, both at 2% spread.

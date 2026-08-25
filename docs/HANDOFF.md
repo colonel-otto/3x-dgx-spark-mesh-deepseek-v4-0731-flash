@@ -152,7 +152,8 @@ Full rollback procedure in the operator's `docs\dsv4-2node-fallback.md`.
 | `GPU_MEMORY_UTILIZATION=0.80` | **Shipped 2026-08-24.** +14% prefill at 78K vs 0.85, decode unaffected. Costs 17% of KV pool. |
 | TP=3 attention head padding | **50% waste is real, but NOT prefill-limiting.** Kernel widths {8,16,32,64,128}; 24 heads/rank snap to 32. But TP=2 and TP=3 measure IDENTICAL prefill at 8K (1,081 both), so this is not the prefill bottleneck. |
 | TP=2 as a prefill fallback | **Rejected 2026-08-25.** Same prefill as TP=3, but decode cc=1 drops 82.4 -> 70.1 and KV 4.48M -> 1.82M. TP=3 is correct. |
-| Prefill gap cause | **Isolated 2026-08-25 to hardware.** Every software variable eliminated by measurement with upstream's own harness. GPUs hold 82% of rated SM clock under load, unthrottled. |
+| Prefill gap cause | **Localised 2026-08-25 to a fixed ~470 us/token communication cost.** Flat across a 32x prompt-size range. Every software variable AND GPU compute/clocks/bandwidth eliminated by measurement. |
+| GB10 GPU health | **Verified healthy.** 93.3 TFLOP/s bf16, 236 GB/s memory, 2,470 MHz vs a 2,418 MHz application-clock spec. An earlier claim of '82% of rated' was WRONG — 3,003 MHz is a hardware ceiling, not the operating spec. |
 | Upstream harness on our cluster | **Reproduces our numbers.** anemll's benchmark_prefill.py gives 1,075 tok/s @ 8K (server timer, 0.3% agreement with client). Not a measurement artifact. |
 | Aggregate throughput as an MTP signal | **Useless** — every level sits inside its own run spread. Use the acceptance counters. |
 
@@ -223,30 +224,42 @@ These are not style preferences. Each was learned by getting a wrong answer firs
 ## 5. Next measurements — in priority order
 
 > **START HERE: §5a and §5c lead #1 CLOSED. §5c prefill: one fix shipped, parity NOT
-> reached, cause isolated to HARDWARE (GPU clocks at 82% of rated).**
-> See [`SEQS32-AND-NCCL-FABRIC.md`](SEQS32-AND-NCCL-FABRIC.md) and
-> [`PREFILL-MEASURED.md`](PREFILL-MEASURED.md) — read all three addenda.
+> reached, cause localised to a fixed per-token communication cost.**
+> Read [`PREFILL-MEASURED.md`](PREFILL-MEASURED.md) — ALL FOUR addenda — and
+> [`SEQS32-AND-NCCL-FABRIC.md`](SEQS32-AND-NCCL-FABRIC.md).
 >
 > - seqs=32 **crashes the engine**; rolled back to 16.
-> - `NCCL_IB_MERGE_NICS` is a **measured no-op**.
 > - **Shipped: `GPU_MEMORY_UTILIZATION` 0.80** (+14% prefill at 78K, decode unaffected).
-> - **anemll's own harness, run unmodified on our cluster, reproduces our numbers**
->   (server and client agree to 0.3%). Every software variable is now eliminated by
->   measurement: harness, caching, topology, head padding, vLLM version, image, model
->   checkpoint, seqs, gpu-mem, indexer chunk size, prompt content.
-> - **Flat ~2x gap at every depth**: ours 1,075 tok/s @ 8K vs their published 2,184.
+> - **The comparison is now EXACT**: upstream's harness, run unmodified, produced a
+>   **byte-identical `token_pool_sha256`** to their published run. Same prompts, same
+>   vLLM version string, same image. Ours 1,075 tok/s @ 8K vs their 2,184.
+> - **Eliminated by measurement:** harness, prefix caching, TP=2 vs TP=3, head padding,
+>   vLLM version, image, checkpoint, `MAX_MODEL_LEN` (350K vs 1M), `MTP_NUM_TOKENS`
+>   (1 vs 5), seqs, gpu-mem, indexer chunk MB, prompt content, GPU compute
+>   (**93.3 TFLOP/s bf16 = healthy**), GPU clocks (**2,470 MHz vs a 2,418 MHz
+>   application spec — at spec, NOT throttled**), memory bandwidth (**236 GB/s of a
+>   273 GB/s spec**).
 >
-> **THE FINDING:** all three GB10s hold **~2,470 MHz under load against a rated 3,003
-> MHz (82%)**, at 96% utilization, 43 W, with **no throttle reason flagged**.
-> `nvidia-smi -lgc 3003` is accepted but does not raise the clock. That is 1.22x of the
-> 1.97x gap — not all of it, but the only non-software difference found.
+> **THE LEAD:** the gap is a **flat ~450-508 us PER TOKEN** across a 32x range of prompt
+> sizes. A compute deficit scales with work; a constant per-token cost does not. This is
+> a communication signature. Our 3-rank allgather measures **~0.5 GB/s on live RDMA**
+> (`Using network IB`, 768 channels via NET/IB/2) against published GB10 figures of
+> 18-23 GB/s with GPUDirect and 10-12 GB/s on socket fallback — an order of magnitude
+> below even the fallback.
 >
-> **NEXT STEP: ask anemll what SM clock their GB10s hold under prefill.** If theirs run
-> near 3,003 and ours cap at 2,480, this is a platform/firmware question, not a vLLM one.
-> Then check BIOS/power profile (43 W under full load is low) and driver
-> (ours: 580.173.02 / CUDA 13.0).
+> **NEXT EXPERIMENT (needs a maintenance window):** stop vLLM, then re-run
+> `results/20260824-seqs32-nccl/agbench.py` with `NCCL_DMABUF_ENABLE=1` and
+> `NCCL_NET_GDR_LEVEL=5`. Live vLLM holds ~119/121 GiB so a second CUDA context cannot
+> be created on GB10 — that is why this is not already answered. Also check whether
+> `nvidia-peermem` failed to load (GPU driver installed before MLNX_OFED is a documented
+> GB10 failure costing 3-5x in distributed work).
+>
+> **CAUTION:** `MTP_NUM_TOKENS=0` is invalid (vLLM rejects it; the service fails to
+> start). Use 1 as the floor. MTP=1 leaves prefill unchanged but **collapses decode to
+> 46.7 tok/s** — MTP is load-bearing for decode only.
 >
 > The cluster is **idle, healthy, and serving**: TP=3, 1M context, MTP=5, seqs=16, 0.80.
+> Decode verified: cc=1 82.5 tok/s, cc=16 340.1, both 2% spread.
 
 ### 5a. `MAX_NUM_SEQS=32` → issue #10 — **CLOSED 2026-08-24: REJECTED**
 
