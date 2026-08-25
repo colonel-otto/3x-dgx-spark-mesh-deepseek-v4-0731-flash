@@ -1,6 +1,6 @@
 # Deep-concurrency re-run on healthy fabric — 2026-08-25
 
-Re-runs the 2026-08-21 "4 × 200,000-token" test that [issue #15](../../../../issues/15)
+Re-runs the 2026-08-21 "4 × 200,000-token" test that [issue #15](../../issues/15)
 flagged as suspect, because the original was taken while spark1's RDMA fabric ran at
 ~15% of its sibling's collective bandwidth.
 

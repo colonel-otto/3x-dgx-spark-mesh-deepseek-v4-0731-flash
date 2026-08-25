@@ -1,5 +1,16 @@
 # TP=3 tuning sweep — DeepSeek-V4-Flash on 3× DGX Spark
 
+> [!WARNING]
+> **PROVISIONAL and FROZEN.** Measured 2026-08-21 on degraded fabric ([#14](../../issues/14))
+> at the superseded `MAX_MODEL_LEN=460800` / `MAX_NUM_SEQS=8` / `GPU_MEMORY_UTILIZATION=0.85`
+> / `MTP_NUM_TOKENS=4` profile.
+>
+> The settled profile is **1M / seqs=16 / 0.80 / MTP=5** — see
+> [`DECISIONS.md`](DECISIONS.md) and [`../config/tp3.env.example`](../config/tp3.env.example).
+> This page is retained as the record of how those values were first explored.
+> 
+> Itemized with every other bad measurement in [`DEGRADED-DATA-CATALOGUE.md`](DEGRADED-DATA-CATALOGUE.md).
+
 Incremental, controlled measurements on the 3-node TP=3 deployment. Every row is the
 same harness, checkpoint, prompt, `temperature=0`, 256 output tokens, on otherwise
 identical software.

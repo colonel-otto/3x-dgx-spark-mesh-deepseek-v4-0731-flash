@@ -1,5 +1,17 @@
 # Why three DGX Sparks instead of two
 
+> [!WARNING]
+> **PROVISIONAL — measured 2026-08-21 on degraded fabric.** One node was running at ~15%
+> of its collective bandwidth with zero error indicators ([#14](../../issues/14)), and it
+> sat in the 3-node arm, so the handicap fell disproportionately here.
+>
+> **The direction survived a healthy-fabric re-run; the magnitudes moved.** The re-run also
+> found a **crossover near cc=16** that was invisible at the time: three nodes win
+> per-stream, two win batch aggregate. Quote the table in
+> [`../README.md`](../README.md#is-the-third-node-worth-it), not the numbers below.
+> 
+> Itemized with every other bad measurement in [`DEGRADED-DATA-CATALOGUE.md`](DEGRADED-DATA-CATALOGUE.md).
+
 The case for the third node, with the measurements behind it — and the cases where it
 is **not** the right answer.
 
