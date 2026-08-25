@@ -152,6 +152,8 @@ Full rollback procedure in the operator's `docs\dsv4-2node-fallback.md`.
 | `GPU_MEMORY_UTILIZATION=0.80` | **Shipped 2026-08-24.** +14% prefill at 78K vs 0.85, decode unaffected. Costs 17% of KV pool. |
 | TP=3 attention head padding | **50% waste is real, but NOT prefill-limiting.** Kernel widths {8,16,32,64,128}; 24 heads/rank snap to 32. But TP=2 and TP=3 measure IDENTICAL prefill at 8K (1,081 both), so this is not the prefill bottleneck. |
 | TP=2 as a prefill fallback | **Rejected 2026-08-25.** Same prefill as TP=3, but decode cc=1 drops 82.4 -> 70.1 and KV 4.48M -> 1.82M. TP=3 is correct. |
+| Prefill gap cause | **Isolated 2026-08-25 to hardware.** Every software variable eliminated by measurement with upstream's own harness. GPUs hold 82% of rated SM clock under load, unthrottled. |
+| Upstream harness on our cluster | **Reproduces our numbers.** anemll's benchmark_prefill.py gives 1,075 tok/s @ 8K (server timer, 0.3% agreement with client). Not a measurement artifact. |
 | Aggregate throughput as an MTP signal | **Useless** — every level sits inside its own run spread. Use the acceptance counters. |
 
 Full detail and evidence: [`MTP5-1M-AND-UPSTREAM-COMPARISON.md`](MTP5-1M-AND-UPSTREAM-COMPARISON.md).
@@ -220,27 +222,29 @@ These are not style preferences. Each was learned by getting a wrong answer firs
 
 ## 5. Next measurements — in priority order
 
-> **START HERE: §5a and §5c lead #1 are CLOSED. §5c prefill is PARTLY closed — one
-> fix shipped, parity NOT reached, and the remaining cause is unidentified.**
+> **START HERE: §5a and §5c lead #1 CLOSED. §5c prefill: one fix shipped, parity NOT
+> reached, cause isolated to HARDWARE (GPU clocks at 82% of rated).**
 > See [`SEQS32-AND-NCCL-FABRIC.md`](SEQS32-AND-NCCL-FABRIC.md) and
-> [`PREFILL-MEASURED.md`](PREFILL-MEASURED.md) (read BOTH addenda).
+> [`PREFILL-MEASURED.md`](PREFILL-MEASURED.md) — read all three addenda.
 >
 > - seqs=32 **crashes the engine**; rolled back to 16.
 > - `NCCL_IB_MERGE_NICS` is a **measured no-op**.
 > - **Shipped: `GPU_MEMORY_UTILIZATION` 0.80** (+14% prefill at 78K, decode unaffected).
-> - **Falsified by measurement:** seqs=6, TP=2-vs-TP=3 (identical prefill!), the
->   `VLLM_SPARSE_INDEXER_MAX_LOGITS_MB` 512 knob, prompt content, and the "server
->   prefills faster than the client sees" theory (server counters agree with the client).
-> - **The 50%% head-padding tax is real in the kernel but is NOT prefill-limiting** —
->   TP=2 and TP=3 measure identical at 8K. An earlier claim to the contrary was wrong.
+> - **anemll's own harness, run unmodified on our cluster, reproduces our numbers**
+>   (server and client agree to 0.3%). Every software variable is now eliminated by
+>   measurement: harness, caching, topology, head padding, vLLM version, image, model
+>   checkpoint, seqs, gpu-mem, indexer chunk size, prompt content.
+> - **Flat ~2x gap at every depth**: ours 1,075 tok/s @ 8K vs their published 2,184.
 >
-> **THE OPEN QUESTION:** we prefill at ~920-1,080 tok/s, flat. anemll publish **2,184
-> tok/s at 8K on the image we run**, and their own A/B says our vLLM version is the
-> faster one. That ~2x is unexplained by anything tested.
+> **THE FINDING:** all three GB10s hold **~2,470 MHz under load against a rated 3,003
+> MHz (82%)**, at 96% utilization, 43 W, with **no throttle reason flagged**.
+> `nvidia-smi -lgc 3003` is accepted but does not raise the clock. That is 1.22x of the
+> 1.97x gap — not all of it, but the only non-software difference found.
 >
-> **NEXT EXPERIMENT: run anemll's `benchmarks/benchmark_prefill.py` unmodified against
-> our endpoint** (§4.6, "run upstream harnesses unmodified"). It measures server-side
-> with warm-up excluded. That is the only remaining apples-to-apples comparison.
+> **NEXT STEP: ask anemll what SM clock their GB10s hold under prefill.** If theirs run
+> near 3,003 and ours cap at 2,480, this is a platform/firmware question, not a vLLM one.
+> Then check BIOS/power profile (43 W under full load is low) and driver
+> (ours: 580.173.02 / CUDA 13.0).
 >
 > The cluster is **idle, healthy, and serving**: TP=3, 1M context, MTP=5, seqs=16, 0.80.
 

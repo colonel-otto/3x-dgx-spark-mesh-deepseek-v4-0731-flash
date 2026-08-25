@@ -1,0 +1,39 @@
+target http://localhost:8100 model deepseek-v4-flash-0731 version 0.25.2.dev0+g752a3a504.d20260714 label ours-tp3
+warmup 1,024 tokens: TTFT 9.450s
+shape warmup 1,024 tokens (1/1): TTFT 0.979s
+shape warmup 2,048 tokens (1/1): TTFT 2.125s
+shape warmup 4,096 tokens (1/1): TTFT 6.037s
+shape warmup 8,192 tokens (1/1): TTFT 10.224s
+shape warmup 16,384 tokens (1/1): TTFT 15.235s
+shape warmup 32,768 tokens (1/1): TTFT 38.652s
+=== 1,024 input tokens ===
+  trial=1: server=1063.0 tok/s | client=1045.1 tok/s | TTFT=0.980s | computed=1024
+  trial=2: server=1060.2 tok/s | client=1039.9 tok/s | TTFT=0.985s | computed=1024
+  trial=3: server=1064.7 tok/s | client=1048.2 tok/s | TTFT=0.977s | computed=1024
+=== 2,048 input tokens ===
+  trial=1: server=1112.9 tok/s | client=1108.3 tok/s | TTFT=1.848s | computed=2048
+  trial=2: server=1106.6 tok/s | client=1101.6 tok/s | TTFT=1.859s | computed=2048
+  trial=3: server=1118.7 tok/s | client=1114.3 tok/s | TTFT=1.838s | computed=2048
+=== 4,096 input tokens ===
+  trial=1: server=1111.8 tok/s | client=1108.7 tok/s | TTFT=3.694s | computed=4096
+  trial=2: server=1114.8 tok/s | client=1111.6 tok/s | TTFT=3.685s | computed=4096
+  trial=3: server=1112.6 tok/s | client=1106.1 tok/s | TTFT=3.703s | computed=4096
+=== 8,192 input tokens ===
+  trial=1: server=1078.4 tok/s | client=1076.7 tok/s | TTFT=7.608s | computed=8192
+  trial=2: server=957.7 tok/s | client=955.3 tok/s | TTFT=8.575s | computed=8192
+  trial=3: server=1074.9 tok/s | client=1071.9 tok/s | TTFT=7.643s | computed=8192
+=== 16,384 input tokens ===
+  trial=1: server=1078.3 tok/s | client=1076.9 tok/s | TTFT=15.214s | computed=16384
+  trial=2: server=1013.2 tok/s | client=1011.3 tok/s | TTFT=16.200s | computed=16384
+  trial=3: server=1078.5 tok/s | client=1077.1 tok/s | TTFT=15.211s | computed=16384
+=== 32,768 input tokens ===
+  trial=1: server=1034.3 tok/s | client=1033.2 tok/s | TTFT=31.715s | computed=32768
+  trial=2: server=1036.6 tok/s | client=1035.5 tok/s | TTFT=31.646s | computed=32768
+  trial=3: server=1031.5 tok/s | client=1030.4 tok/s | TTFT=31.800s | computed=32768
+=== MEDIANS ===
+   1,024: server 1063.0 tok/s | client 1045.1 tok/s | TTFT 0.980s
+   2,048: server 1112.9 tok/s | client 1108.3 tok/s | TTFT 1.848s
+   4,096: server 1112.6 tok/s | client 1108.7 tok/s | TTFT 3.694s
+   8,192: server 1074.9 tok/s | client 1071.9 tok/s | TTFT 7.643s
+  16,384: server 1078.3 tok/s | client 1076.9 tok/s | TTFT 15.214s
+  32,768: server 1034.3 tok/s | client 1033.2 tok/s | TTFT 31.715s
