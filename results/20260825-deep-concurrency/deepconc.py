@@ -72,12 +72,19 @@ INSTRUCTION = ("Return exactly 128 numbered lowercase English words, then stop."
 MAX_TOKENS = 128
 
 
-# Words-per-token for this filler, calibrated against the engine's own reported
-# prompt_tokens: a 1.3 tokens/word estimate produced 185,529 tokens for a
-# 200,000 request (0.928x). Measure, don't guess -- the depth is the independent
-# variable of this whole test, so an 8% shortfall would not be a re-run of the
-# 2026-08-21 rows at all.
-TOKENS_PER_WORD = 1.3 / 0.928
+# Tokens per word for this filler, measured against the engine's own /tokenize
+# endpoint rather than estimated: 1.2056, flat across 150K-240K (107,091 words
+# -> 129,114 tokens; 142,786 -> 172,146; 171,346 -> 206,579).
+#
+# Depth is the independent variable of this whole test, so getting it wrong is
+# not cosmetic -- a run at 172K is not a re-run of the 2026-08-21 200K rows.
+# Note this value DIVIDES the target: raising it shortens the prompt.
+TOKENS_PER_WORD = 1.2056
+
+# The measured ratio is for the raw prompt. The chat template adds a small fixed
+# overhead on top, so the engine reports slightly more than this predicts; the
+# run records prompt_tokens_actual from the engine so the real depth is always
+# on the record rather than inferred.
 
 
 def build_prompt(depth_tokens, nonce, rotation):
