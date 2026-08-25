@@ -1,120 +1,178 @@
-# Why our bandwidth number looked 3-6x too low
+# The bandwidth gap: what it is, and what it is not
 
-**Short answer: we compared two different measurements.** The gap is mostly, possibly
-entirely, an artifact of collective convention and message size. Before chasing a fabric
-problem, run [`../scripts/bwsweep.py`](../scripts/bwsweep.py) and compare like with like.
+> [!IMPORTANT]
+> **This page was rewritten 2026-08-25 after source verification refuted its first
+> version.** That version argued the gap was mostly a metric-convention artifact.
+> **It was wrong** — published DGX Spark figures use the *same* collective and the
+> *same* formula we do. The gap is real. Corrected analysis below.
+
+**The gap is ~3.2x at matched size and rank count, and it is not a bookkeeping error.**
 
 ---
 
-## What we were comparing
+## Verified: our formula matches theirs exactly
 
-| source | topology | collective | message | reported |
-|---|---|---|---|---:|
-| [NVIDIA forum (Turtle7777)](https://forums.developer.nvidia.com/t/test-the-sample-about-connect-three-dgx-spark-in-a-ring-topology/365160) | 3-Spark ring | allgather | **16 GB** | 20.84 GB/s |
-| [route179.dev](https://route179.dev/2026/07/21/dgx-spark-nccl-roce-benchmarking/) | **2**-Spark | allgather | not stated | 22.1 GB/s |
-| **ours** | 3-Spark ring | allgather | **67 MB** | **5.80 GB/s** busbw |
-
-Two variables differ, and **both** move the number in the same direction.
-
-## Confound 1 — convention (up to 3.2x)
-
-For all_gather with input `n` bytes per rank across `w` ranks:
+From [nccl-tests `doc/PERFORMANCE.md`](https://github.com/NVIDIA/nccl-tests/blob/master/doc/PERFORMANCE.md):
 
 ```
-algbw = n / dt                  # "how fast my input moved"
-busbw = n * (w-1)/w / dt        # "wire rate each NIC sustains"
+algbw = S/t
+AllGather:  busbw = algbw * (n-1)/n
+AllReduce:  busbw = algbw * 2*(n-1)/n     <- the 2x applies ONLY to all_reduce
 ```
 
-`nccl-tests all_reduce_perf` busbw carries an **extra factor of 2**, because ring
-all-reduce is reduce-scatter + all-gather. So one wire speed reads three ways:
+Our harness computes `nbytes * (world-1)/world / dt` — the AllGather definition, exactly.
+And the DGX Spark community overwhelmingly publishes **`all_gather_perf` busbw**, not
+all_reduce. **There is no factor-of-2 to reconcile.**
 
-| convention | our w=2 | our w=3 |
+## The closest apples-to-apples comparison
+
+[Forum 365160](https://forums.developer.nvidia.com/t/test-the-sample-about-connect-three-dgx-spark-in-a-ring-topology/365160) — **3-Spark ring**, `all_gather_perf`, same topology as ours:
+
+| | message | busbw |
 |---|---:|---:|
-| all_gather **busbw** ← what we report | 9.70 | **5.80** |
-| all_gather **algbw** | **19.40** | 8.70 |
-| all_reduce **busbw** equivalent | 19.40 | 11.60 |
+| forum, 3-rank ring | 32 MB | **18.70 GB/s** |
+| forum, 3-rank ring | 16 GB | 20.75 |
+| **ours, 3-rank ring** | 67 MB | **5.80** |
 
-**Our 2-rank algbw is 19.40 GB/s — inside the 18–21 band exactly.** Same fabric, same
-run, different bookkeeping. We report the most conservative of the three.
+**~3.2x at comparable size.** Critically, that reporter ran **`NCCL_IB_MERGE_NICS=0`** —
+so the deficit is not purely an HCA-count story.
 
-## Confound 2 — message size (238x)
+## Corrected: the real ceiling is ~24 GB/s, not 48.5
 
-Our largest point is a **67 MB** input; the forum figure used **16 GB**.
+An earlier estimate here — "4 HCAs = 400 Gb/s line = 48.5 GB/s theoretical" — is **not
+supported and is contradicted by the PCIe evidence.** From
+[forum 350417 post 61](https://forums.developer.nvidia.com/t/connectx-7-nic-in-dgx-spark/350417/61):
 
-NCCL bandwidth is `time = latency + bytes/bandwidth`. Small messages are latency-bound;
-throughput only asymptotes toward line rate at large sizes. **A 67 MB allgather is nowhere
-near the asymptote on a 400 Gb/s fabric**, so its number is structurally low as a measure
-of peak.
+> "both 200G physical ports are sharing **two PCIe Gen5 x4 lanes**"
+> "The theoretical max of a single x4 lane is around 126 Gbit/sec. The theoretical max of
+> using both interfaces is **252 Gbit/sec**."
 
-This was not a sloppy choice — it was the *right* size for the question the harness was
-built for. `agbench.py` mirrors the vLLM MTP allgather shape:
+Measured raw RDMA tops out near 196 Gb/s ≈ **24.5 GB/s**, and the best observed
+`all_gather` busbw (23.74–24.32) essentially saturates it. **PCIe binds before the wire
+does.** The realistic target is ~24 GB/s, which makes 18–21 near-optimal rather than
+exotic.
 
-| shape | input per rank |
-|---|---:|
-| MTP allgather, `seqs=16` | **4.14 MB** |
-| MTP allgather, `seqs=32` | 8.27 MB |
+## Where our number sits
 
-The error was **reusing a workload-shaped harness as a peak-bandwidth harness**, then
-comparing its top point against someone else's peak-bandwidth figure.
+| config | ours | published comparison |
+|---|---:|---|
+| 2-rank | 9.70 | 18.92 @64MiB (2 HCAs), 13.49 @16G (**1 HCA**) |
+| 3-rank ring | 5.80 | 18.70 @32MB |
 
-## What we did not think of
+**Our 2-rank sits below even the published single-HCA figure**, and our 3-rank gap (3.2x)
+is *worse* than our 2-rank gap (2.0x). A deficit that grows with rank count points at
+**ring topology handling**, not raw link speed.
 
-1. **We never ran the collective at the size the comparison used.** Not once. The gap was
-   treated as a hardware mystery for days without matching the independent variable.
-2. **We never stated our convention when comparing.** Neither did the sources. `busbw` and
-   `algbw` differ by `w/(w-1)`, and all_reduce adds another 2x.
-3. **The 2-node sources are not comparable to a 3-node ring at all.** route179 is 2-Spark.
-   At `w=2` each rank has one peer and both ports face it; at `w=3` each rank relays for a
-   neighbour and the two ports face *different* peers. Different topology, different
-   number.
-4. **We treated "peak fabric bandwidth" as the goal.** It is not our workload. At 4.14 MB
-   the MTP allgather is **latency-bound**, and peak bandwidth at 16 GB says nothing about
-   it. Optimizing toward a number that does not govern our performance is wasted effort.
-5. **The efficiency figure was flat at ~20% of line in both configs** (2 HCA and 4 HCA).
-   A hard ceiling does not scale linearly — and doubling HCAs doubled throughput
-   (4.73 → 9.70, 2.05x). That linearity was evidence *against* a wall, and we read it as
-   evidence of one.
+## The lead this surfaces: HCA *pairing*, not HCA *count*
 
-## What is genuinely lower at w=3, and is not a bug
+Every working published config merges the **two PCIe domains of the same physical port**:
 
-- **Ring relaying.** At `w=3` each rank forwards for a neighbour; per-rank egress rises.
-- **No GPUDirect on GB10** — architecturally impossible, not merely absent. Every byte
-  bounces through system memory over PCIe. A fixed tax no flag removes.
-- **PCIe Gen5 x4 per ConnectX device** ≈ 14.4 GB/s practical per device.
-- **No redundant path in a 3-node ring** — the slowest link paces the whole collective.
-
-## The test that settles it
-
-[`../scripts/bwsweep.py`](../scripts/bwsweep.py) sweeps 4 MiB → 4 GiB and prints **all
-three conventions on every line**, so a published figure can be matched rather than
-guessed at.
-
-```bash
-# engine STOPPED -- needs tens of GiB of buffer
-RANK=$i WORLD_SIZE=3 INIT_METHOD=tcp://<rank0-fabric>:29555 \
-  TAG=4hca MAX_GIB=4 python3 scripts/bwsweep.py
+```
+NCCL_IB_HCA==rocep1s0f1,roceP2p1s0f1        # note: both "f1"
+NCCL_IB_MERGE_NICS=1
+NCCL_IB_GID_INDEX=3
 ```
 
-Run at `w=2` and `w=3`. Then compare **only** against a source that states its collective,
-size, rank count, and convention.
+Per forum 350417 the interfaces enumerate as *port0-half1, port1-half1, port0-half2,
+port1-half2*, and aggregation should be built **between the halves of the same port.**
 
-### What each outcome means
+Our own `NCCL_DEBUG` (2-HCA era) shows the opposite grouping:
 
-| Result at 1–4 GiB | Reading |
-|---|---|
-| busbw climbs toward ~15–20 GB/s | ✅ **No fabric problem.** The gap was size + convention. Close [#11](../../issues/11) |
-| busbw plateaus near 5.8 GB/s | ⚠️ A real ceiling exists. Now it is worth chasing — and the sweep shows *where* it binds |
-| w=2 scales but w=3 does not | ⚠️ Ring-specific: relaying or routing, not raw link speed |
+```
+NET/IB : Made virtual device [2] name=rocep1s0f0+rocep1s0f1 speed=400000 ndevs=2
+```
 
-**Whatever it shows, the small-message end is the one that governs our serving.** If
-4 MB is latency-bound, peak bandwidth is the wrong target and `NCCL_IB_MERGE_NICS`,
-buffer sizes and channel counts matter more than line rate.
+That merges `f0` with `f1` — **two different physical ports.** On a 2-node setup both
+ports face the same peer, so it is harmless. **On a 3-node ring, port 0 faces one
+neighbour and port 1 faces the other**, so the merged "400G" virtual device spans two
+different peers. NCCL believes it has a pipe to each neighbour that does not exist.
 
-## The transferable lesson
+That is a coherent mechanism for a *ring-specific* deficit, and it predicts exactly what
+we observe: the 3-rank gap being worse than the 2-rank gap.
 
-> Before treating a gap as a hardware defect, **match the independent variable.** A
-> benchmark built to answer "does my workload run well" cannot be reused to answer
-> "what is this hardware's peak" — and comparing across that boundary manufactures
-> mysteries.
+**We have never set `NCCL_IB_MERGE_NICS` or `NCCL_IB_GID_INDEX`, and we have never tested
+same-port pairing.**
 
-**Related:** [#11](../../issues/11) · [`../results/20260825-upper-mesh/`](../results/20260825-upper-mesh) · [`POSTMORTEM-2026-08-25.md`](POSTMORTEM-2026-08-25.md)
+### On the existing "MERGE_NICS is falsified" note
+
+[`SEQS32-AND-NCCL-FABRIC.md`](SEQS32-AND-NCCL-FABRIC.md) §2 records MERGE_NICS as a no-op —
+"measured, both ways, same day — do not re-open." **That measurement ran at 0.47–0.52
+GB/s**, i.e. entirely on the degraded fabric, where one bad link paced everything and no
+flag could have shown a difference. It does not constrain healthy hardware, and it never
+tested same-port pairing. **Re-open it.**
+
+## What message size does and does not explain
+
+Size matters, but far less than this page first claimed. route179's curve (2 ranks,
+2 HCAs merged):
+
+| message | busbw |
+|---|---:|
+| 512 MB | 18.39 |
+| 1 GB | 19.93 |
+| 16 GB | 23.74 |
+
+**+29% from 512 MB to 16 GB** — real, but nowhere near 3x. And the forum's 3-rank ring
+reached **18.70 at 32 MB**, a *smaller* message than our 67 MB point. **Size does not
+rescue us.**
+
+Still worth fixing the methodology: our sweep tops out at 67 MB because `agbench.py` was
+built to mirror the vLLM MTP allgather shape (`seqs16` = 4.14 MB), not to find peak
+bandwidth. [`../scripts/bwsweep.py`](../scripts/bwsweep.py) extends to 4 GiB and prints
+all three conventions per line.
+
+## Confirmed: no GPUDirect RDMA, and it is a fixed tax
+
+`GPU Direct RDMA Disabled for HCA 0/1` appears in our logs and in every published one.
+NVIDIA states it is not implemented on Spark. Every byte bounces through system memory
+over PCIe, and independent reporting attributes the gap between raw RDMA (~24.6 GB/s) and
+NCCL (~9–10 GB/s) to exactly this. **No flag removes it** — but it applies to the
+published numbers too, so it does not explain a gap *against* them.
+
+## What we got wrong
+
+1. **Claimed the gap was a convention artifact.** It is not — same collective, same
+   formula, verified against nccl-tests source.
+2. **Estimated a 48.5 GB/s ceiling from line rate.** PCIe Gen5 x4 shared across both ports
+   caps it near 24.
+3. **Over-weighted message size.** Worth ~29%, not 3x. The forum's 3-rank number at a
+   *smaller* size than ours refutes the size explanation directly.
+4. **Never tested the pairing the working configs use.** We merge across ports; they merge
+   within a port. On a ring those are not equivalent.
+5. **Treated a degraded-fabric measurement as a permanent falsification.** The MERGE_NICS
+   result was taken at 0.5 GB/s, where nothing could have shown an effect.
+
+**The one thing that survives from the first version:** always state collective, message
+size, rank count and convention when quoting a bandwidth number. That discipline is what
+made this correction possible.
+
+## The test
+
+One variable, same day, same harness:
+
+1. **2 ranks, same-port pairing, at 16 G:**
+   `NCCL_IB_HCA==rocep1s0f1,roceP2p1s0f1`, `NCCL_IB_MERGE_NICS=1`, `NCCL_IB_GID_INDEX=3`.
+   Landing near 24 GB/s means we were simply mis-paired, and there is no anomaly.
+2. **Then add the third rank** with `NCCL_IB_SUBNET_AWARE_ROUTING=1` and
+   `NCCL_NET_PLUGIN=none`, to test the ring case separately.
+3. Sweep sizes with [`../scripts/bwsweep.py`](../scripts/bwsweep.py) so the **curve**, not
+   one point, is the comparison.
+
+Our live config currently sets all four HCAs ordered as port-pairs. **Whether NCCL then
+builds same-port or cross-port virtual devices must be read from `NCCL_DEBUG=INFO`, not
+assumed** — the `Made virtual device` line names exactly what it merged.
+
+## Sources
+
+- [nccl-tests PERFORMANCE.md](https://github.com/NVIDIA/nccl-tests/blob/master/doc/PERFORMANCE.md) — the formulas
+- [Forum 365160](https://forums.developer.nvidia.com/t/test-the-sample-about-connect-three-dgx-spark-in-a-ring-topology/365160) — 3-rank ring, 18.70 @32MB, MERGE_NICS=0
+- [Forum 350417](https://forums.developer.nvidia.com/t/connectx-7-nic-in-dgx-spark/350417/61) — PCIe lanes, enumeration, no GPUDirect
+- [Forum 368025](https://forums.developer.nvidia.com/t/nccl-all-gather-performance-halved-on-dual-spark-setup-connectx-7-after-msi-firmware-update-solved-via-downgrade/368025) — 13.49 (1 HCA) vs 24.32 (2 HCA)
+- [route179.dev](https://route179.dev/2026/07/21/dgx-spark-nccl-roce-benchmarking/) — size curve, merge config
+- [note.com tsuru_mitsu](https://note.com/gb10_tsurumitsu/n/n1c5efc62a92e?hl=en) — 18.92 @64MiB, raw RDMA ceiling
+
+**Not verified:** NVIDIA publishes **no** numeric NCCL target for DGX Spark — the
+clustering doc and the nccl playbook both contain none. Every 18–21 figure is
+community-measured. No published measurement uses all four HCAs.
+
+**Related:** [#11](../../issues/11) · [`SEQS32-AND-NCCL-FABRIC.md`](SEQS32-AND-NCCL-FABRIC.md) · [`../results/20260825-upper-mesh/`](../results/20260825-upper-mesh)

@@ -50,9 +50,9 @@ speed knob only. Raising it cannot buy accuracy.
 
 | Quantity | Value | Note |
 |---|---|---|
-| Healthy pair busbw @64MiB | **~4.6 GB/s** | ~0.7 means a degraded node — reboot it |
+| Healthy pair busbw @64MiB | **~4.6 GB/s** (2 HCA) / **~9.7** (4 HCA) | ~0.7 means a degraded node — reboot it |
 | Healthy 3-rank busbw | **2.85–3.25 GB/s** | Two HCAs. Supersedes the 0.49 figure, which was 6.6x pessimistic |
-| 3-rank busbw, **four HCAs** | **5.80 GB/s** | Upper mesh addressed. Validated under a live engine, `rdma:*` clean. **This is allgather busbw** — see the note below |
+| 3-rank busbw, **four HCAs** | **5.80 GB/s** | Upper mesh addressed, live-gate clean. Still **~3.2x below** a published ring — see the note below |
 | KV envelope, DeepSeek-V4 | **584 B/token** | 448 NoPE + 128 RoPE + 8 fp8 scale. **Identical for `fp8_ds_mla` and `nvfp4_ds_mla`** |
 | Tokens per word, filler prompt | **1.2056** | Measured against `/tokenize`, flat 150K–240K. **Do not estimate this** |
 | Idle TTFT penalty | **~22 ms** | Why a keep-alive ping is not worth it |
@@ -76,14 +76,23 @@ speed knob only. Raising it cannot buy accuracy.
 ## A note on comparing bandwidth numbers
 
 Our figures are **`all_gather` busbw**: `nbytes * (world-1)/world / dt`, where `nbytes` is
-the **per-rank input**. That convention matters enormously when comparing against a
-published number, because the same physical wire speed can be quoted three ways:
+the per-rank input. That is the [nccl-tests](https://github.com/NVIDIA/nccl-tests/blob/master/doc/PERFORMANCE.md)
+AllGather definition, and it is **the same convention published DGX Spark figures use** —
+so those comparisons are valid as stated. (The 2x factor applies to *all_reduce* busbw
+only; do not apply it here.)
 
-| convention | world=2 | world=3 |
-|---|---:|---:|
-| `all_gather` **busbw** (what we report) | 9.70 | 5.80 |
-| `all_gather` **algbw** (`= busbw * w/(w-1)`) | **19.40** | 8.70 |
-| `all_reduce` **busbw** (`= 2x` allgather busbw) | **19.40** | 11.60 |
+Always state **collective, message size, rank count, and algbw-vs-busbw** when quoting a
+bandwidth number. Without those four, a figure cannot be compared to.
 
-A **3.2x spread from bookkeeping alone.** Always state collective, message size, rank
-count, and algbw-vs-busbw before comparing.
+| our measurement | value | closest published |
+|---|---:|---|
+| 2-rank busbw | 9.70 | 18.92 @64MiB (2 HCAs) |
+| 3-rank busbw | 5.80 | **18.70 @32MB** (3-rank ring) |
+
+**We are ~3.2x below a published ring at a smaller message size.** Open as
+[#11](../../issues/11); the live lead is HCA *pairing* — see
+[`BANDWIDTH-COMPARISON.md`](BANDWIDTH-COMPARISON.md).
+
+**Ceiling:** PCIe Gen5 x4 is shared across both ports (~252 Gb/s), and measured raw RDMA
+tops out near 196 Gb/s ≈ **24.5 GB/s**. Line-rate arithmetic (400 Gb/s → 48.5 GB/s)
+**overstates it** and should not be used.
