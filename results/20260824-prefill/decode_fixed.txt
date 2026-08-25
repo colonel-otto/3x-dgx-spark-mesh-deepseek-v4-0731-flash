@@ -1,0 +1,16 @@
+target : http://localhost:8100
+model  : deepseek-v4-flash-0731
+tokens : 256 per completion, temperature 0
+runs   : 3 per level
+
+cc=1   wall=  3.37s  ok=1/1  aggregate=  76.0 tok/s  per-stream= 76.0 tok/s
+cc=1   wall=  3.40s  ok=1/1  aggregate=  75.2 tok/s  per-stream= 75.2 tok/s
+cc=1   wall=  2.87s  ok=1/1  aggregate=  89.2 tok/s  per-stream= 89.3 tok/s
+      median=  76.0 tok/s  spread=18%
+
+cc=16  wall=  8.49s  ok=16/16  aggregate= 482.6 tok/s  per-stream= 30.8 tok/s
+cc=16  wall=  7.23s  ok=16/16  aggregate= 566.8 tok/s  per-stream= 35.6 tok/s
+cc=16  wall=  8.36s  ok=16/16  aggregate= 490.2 tok/s  per-stream= 31.1 tok/s
+      median= 490.2 tok/s  spread=17%
+
+wrote decode_fixed.json
