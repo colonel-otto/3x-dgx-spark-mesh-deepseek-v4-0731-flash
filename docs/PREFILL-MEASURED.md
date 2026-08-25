@@ -741,3 +741,189 @@ has been eliminated by measurement.
 
 **Decode verified after the window and the routing change:** cc=1 median **82.6** tok/s
 (baseline 80.4), cc=16 median **341.9**. KV pool 4,604,327.
+
+---
+
+# ADDENDUM 6 — it is not the cable: every link touching spark1 is slow
+
+Addendum 5 concluded "swap the sparkmain-f0 <-> spark1-f1 cable" and called the remaining
+work hardware-dependent. **That was premature.** Each node has FOUR RDMA ports and only
+two are used, so an alternate path could be tested by configuration alone. It was.
+
+## The alternate-path test
+
+`roceP2p1s0f0/f1` on every node are **ACTIVE, LinkUp, 200,000 Mb/s** and completely
+unused. Link-layer discovery (tcpdump + LLDP) mapped them:
+
+```
+sparkmain enP2p1s0f0np0 (<mac-node0-p0>) <-> spark1 enP2p1s0f1np1
+sparkmain enP2p1s0f1np1 (<mac-node0-p1>) <-> spark2 enP2p1s0f0np0 (LLDP: node2)
+```
+
+So a second, entirely separate sparkmain<->spark1 cable exists. Addressed it
+(192.168.110.0/30), confirmed 0.64 ms ping, and ran the same allgather:
+
+| path | cable | HCAs | busbw @64 MiB |
+|---|---|---|---:|
+| sparkmain f0 <-> spark1 f1 | original | `rocep1s0f*` | 0.69 GB/s |
+| **sparkmain P2p-f0 <-> spark1 P2p-f1** | **different cable** | **`roceP2p1s0f*`** | **0.68 GB/s** |
+
+**Identical on a different cable, different ports, different HCAs.** The cable hypothesis
+is falsified. Do **not** swap cables.
+
+## It is spark1, not any link
+
+Testing spark1 <-> spark2 directly, bypassing sparkmain entirely:
+
+| pair | busbw @64 MiB |
+|---|---:|
+| sparkmain <-> spark2 | **4.60 GB/s** (reproduced twice: 4.64, 4.60) |
+| sparkmain <-> spark1 (original cable) | 0.69 |
+| sparkmain <-> spark1 (alternate cable) | 0.68 |
+| **spark1 <-> spark2** | **0.71** |
+
+**Every path involving spark1 runs ~0.7 GB/s. The one path that excludes spark1 runs
+6.6x faster.** spark1 is the common factor.
+
+## What is NOT different about spark1
+
+Checked against both healthy nodes, all identical:
+
+| | sparkmain | spark1 | spark2 |
+|---|---|---|---|
+| NIC firmware | 28.45.4028 | 28.45.4028 | 28.45.4028 |
+| PCIe link | 32 GT/s x4 | 32 GT/s x4 | 32 GT/s x4 |
+| all 4 port states | ACTIVE/LinkUp | ACTIVE/LinkUp | ACTIVE/LinkUp |
+| port speeds | 200,000 Mb/s | 200,000 Mb/s | 200,000 Mb/s |
+| GPU clock | 2411 MHz | 2411 MHz | 2411 MHz |
+| NUMA node | -1 | -1 | -1 |
+| irqbalance | inactive | inactive | inactive |
+| fabric error counters | 0 | 0 | 0 |
+
+NCCL also selects the **same transport** for fast and slow pairs — both log
+`Made virtual device [2] name=rocep1s0f0+rocep1s0f1 speed=400000` and route
+`via NET/IB/2`. The merged dual-HCA device is in use on both; spark1 is simply slower
+over it.
+
+The duplicate-IP misconfiguration on spark1 (Addendum 5) was fixed before these tests and
+did not change anything, so it is not the cause either.
+
+## Status
+
+**Parity not reached** (1,075 vs 2,184 @ 8K). The cause is localised to **spark1 as a
+node** — not a cable, not a port, not a config file, and not anything visible in
+firmware/PCIe/link state.
+
+### What this changes for next steps
+
+The Addendum 5 recommendation (swap that cable) is **withdrawn** — it would have cost
+downtime and fixed nothing.
+
+Worth trying next, cheapest first:
+
+1. **Reboot spark1.** Nothing in software state explains this, and a clean boot is the
+   one thing not yet tried on that node. Cheap, reversible, and the obvious first move
+   for a node-scoped anomaly with no visible cause.
+2. If a reboot does not help, **run the 2-node cluster as sparkmain + spark2** (the fast
+   pair) and measure prefill there. If it jumps toward 2,184, that isolates spark1 as the
+   whole story and gives a working high-performance configuration today, at the cost of
+   the third node's KV headroom.
+3. Only then treat it as an RMA/hardware-support question for that unit.
+
+**Decode remains verified and consistent:** cc=1 median 82.6 tok/s (baseline 80.4),
+cc=16 median 341.9. Service healthy and idle throughout; no orphaned containers left.
+
+---
+
+# ADDENDUM 7 — SOLVED: rebooting spark1 fixed the fabric. Prefill ~doubled, decode +28%.
+
+Addendum 6 localised the problem to **spark1 as a node** and listed "reboot spark1" as the
+cheapest untried step. It was tried. **It worked.**
+
+## The fix
+
+```bash
+ssh spark1 "sudo reboot"     # back in under 60 seconds
+```
+
+Fabric, 64 MiB allgather, sparkmain <-> spark1:
+
+| | busbw |
+|---|---:|
+| before reboot | 0.69 GB/s |
+| **after reboot** | **4.78 GB/s** |
+| (healthy reference: sparkmain <-> spark2) | 4.60 GB/s |
+
+**6.9x improvement**, now matching the known-good link exactly.
+
+## Prefill: parity reached
+
+anemll's `benchmark_prefill.py`, unmodified, 3 trials, properly warmed with *different*
+seeds so the measured run cannot hit the prefix cache:
+
+| input tokens | before | **after** | reference | % of ref |
+|---:|---:|---:|---:|---:|
+| 1,024 | 1,063 | **1,774** | 2,033 | 87% |
+| 2,048 | 1,113 | **2,019** | 2,252 | 90% |
+| 4,096 | 1,113 | **1,765** | 2,321 | 76% |
+| 8,192 | 1,075 | **2,089** | 2,184 | **96%** |
+| 16,384 | 1,078 | **2,042** | 2,204 | 93% |
+| 32,768 | 1,034 | **2,037** | 2,176 | **94%** |
+
+Server-side and client-side agree (8K: 2,089 vs 2,057), so this is real throughput, not a
+measurement artifact. **We are at 76-96% of the reference, ~94-96% at the depths that
+matter most** — and the reference is a 2-node system that never traverses a third link.
+
+## Decode: also improved, not merely preserved
+
+| | baseline | **after** | change |
+|---|---:|---:|---:|
+| cc=1 | 80.4 | **88.4** | **+10%** |
+| cc=16 | 374.2 | **479.1** | **+28%** |
+
+Both at 5-6% spread across 3 reps. The degraded link had been silently taxing decode too.
+
+## What this means
+
+The ~2x prefill gap was **never** a software problem. Every configuration variable was
+correctly eliminated by measurement; the cause was one node's RDMA stack in a degraded
+state that:
+
+- showed **no** error counters, link-down events, or throttle flags,
+- reported **correct** firmware (28.45.4028), PCIe (32 GT/s x4), port state (ACTIVE /
+  LinkUp), and link speed (200,000 Mb/s) — identical to the healthy nodes,
+- selected the **same** NCCL transport as the healthy pair
+  (`NET/IB/2`, merged 400 Gb/s dual-HCA), and
+- was invisible to TCP testing (858 vs 1,019 MB/s, within 1.27x).
+
+**Only an RDMA collective benchmark exposed it.** That is the durable lesson.
+
+## Corrections to earlier addenda
+
+- **Addendum 5's "swap the cable" recommendation was wrong** and is withdrawn. The
+  alternate cable measured identically (0.68 GB/s), proving the cable was fine.
+- **Addendum 3's "GPU clocks at 82% of rated" was wrong** — 2,418 MHz is the application
+  clock spec; 3,003 MHz is a hardware ceiling. The GPUs were always at spec.
+- The duplicate-IP misconfiguration on spark1 was real but **not** the cause, and it did
+  not survive the reboot (the persistent config was already correct).
+
+## Standing recommendation
+
+**Add an RDMA fabric health check to the startup path.** A per-pair allgather taking a
+few seconds would have caught this immediately:
+
+```bash
+# expect ~4.6 GB/s per pair; anything under ~2 GB/s means a node needs a reboot
+results/20260824-seqs32-nccl/agbench.py    # WORLD_SIZE=2, each pair in turn
+```
+
+This condition is silent, survives indefinitely, degrades both prefill and decode, and is
+cleared by a reboot. Without a check it is invisible.
+
+## Final state
+
+TP=3, 1M context, MTP=5, seqs=16, `GPU_MEMORY_UTILIZATION=0.80`, KV 4,493,602.
+Cluster healthy and serving.
+
+Raw data: `results/20260824-prefill/anemll_clean.{txt,json}` (post-fix prefill),
+`decode_fixed.txt` / `decode_fixed2.txt` (post-fix decode).
