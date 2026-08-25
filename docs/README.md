@@ -33,6 +33,7 @@ is marked **provisional** — not wrong, but not trustworthy without a re-run.
 | [`FABRIC-FIX-PARITY.md`](FABRIC-FIX-PARITY.md) | ✅ | The 6.8x RDMA degradation, how it hid, and the parity re-run. |
 | [`../results/20260825-upper-mesh/`](../results/20260825-upper-mesh) | ⚠️ | **Four-HCA fabric measures 2.0x and is gate-clean.** Not adopted until it survives an engine run. |
 | [`PREFILL-MEASURED.md`](PREFILL-MEASURED.md) | ✅ | Prefill has **two rates, ~30x apart**. The long one. |
+| [`BANDWIDTH-COMPARISON.md`](BANDWIDTH-COMPARISON.md) | ✅ | **Why our fabric looked 3-6x slow than published rings** — convention + message size, not hardware. Read before chasing the gap. |
 | [`KV-QUALITY-LONG-CONTEXT.md`](KV-QUALITY-LONG-CONTEXT.md) | ⚠️ | NVFP4 KV quality, clean to 464K — but **single-arm**, no comparison. Open as [#16](../../issues/16). |
 | [`MTP5-1M-AND-UPSTREAM-COMPARISON.md`](MTP5-1M-AND-UPSTREAM-COMPARISON.md) | ✅ | Why MTP=5 and 1M context; the upstream gap is workload, not deficit. |
 
