@@ -1,5 +1,15 @@
 # `MAX_NUM_SEQS=32` and the NCCL fabric ceiling — 2026-08-24
 
+> [!WARNING]
+> **PROVISIONAL — the rejection rests on a bad number.** `MAX_NUM_SEQS=32` was rejected
+> against a measured 3-rank collective budget of 0.49 GB/s. That figure was taken on the
+> degraded fabric. True 3-rank bandwidth is **3.25 GB/s — 6.6x higher**.
+>
+> The conclusion may still hold, but it has not been re-tested against the real budget.
+> Tracked as [#10](../../issues/10).
+> 
+> Itemized with every other bad measurement in [`DEGRADED-DATA-CATALOGUE.md`](DEGRADED-DATA-CATALOGUE.md).
+
 Answers issue #10 (seqs=32) and falsifies the leading hypothesis of issue #11
 (prefill gap). Both answers come from the same root cause.
 

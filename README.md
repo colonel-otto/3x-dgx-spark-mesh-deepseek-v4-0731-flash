@@ -10,11 +10,16 @@ correctness suite, and outperforms our matched two-Spark baseline. The complete 
 trail—including the unsuccessful EP and PP paths—is retained in
 [`docs/EXPERIMENT-LOG.md`](docs/EXPERIMENT-LOG.md).
 
-> **Picking this work up?** Start with **[`docs/HANDOFF.md`](docs/HANDOFF.md)** (what is
-> running and how to operate it), then
-> **[`docs/POSTMORTEM-2026-08-25.md`](docs/POSTMORTEM-2026-08-25.md)** — four classes of
-> silent failure that produced plausible-but-wrong numbers here, and how each is now
-> gated. Read it before trusting or adding a benchmark.
+> **Picking this work up?** Four pages, in order:
+>
+> 1. **[`docs/HANDOFF.md`](docs/HANDOFF.md)** — what is running, how to operate it, what is open.
+> 2. **[`docs/DECISIONS.md`](docs/DECISIONS.md)** — every settled value and the measurement behind it.
+> 3. **[`docs/POSTMORTEM-2026-08-25.md`](docs/POSTMORTEM-2026-08-25.md)** — four classes of silent
+>    failure that produced plausible-but-wrong numbers here. **Read before adding a benchmark.**
+> 4. **[`docs/DEGRADED-DATA-CATALOGUE.md`](docs/DEGRADED-DATA-CATALOGUE.md)** — what bad data
+>    looked like, itemized, so you can recognise the shape.
+>
+> Full map: **[`docs/README.md`](docs/README.md)**.
 
 ## Is the third node worth it?
 
@@ -48,8 +53,10 @@ Evidence: [`results/20260825-decode-2v3/`](results/20260825-decode-2v3) ·
 [`results/20260825-deep-concurrency/`](results/20260825-deep-concurrency)
 
 > Historical numbers from before 2026-08-25 were taken while one node ran at ~15% of its
-> collective bandwidth and are **provisional** — see
-> [issue #14](../../issues/14) and [`docs/results.md`](docs/results.md).
+> collective bandwidth and are **provisional**. Every affected measurement is itemized in
+> [`docs/DEGRADED-DATA-CATALOGUE.md`](docs/DEGRADED-DATA-CATALOGUE.md) — kept deliberately,
+> because knowing what bad data looked like is how you spot the next batch. See also
+> [issue #14](../../issues/14).
 
 ## Pitfalls — read before you deploy
 
@@ -149,15 +156,21 @@ NCCL_IB_ADDR_FAMILY=AF_INET
 NCCL_IB_ROCE_VERSION_NUM=2
 ```
 
-The measured serving profile used:
+The settled serving profile (2026-08-25) is:
 
 ```bash
-MAX_MODEL_LEN=460800
-MAX_NUM_SEQS=8
-GPU_MEMORY_UTILIZATION=0.85
-MTP_NUM_TOKENS=4
+MAX_MODEL_LEN=1048576          # 1M is free here: memory-bound, not comms-bound
+MAX_NUM_SEQS=16
+GPU_MEMORY_UTILIZATION=0.80
+MTP_NUM_TOKENS=5               # beats 4; matched control 2026-08-24
+MAX_NUM_BATCHED_TOKENS=8192    # do NOT raise to 16384 -- see pitfall 8
 VLLM_USE_BREAKABLE_CUDAGRAPH=0
 ```
+
+> Earlier documents describe `460800` / `seqs=8` / `0.85` / `MTP=4`. That profile is
+> **superseded**; it survives only inside dated result pages, which are frozen to the
+> configuration they were measured under. [`config/tp3.env.example`](config/tp3.env.example)
+> is authoritative and carries the reasoning for every value.
 
 Use `NCCL_DEBUG=INFO` and `NCCL_DEBUG_SUBSYS=INIT,NET,GRAPH` for the first validation
 launch. The log must show `NET/IB`; `NET/Socket` is a TCP fallback. Return to
@@ -193,12 +206,25 @@ Detailed reproduction protocol:
 ## Repository map
 
 ```text
-config/       sanitized env and Compose-forwarding examples
-docs/         setup, topology, results, patch explanation and troubleshooting
-scripts/      environment/fabric collection and benchmark helpers
-benchmarks/   machine-readable historical summary
+config/       engine env -- runs ON the Sparks         (config/README.md)
+configs/      harness targets -- runs on your WORKSTATION (configs/README.md)
+docs/         all documentation, indexed and status-tagged (docs/README.md)
+scripts/      fabric gate, launchers, benchmark helpers
+results/      dated raw run bundles -- frozen, never edited
+benchmarks/   machine-readable summary + CHANGELOG
+tests/        schema validation for benchmark artifacts
 artifacts/    schema for complete future run bundles
 ```
+
+> [!IMPORTANT]
+> **`config/` and `configs/` are different things.** `config/` holds the vLLM engine
+> environment that lives on each Spark; `configs/` holds benchmark harness targets that
+> live on your workstation. A file from one will not work in the other — each directory
+> has a README stating which is which.
+
+Dated directories under `results/` are **frozen**: they record one experiment at the
+configuration it was measured under. Supersede them with a new dated directory; never
+edit one in place.
 
 ## Privacy and safety
 

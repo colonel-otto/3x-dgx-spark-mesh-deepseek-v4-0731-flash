@@ -1,5 +1,13 @@
 # Controlled result and experiment progression
 
+> [!WARNING]
+> **FROZEN and PROVISIONAL.** Earliest TP=2/TP=3 comparison, measured on the pre-rewire
+> cable rotation and before the 2026-08-25 fabric fix ([#14](../../issues/14)). Retained as
+> a historical record only. For current numbers see
+> [`../README.md`](../README.md#is-the-third-node-worth-it).
+> 
+> Itemized with every other bad measurement in [`DEGRADED-DATA-CATALOGUE.md`](DEGRADED-DATA-CATALOGUE.md).
+
 > This page freezes the earlier MTP=5 result on the pre-rewire cable rotation. For the
 > canonical-ring tuning results, see [`TP3-TUNING.md`](TP3-TUNING.md). For the later
 > prompt-matched 79.0–79.3 tok/s result and raw sweeps, see
