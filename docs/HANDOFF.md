@@ -121,6 +121,52 @@ Re-run these on the healthy fabric. Priority order:
 5. **`GPU_MEMORY_UTILIZATION` 0.80 vs 0.85.** The +14% was measured on the bad fabric.
 6. **MTP=4 vs 5 aggregate throughput.** Acceptance counters are fine; aggregates are not.
 
+## 4b. ✗ FALSIFIED 2026-08-25: adding the `roceP2p` HCAs to `NCCL_IB_HCA`
+
+**Do not set `NCCL_IB_HCA==rocep1s0f0,roceP2p1s0f0,rocep1s0f1,roceP2p1s0f1`.** It wedges
+the cluster. Tried, failed, rolled back.
+
+**Why it looked right.** Upstream MiaAI-Lab's `.env.dspark.example` documents that a GB10
+QSFP port enumerates as **two virtual NICs** (2× PCIe Gen5 x4 controllers, ~100G each) and
+that *"with only one HCA in `NCCL_IB_HCA` the link runs at half the port."* LLDP confirms
+the pairing on our hardware — `enP2p1s0f0np0` sees the same neighbour as `enp1s0f0np0`.
+A direct pairwise A/B measured a real gain:
+
+| sparkmain↔spark1, per-node HCA | 16 MiB | 64 MiB |
+|---|---:|---:|
+| one controller (current) | 5.56 / 5.53 | 5.72 / 5.12 |
+| both controllers + MTU 9000 | 9.07 / 9.50 | 8.34 / 8.45 |
+
+**Why it fails anyway — the anti-pattern.** The `roceP2p` pair has **no IPv4 address at
+all**, only link-local IPv6, while the routed mesh runs IPv4 on the `rocep1` pair. Adding
+them makes NCCL select all four devices, emit repeated `GID table changed` warnings, and
+then fail live traffic:
+
+```
+NCCL WARN NET/IB: Got completion from peer 192.168.101.2 with status=IBV_WC_RETRY_EXC_ERR(12)
+  localGid fe80::4ebb:47ff:fe2e:5fa6  remoteGids fe80::32c5:99ff:febe:6b46  hca roceP2p1s0f0
+```
+
+Both GIDs are `fe80::` link-local — RDMA over an unaddressed, unrouted path. Failures hit
+both sparkmain↔spark2 and spark1↔spark2.
+
+**The trap that makes this dangerous.** All three ranks **completed NCCL init** and the
+container stayed `running` while RDMA completions were failing. Init proves initial
+connectivity, not a healthy fabric, and the container has **no health check**, so Docker
+cannot flag the degraded state. The engine simply never finished loading — 10+ minutes of
+`shm_broadcast` "No available shared memory broadcast block" with no error surfaced.
+
+**Correct direction if this is revisited:** give the `roceP2p` pair stable IPv4 addressing
+and routing *first*, validate it independently, and only then widen `NCCL_IB_HCA`. Until
+then keep the fully-configured mesh pair, `=rocep1s0f0,rocep1s0f1`.
+
+Note `NCCL_IB_HCA==...` is **not** a typo: the first `=` separates the variable, the
+second requests exact HCA-name matching.
+
+**Kept from this attempt:** MTU 9000 on all four controllers (persisted via netplan on all
+three nodes). Harmless with the narrow HCA list, and prerequisite if the `roceP2p` pair is
+ever addressed properly.
+
 ## 4a. ⚠ Our fabric may STILL be ~5x slower than this hardware does
 
 **This outranks every tuning question below it.** Independent measurements on the
