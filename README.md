@@ -10,42 +10,81 @@ correctness suite, and outperforms our matched two-Spark baseline. The complete 
 trail—including the unsuccessful EP and PP paths—is retained in
 [`docs/EXPERIMENT-LOG.md`](docs/EXPERIMENT-LOG.md).
 
-> **Picking this work up?** Start with **[`docs/HANDOFF.md`](docs/HANDOFF.md)** — what is
-> running, how to operate it, what is settled, and step-by-step instructions for the next
-> three measurements.
->
-> **The table below predates 2026-08-24 and describes the 460,800-context, MTP=4 era.**
-> The cluster now runs **1M context with `MTP_NUM_TOKENS=5`**, measuring 93.8 / 92.3 /
-> 86.1 tok/s single-stream (count / JSON / code) with a 5,444,869-token KV pool. See
-> [`docs/MTP5-1M-AND-UPSTREAM-COMPARISON.md`](docs/MTP5-1M-AND-UPSTREAM-COMPARISON.md).
+> **Picking this work up?** Start with **[`docs/HANDOFF.md`](docs/HANDOFF.md)** (what is
+> running and how to operate it), then
+> **[`docs/POSTMORTEM-2026-08-25.md`](docs/POSTMORTEM-2026-08-25.md)** — four classes of
+> silent failure that produced plausible-but-wrong numbers here, and how each is now
+> gated. Read it before trusting or adding a benchmark.
 
-## Measured result
+## Is the third node worth it?
 
-| Configuration | Decode median | TTFT | KV cache | Concurrency @ 460,800 | Correctness |
-|---|---:|---:|---:|---:|---:|
-| 2 Spark, TP=2, RoCE | 48.23 tok/s | 154 ms | 1,855,255 tokens | ~3.9x | 7/7 |
-| 3 Spark, TP=3, TCP control | 24.59 tok/s | 323 ms | 3,579,619 tokens | 7.77x | 7/7 |
-| 3 Spark, TP=3, RoCE, canonical ring, prose prompt | 53.95–56.63 tok/s | — | ~3.6M tokens | ~7.8x | 7/7 |
-| 3 Spark, TP=3, RoCE, upstream/code prompt | **79.0–79.3 tok/s** | ~105–115 ms | same engine | same engine | 7/7 deployment |
-| 3 Spark, TP=3, RoCE, earlier cable rotation | 57.73 tok/s | 186 ms | 3,598,182 tokens | 7.81x | 7/7 |
+**Yes for single-stream interactive work; no for batch throughput.** Measured
+2026-08-25 on healthy fabric, identical config on both arms (`1M` / `seqs 16` / `MTP=5` /
+`0.80`), same harness, node count the only variable:
 
-On the matched prose workload, TP=3 RoCE delivered:
+| measurement | 2 Spark | 3 Spark | winner |
+|---|---:|---:|---|
+| **decode cc=1** | 76.2 tok/s | **89.1 tok/s** | **3-node, +17%** |
+| decode cc=4 | 192.8 | **208.8** | 3-node, +8% |
+| decode cc=8 | 302.7 | **322.7** | 3-node, +7% |
+| decode cc=16 | **481.3** | 474.8 | 2-node, +1.4% |
+| prefill 1K/8K/32K | 1913 / 2081 / 2066 | 2023 / 2070 / 2095 | **parity** (±2%) |
+| deep concurrency (4×200K) TTFT | **293,987 ms** | 396,804 ms | 2-node, 1.35x |
+| KV cache | 1,711,307 tok | **4,457,627 tok** | 3-node 2.6x — *never binds* |
 
-- **11.9–17.4% higher single-stream decode throughput**
-- **1.94x KV-cache capacity**
-- approximately **2x concurrency** at the configured maximum context
-- **about 2.2–2.3x the throughput of the TP=3 TCP control**, isolating transport as the
-  important performance difference
+The 3-node advantage **decays monotonically with concurrency and crosses over near
+cc=16**. Three nodes win per-stream latency; two win batch aggregate.
 
-Prompt shape materially changes MTP acceptance: the same live engine reached about
-49 tok/s on difficult prose and 79–82 tok/s on code-shaped prompts. The upstream-harness
-result closes the apparent 75–79 tok/s comparison gap; it was a workload mismatch, not
-a hardware shortfall. See
-[`docs/BENCHMARK-METHODOLOGY.md`](docs/BENCHMARK-METHODOLOGY.md).
+**Choose by workload, not by node count.** Single-user interactive coding is
+per-stream-latency bound → three nodes. Multi-user batch serving → two nodes, and the
+third is free for another model.
 
-These are measurements from one cluster, not universal product specifications. The
-raw samples from the original exploratory run were not all retained, so the historical
-summary is published separately from future evidence bundles. See
+Two things the third node does **not** buy: prefill throughput (parity), and usable KV
+capacity (`vllm:num_preemptions_total` has read **0 in every test ever run here**,
+including a 4×200K test designed specifically to make KV bite).
+
+Evidence: [`results/20260825-decode-2v3/`](results/20260825-decode-2v3) ·
+[`results/20260825-prefill-2v3/`](results/20260825-prefill-2v3) ·
+[`results/20260825-deep-concurrency/`](results/20260825-deep-concurrency)
+
+> Historical numbers from before 2026-08-25 were taken while one node ran at ~15% of its
+> collective bandwidth and are **provisional** — see
+> [issue #14](../../issues/14) and [`docs/results.md`](docs/results.md).
+
+## Pitfalls — read before you deploy
+
+Each of these cost real time here, and none announced itself.
+
+1. **TP=3 silently serves nonsense without the padding patch.** Stock vLLM computes
+   `n_local_groups = 8 // 3 == 2`, dropping 6 of 8 attention groups. Output stays
+   *fluent*. Always run a correctness check (17×23 → 391) after any restart.
+2. **A parallelism-flag mismatch between ranks hangs startup forever with no error.**
+   Verify a checksum across all ranks before starting; `scripts/cluster_tp2.sh` refuses
+   to start rather than let you watch a silent hang.
+3. **NetworkManager here is only a renderer — netplan owns the config.** NM connections
+   live in `/run/…` (tmpfs, wiped on reboot). An `nmcli` change that does not reach
+   `/etc/netplan/` looks applied and reverts. This nearly made the cluster unrecoverable.
+4. **A degraded RDMA link has zero error indicators.** Ports ACTIVE, 200,000 Mb/s, all
+   counters 0 — while running at 15% speed. **TCP throughput will not find it** (it hid a
+   6.8x RDMA deficit behind a 1.19x TCP one). Only an NCCL collective does.
+5. **Init success is not health.** All ranks can complete NCCL init and every container
+   stay `running` while live RDMA completions fail. There is no container health check.
+   Check `IBV_WC_*_ERR` in the engine log, not `docker ps`.
+6. **Do not add the `roceP2p` HCAs.** They genuinely double per-port bandwidth
+   (+56% measured) but have no IPv4 on this cluster, so NCCL picks them and wedges.
+   See [`docs/HANDOFF.md`](docs/HANDOFF.md) §4b.
+7. **JIT compiles land *during* inference** — one measured at 5 s inside a request. Warm
+   every shape you intend to measure, and discard sweeps containing a `jit_monitor`
+   warning.
+8. **`MAX_NUM_BATCHED_TOKENS=16384` is a trap** despite vLLM's own log suggesting it.
+   That advice assumes intra-node NVLink; here it cost 43% of the KV pool for zero gain.
+
+**Before any benchmark:** `scripts/fabric_gate.sh configs/<your>.env --nccl=full` with the
+engine stopped. It gates on liveness, mesh, latency, subnets, ARP-port correctness, config
+persistence, transport, RDMA errors, and collective bandwidth — and exits non-zero so a
+bad run cannot silently happen.
+
+These are measurements from one cluster, not universal product specifications. See
 [`docs/results.md`](docs/results.md) and [`benchmarks/summary.csv`](benchmarks/summary.csv).
 
 ## Why a patch is required
