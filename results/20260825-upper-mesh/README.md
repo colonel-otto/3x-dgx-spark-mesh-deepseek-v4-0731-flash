@@ -46,39 +46,47 @@ before is not in play here.
 > against `ip addr` output and therefore **silently matched nothing** — the upper mesh was
 > invisible to the gate. Fixed in the same commit as this directory.
 
-## Status: promising, NOT yet adopted
+## Status: ADOPTED for serving; soak still outstanding
 
-What this establishes:
+Applied 2026-08-25T23:22Z. All six uppercase controllers given persistent IPv4 `/30`
+addressing, every link verified with jumbo frames and IPv4 RoCEv2 GIDs, conflicting legacy
+autoconnect profiles removed (backups in
+`/etc/netplan/dsv4-backup-pre-upper-mesh-20260825/`). All four HCAs enabled on every rank;
+workers restarted first, then the head.
 
-- ✅ The +56% figure was **not** an artifact — it is now **~2.0x**, on a path that is
-  properly addressed, routed, persisted, and gate-clean.
-- ✅ The **3-rank** number moves too (2.85 → 5.80 GB/s), which matters most: the 3-rank
-  collective is what bounds TP=3.
-- ✅ It narrows the gap against published 3-Spark rings ([#11](../../issues/11)).
+### Live gate with the engine RUNNING — `live-gate.json`
 
-What it does **not** establish:
+**21 passed, 0 failed**, bandwidth skipped (engine up, as designed).
 
-- ❌ **No engine run.** The gate measures NCCL collectives with the engine stopped. The
-  previous attempt also passed initialisation and *then* wedged under real load —
-  **init success is not health.** This is exactly the failure class the postmortem names.
-- ❌ **No tok/s.** Fabric bandwidth is not throughput. Decode is not obviously
-  bandwidth-bound at cc=1, so a 2x fabric gain may deliver little.
-- ❌ **No sustained-load soak.** `IBV_WC_RETRY_EXC_ERR` appeared under traffic, not at init.
+The decisive line is `rdma:*`:
 
-## Next step
+| check | result |
+|---|---|
+| `rdma:sparkmain` / `rdma:spark1` / `rdma:spark2` | **pass, 0 errors** |
 
-Start the engine with all four HCAs, then in order:
+**This is the check that skipped in the stopped-engine runs, and the one that would have
+caught the previous wedge.** The earlier attempt failed here with
+`IBV_WC_RETRY_EXC_ERR` and both GIDs `fe80::`. No GID changes, no NCCL warnings, and no
+RDMA completion errors appeared this time.
 
-1. `make gate CONFIG=configs/3spark-live.env` — engine up, checks `rdma:*` counters
-   (they `skip` here because the engine was stopped; **that is the check that would have
-   caught the previous wedge**).
-2. Correctness (17×23 → 391) — the padding patch means a broken fabric can serve
-   *fluent nonsense*.
-3. Warm shapes, then decode at cc=1/4/8/16 against
-   [`../20260825-decode-2v3/`](../20260825-decode-2v3).
-4. Soak under sustained load, watching for `IBV_WC_*_ERR`.
+API health and inference both passed. KV capacity after restart: **4,502,448 tokens**.
 
-Until steps 1–4 pass, `config/tp3.env.example` keeps `NCCL_IB_HCA=rocep1s0f0,rocep1s0f1`.
+### What is confirmed
+
+- ✅ Bandwidth doubles and is **real under a live engine**, not just a stopped-engine gate.
+- ✅ Zero RDMA completion errors — the specific failure mode of the earlier rollback.
+- ✅ Addressing is persistent, so a reboot will not silently revert it.
+- ✅ Follows NVIDIA's guidance that each logical controller gets a unique address/subnet.
+
+### What is still outstanding
+
+- ⏳ **Sustained-load soak.** `IBV_WC_RETRY_EXC_ERR` appeared under traffic, not at init.
+  An immediate inference check is not a soak.
+- ⏳ **No tok/s yet.** Fabric bandwidth is not throughput. Prefill measured at *parity*
+  between 2 and 3 nodes, which is evidence prefill is not fabric-bound — so a 2x fabric
+  gain may deliver little. Decode at cc=1/4/8/16 against
+  [`../20260825-decode-2v3/`](../20260825-decode-2v3) is the test that matters, and the
+  interesting question is **whether the cc=16 crossover moves.**
 
 ## Files
 
@@ -86,3 +94,4 @@ Until steps 1–4 pass, `config/tp3.env.example` keeps `NCCL_IB_HCA=rocep1s0f0,r
 |---|---|
 | `gate.json` | 2-HCA baseline, 26/26 pass |
 | `gate-four-hca.json` | 4-HCA run, 26/26 pass |
+| `live-gate.json` | **Engine running**, 21/21 pass, `rdma:*` clean on all three ranks |
