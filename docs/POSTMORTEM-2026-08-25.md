@@ -193,11 +193,16 @@ fault** and confirming exit 1.
    - An earlier draft claimed the residual was a metric-convention artifact. **Source
      verification refuted that** — published figures are `all_gather` busbw, the same
      collective and formula we use.
-   - **Live lead: HCA *pairing*.** Working configs merge the two PCIe domains of the *same*
-     port (`rocep1s0f1,roceP2p1s0f1`); our debug log shows NCCL merging `f0+f1`, i.e. two
-     *different* ports. On a ring those face different neighbours. This predicts a
-     ring-specific deficit — and our 3-rank gap (3.2x) is indeed worse than our 2-rank
-     (2.0x). See [`BANDWIDTH-COMPARISON.md`](BANDWIDTH-COMPARISON.md).
+   - **Not yet a controlled comparison.** Four variables still differ: bootstrap
+     interface, harness, NIC-merge setting, HCA discovery.
+   - **Strongest lead: the control plane.** The one public 3-Spark result began at
+     **2.86 GB/s** — almost exactly our original number — and recovered to 18.64 by
+     moving bootstrap onto a **common management interface**. We bootstrap over
+     rank-specific *fabric* addresses with the master on loopback.
+   - **Second lead: NIC merging.** Their working ring ran `MERGE_NICS=0`; we have never
+     set it, so NCCL merges by default. Our gate shows it built two virtual devices but
+     did not record *which* HCAs — same-port vs cross-port is the ring question. Gate
+     now captures it. See [`BANDWIDTH-NEXT-TEST.md`](BANDWIDTH-NEXT-TEST.md).
    - Ceiling correction: PCIe Gen5 x4 shared across both ports caps this near **24 GB/s**,
      not the 48.5 a line-rate estimate suggests.
 

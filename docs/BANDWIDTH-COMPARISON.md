@@ -6,7 +6,15 @@
 > **It was wrong** — published DGX Spark figures use the *same* collective and the
 > *same* formula we do. The gap is real. Corrected analysis below.
 
-**The gap is ~3.2x at matched size and rank count, and it is not a bookkeeping error.**
+**The gap is ~3.2x at comparable size and rank count, and it is not a bookkeeping error.**
+
+> [!WARNING]
+> **It is also not yet a controlled comparison.** Four variables still differ from the
+> published run -- bootstrap interface, harness, NIC-merge setting, and HCA discovery.
+> The one public 3-Spark result began at **2.86 GB/s**, almost exactly our original
+> number, and recovered to 18.64 by changing **how the job bootstraps**, not the fabric.
+> Before treating 3.2x as a hardware deficit, run
+> [`BANDWIDTH-NEXT-TEST.md`](BANDWIDTH-NEXT-TEST.md).
 
 ---
 
@@ -91,7 +99,12 @@ That is a coherent mechanism for a *ring-specific* deficit, and it predicts exac
 we observe: the 3-rank gap being worse than the 2-rank gap.
 
 **We have never set `NCCL_IB_MERGE_NICS` or `NCCL_IB_GID_INDEX`, and we have never tested
-same-port pairing.**
+same-port pairing.** Note the forum's *working* ring ran `MERGE_NICS=0` -- merging off
+entirely -- which is a third possibility we also never tried.
+
+Our 4-HCA gate recorded `via NET/IB/4 via NET/IB/5`. With four physical HCAs at indices
+0-3, **4 and 5 are two merged virtual devices**, so automatic merging was on. Which HCAs
+it grouped, the gate did not record. It does now (`vdev:*`).
 
 ### On the existing "MERGE_NICS is falsified" note
 
@@ -148,19 +161,17 @@ made this correction possible.
 
 ## The test
 
-One variable, same day, same harness:
+**Full plan: [`BANDWIDTH-NEXT-TEST.md`](BANDWIDTH-NEXT-TEST.md).** In priority order:
 
-1. **2 ranks, same-port pairing, at 16 G:**
-   `NCCL_IB_HCA==rocep1s0f1,roceP2p1s0f1`, `NCCL_IB_MERGE_NICS=1`, `NCCL_IB_GID_INDEX=3`.
-   Landing near 24 GB/s means we were simply mis-paired, and there is no anomaly.
-2. **Then add the third rank** with `NCCL_IB_SUBNET_AWARE_ROUTING=1` and
-   `NCCL_NET_PLUGIN=none`, to test the ring case separately.
-3. Sweep sizes with [`../scripts/bwsweep.py`](../scripts/bwsweep.py) so the **curve**, not
-   one point, is the comparison.
+1. **Bootstrap** over a common management interface (the change that took the one public
+   3-Spark result from 2.86 to 18.64).
+2. **`NCCL_IB_MERGE_NICS=0`** vs default — their working ring ran it *off*.
+3. **Official MPI `nccl-tests all_gather_perf`** at 32 MiB and 16 GiB, so the harness stops
+   being a variable.
+4. **Automatic HCA discovery** vs our explicit four-HCA list.
 
-Our live config currently sets all four HCAs ordered as port-pairs. **Whether NCCL then
-builds same-port or cross-port virtual devices must be read from `NCCL_DEBUG=INFO`, not
-assumed** — the `Made virtual device` line names exactly what it merged.
+Read `Made virtual device … name=` from `NCCL_DEBUG=INFO` on every run — the gate now
+records it as `vdev:*`. Do not infer the grouping from the env var.
 
 ## Sources
 
