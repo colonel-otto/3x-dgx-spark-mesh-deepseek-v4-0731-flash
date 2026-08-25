@@ -1,0 +1,10 @@
+target : http://localhost:8100
+model  : deepseek-v4-flash-0731
+tokens : 256 per completion, temperature 0
+runs   : 2 per level
+
+cc=16  wall= 17.26s  ok=16/16  aggregate= 237.2 tok/s  per-stream= 15.1 tok/s
+cc=16  wall= 18.93s  ok=16/16  aggregate= 216.4 tok/s  per-stream= 13.7 tok/s
+      median= 226.8 tok/s  spread=9%
+
+wrote postrollback.json
