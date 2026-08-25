@@ -17,17 +17,24 @@ reproduced or trusted.
 DeepSeek-V4-Flash-0731 checkpoint, image `ghcr.io/anemll/dspark-vllm-gx10:0.1.1`.
 
 ```
-MAX_MODEL_LEN=460800
+MAX_MODEL_LEN=1048576
 MAX_NUM_SEQS=16
 MAX_NUM_BATCHED_TOKENS=8192
-MTP_NUM_TOKENS=4
-GPU_MEMORY_UTILIZATION=0.85
+MTP_NUM_TOKENS=5
+GPU_MEMORY_UTILIZATION=0.80
 --kv-cache-dtype nvfp4_ds_mla
 --block-size 256
 ```
 
-Live KV on this config: **37.72 GiB / 3,581,724 tokens / 7.77x concurrency @460800**.
-Correctness verified (17×23 → 391).
+Live KV on this config: **4,493,602 tokens @1M context**. Correctness verified
+(17×23 → 391).
+
+> **This block was stale until 2026-08-25** — it still described `460800` / `MTP=4` /
+> `0.85`, the profile superseded when 1M context and `MTP=5` were settled on 2026-08-24.
+> The measurement rows carrying those older values are correct and stay as they are; it
+> was this summary that had drifted. Two separate pieces of work have now been misled by
+> a stale pointer, so: **when the live config changes, update this block in the same
+> commit.**
 
 > **Note on KV variance.** Reported KV cache has read 38.49 / 38.47 / 37.72 GiB across
 > restarts with *identical* settings. That spread is normal run-to-run profiling
