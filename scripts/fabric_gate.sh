@@ -201,6 +201,40 @@ for n in "${NODES[@]}"; do
   fi
 done
 
+# ---- 3d. Fabric config PERSISTENCE ------------------------------------------
+# The live address is not the whole story: it must survive a reboot.
+#
+# On these boxes NetworkManager is only a RENDERER -- netplan owns the config.
+# Every NM connection file lives under /run/NetworkManager/system-connections/,
+# which is tmpfs and is wiped on reboot; /etc/NetworkManager/system-connections/
+# is EMPTY. So an `nmcli con mod` that does not write through to /etc/netplan/
+# looks perfectly applied and silently reverts on the next boot.
+#
+# This is not hypothetical. spark1's reboot lost runtime-only state and the
+# cluster would not start: 192.168.200.1 existed only on sparkmain's loopback at
+# runtime, and had sparkmain rebooted the cluster would have been unrecoverable
+# without knowing that.
+echo "-- fabric config persistence (survives reboot?)"
+for n in "${NODES[@]}"; do
+  missing=""
+  # Every fabric address the node currently holds must appear in /etc/netplan.
+  live=$(ssh_node "$n" "ip -o -4 addr show 2>/dev/null | awk '\$2 ~ /^(enp1s0f|roceP2p)/ {print \$4}'" 2>/dev/null)
+  # ...plus this node's own advertised fabric address, which may be on loopback.
+  self=$(fabric_addr_for "$n")
+  for a in $live "$self"; do
+    bare="${a%%/*}"
+    ssh_node "$n" "sudo grep -qF '$bare' /etc/netplan/*.yaml 2>/dev/null" </dev/null \
+      || missing+="$bare "
+  done
+  if [[ -n "$missing" ]]; then
+    bad "$n: NOT persisted in /etc/netplan (reverts on reboot): $missing" "persist:$n" "$missing"
+  elif ! ssh_node "$n" 'sudo netplan generate' </dev/null >/dev/null 2>&1; then
+    bad "$n: netplan generate FAILS -- config will not apply on boot" "persist:$n" "generate"
+  else
+    ok "$n: fabric addressing persisted and netplan generates" "persist:$n" ""
+  fi
+done
+
 # ---- 4. NCCL collective bandwidth ------------------------------------------
 # The only check that would have caught the 2026-08-25 degradation.
 echo "-- nccl collective bandwidth"
