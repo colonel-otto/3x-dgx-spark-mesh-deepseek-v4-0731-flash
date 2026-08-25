@@ -152,7 +152,7 @@ Full rollback procedure in the operator's `docs\dsv4-2node-fallback.md`.
 | `GPU_MEMORY_UTILIZATION=0.80` | **Shipped 2026-08-24.** +14% prefill at 78K vs 0.85, decode unaffected. Costs 17% of KV pool. |
 | TP=3 attention head padding | **50% waste is real, but NOT prefill-limiting.** Kernel widths {8,16,32,64,128}; 24 heads/rank snap to 32. But TP=2 and TP=3 measure IDENTICAL prefill at 8K (1,081 both), so this is not the prefill bottleneck. |
 | TP=2 as a prefill fallback | **Rejected 2026-08-25.** Same prefill as TP=3, but decode cc=1 drops 82.4 -> 70.1 and KV 4.48M -> 1.82M. TP=3 is correct. |
-| Prefill gap cause | **Localised 2026-08-25 to a fixed ~470 us/token communication cost.** Flat across a 32x prompt-size range. Every software variable AND GPU compute/clocks/bandwidth eliminated by measurement. |
+| Prefill gap | **SOLVED 2026-08-25.** A degraded RDMA stack on spark1 (0.69 vs 4.6 GB/s allgather) throttled every collective. `sudo reboot` on spark1 fixed it: prefill 1,075 -> 2,089 @8K (96% of reference), decode +28%. Invisible to error counters, firmware, PCIe, port state, and TCP tests. |
 | GB10 GPU health | **Verified healthy.** 93.3 TFLOP/s bf16, 236 GB/s memory, 2,470 MHz vs a 2,418 MHz application-clock spec. An earlier claim of '82% of rated' was WRONG — 3,003 MHz is a hardware ceiling, not the operating spec. |
 | Upstream harness on our cluster | **Reproduces our numbers.** anemll's benchmark_prefill.py gives 1,075 tok/s @ 8K (server timer, 0.3% agreement with client). Not a measurement artifact. |
 | Aggregate throughput as an MTP signal | **Useless** — every level sits inside its own run spread. Use the acceptance counters. |
@@ -223,46 +223,40 @@ These are not style preferences. Each was learned by getting a wrong answer firs
 
 ## 5. Next measurements — in priority order
 
-> **START HERE: prefill parity NOT reached, but the cause is now a MEASURED HARDWARE
-> ASYMMETRY: one fabric link runs 6.8x slower than the other.**
-> Read [`PREFILL-MEASURED.md`](PREFILL-MEASURED.md) — all five addenda.
+> **START HERE: PREFILL SOLVED 2026-08-25 — parity reached. The cause was a degraded
+> RDMA stack on spark1, cleared by a reboot.**
+> Full story: [`PREFILL-MEASURED.md`](PREFILL-MEASURED.md) (7 addenda; Addendum 7 is the
+> resolution).
 >
-> **THE FINDING (maintenance window, vLLM stopped, 64 MiB allgather):**
+> **The fix was `ssh spark1 "sudo reboot"`.** Fabric allgather sparkmain<->spark1 went
+> **0.69 -> 4.78 GB/s** (6.9x), matching the healthy sparkmain<->spark2 link (4.60).
 >
-> | pair | busbw |
-> |---|---:|
-> | sparkmain <-> spark2 (f0<->f0) | **4.64 GB/s** |
-> | sparkmain <-> spark1 (f0<->f1) | **0.69 GB/s** |
-> | all 3 ranks | **0.49 GB/s** |
+> | input tokens | before | **after** | reference | % of ref |
+> |---:|---:|---:|---:|---:|
+> | 8,192 | 1,075 | **2,089** | 2,184 | **96%** |
+> | 32,768 | 1,034 | **2,037** | 2,176 | **94%** |
 >
-> A TP collective is paced by its slowest link, which is why 3-rank sits below even the
-> bad pair. All six ports negotiate 200,000 Mb/s with zero error counters.
+> **Decode improved too**: cc=1 80.4 -> **88.4** (+10%), cc=16 374.2 -> **479.1** (+28%).
+> The degraded link had been silently taxing decode as well.
 >
-> **NEXT ACTION — a targeted hardware test with a predicted outcome:** swap the
-> sparkmain-f0 <-> spark1-f1 cable, or move that pair onto the unused `roceP2p1s0f*`
-> HCAs. Predicted: 0.69 -> ~4.6 GB/s. Then re-run the prefill benchmark immediately.
+> **THE DURABLE LESSON:** the degraded node showed **zero** error counters, correct
+> firmware (28.45.4028), correct PCIe (32 GT/s x4), ACTIVE/LinkUp ports at 200,000 Mb/s,
+> and selected the **same** NCCL transport as the healthy pair. TCP testing showed only
+> 1.27x. **Only an RDMA collective benchmark exposed it.** Add a fabric health check to
+> the startup path — run `results/20260824-seqs32-nccl/agbench.py` per pair
+> (WORLD_SIZE=2) and expect ~4.6 GB/s; under ~2 GB/s means that node needs a reboot.
 >
-> - **Shipped: `GPU_MEMORY_UTILIZATION` 0.80** (+14% prefill at 78K, decode unaffected).
-> - **Fixed (NOT persistent — reverts on spark1 reboot):** duplicate `192.168.100.2/24`
->   on both of spark1's NICs, plus two stale routes. Correct hygiene; did NOT change
->   bandwidth or prefill. Make it persistent in spark1's network config.
-> - **Ruled out by measurement:** `NCCL_DMABUF_ENABLE=1` + `NCCL_NET_GDR_LEVEL=5`
->   (0.49 GB/s either way), harness (byte-identical `token_pool_sha256` to upstream's
->   published run), prefix caching, TP=2 vs TP=3, head padding, vLLM version, image,
->   checkpoint, `MAX_MODEL_LEN`, `MTP_NUM_TOKENS`, seqs, gpu-mem, indexer chunk MB,
->   prompt content, GPU compute (93.3 TFLOP/s), clocks (2,470 vs a 2,418 spec — at
->   spec), memory bandwidth (236 GB/s of 273).
+> Also shipped: `GPU_MEMORY_UTILIZATION` 0.85 -> **0.80** (+14% prefill at 78K).
+>
+> **Withdrawn/corrected:** the earlier "swap the cable" advice (the alternate cable
+> measured identically, 0.68 GB/s) and the "GPU clocks at 82% of rated" claim
+> (2,418 MHz is the application-clock spec; the GPUs were always at spec).
 >
 > **CAUTION:** `MTP_NUM_TOKENS=0` is invalid (service fails to start); use 1 as a floor.
 > MTP=1 leaves prefill flat but **collapses decode to 46.7 tok/s**.
 >
-> **A method note:** an earlier probe flagged this same spark1 leg and I dismissed it
-> using a TCP test (within 1.27x). TCP does not exercise the RDMA verbs path — wrong
-> instrument. Use the NCCL allgather (`results/20260824-seqs32-nccl/agbench.py`), which
-> is what vLLM actually uses.
->
-> Cluster: **idle, healthy, serving** — TP=3, 1M context, MTP=5, seqs=16, 0.80,
-> KV 4,604,327. Decode cc=1 82.6 tok/s, cc=16 341.9.
+> Cluster: **healthy and serving** — TP=3, 1M context, MTP=5, seqs=16, 0.80,
+> KV 4,493,602.
 
 ### 5a. `MAX_NUM_SEQS=32` → issue #10 — **CLOSED 2026-08-24: REJECTED**
 
