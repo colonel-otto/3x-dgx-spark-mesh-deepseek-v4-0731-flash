@@ -168,15 +168,39 @@ ports**, cabled and ACTIVE.
 
 This is the single most important addition to this document.
 
+**Do not hand-roll this check.** It is one script, and every benchmark should call it:
+
 ```bash
-# pairwise, vLLM must be STOPPED (live vLLM holds ~119/121 GiB; no second CUDA context)
-results/20260824-seqs32-nccl/agbench.py
+make gate CONFIG=configs/3spark-live.env        # engine up: liveness + mesh + latency
+make gate-full CONFIG=configs/3spark-live.env   # engine STOPPED: + every NCCL pair & N-rank
 ```
+
+`scripts/fabric_gate.sh` **exits non-zero when a link is degraded**, so it gates rather
+than merely reports. `scripts/run_experiment.sh` now calls it automatically and refuses to
+benchmark if it fails, archiving the verdict as `fabric-gate.json` beside the results.
+(Bypass with `FABRIC_GATE=0` — rarely, and deliberately.)
+
+It checks four things in ascending cost:
+
+| # | check | catches |
+|---|---|---|
+| 1 | SSH liveness (reads the banner) | a wedged node — **an open port 22 is not proof of life**, which misled us twice |
+| 2 | Full directed mesh over the **fabric** addresses | a missing route or silent WiFi fallback; Gloo needs all N×(N−1) directions |
+| 3 | Per-pair RTT with a ceiling | a link that is up and routable but pathological |
+| 4 | NCCL collective bandwidth | **the 2026-08-25 degradation** — nothing else caught it |
+
+Check 2 uses `FABRIC_ADDRS` from the config, **not** the management IPs: the management
+LAN passed cleanly all the way through the degradation.
 
 | result @64 MiB busbw | meaning |
 |---|---|
 | **~4.6 GB/s** | healthy GB10 pair |
+| **~3.25 GB/s** | healthy 3-rank collective (measured 2026-08-25, post-fix) |
 | **~0.7 GB/s** | **degraded node — reboot it before measuring anything** |
+
+The raw harness underneath is still `results/20260824-seqs32-nccl/agbench.py`, which the
+gate deploys to each node itself; vLLM must be STOPPED for it (live vLLM holds ~119/121
+GiB and there is no room for a second CUDA context).
 
 **TCP throughput is NOT a valid check.** It showed the degraded link at 858 MB/s vs 1,019
 for a healthy one — 1.19x — while RDMA was 6.8x down. TCP does not exercise the RDMA
@@ -270,8 +294,13 @@ contain internal IPs and hostnames, so this matters.
 
 - **Why did spark1's fabric degrade?** No error indicator of any kind. Unknown.
 - **Is `MAX_NUM_SEQS=32` viable on a healthy fabric?** The rejection is now suspect.
-- **What is the real 3-rank allgather ceiling?** The 0.49 GB/s figure was measured on the
-  degraded fabric; the healthy pairwise number is 4.6 GB/s.
+- ~~**What is the real 3-rank allgather ceiling?**~~ **ANSWERED 2026-08-25: 3.25 GB/s.**
+  Measured with `make gate-full` on the healthy fabric (all three pairs read 4.58–4.60
+  GB/s). The old **0.49 GB/s** figure was taken on the degraded fabric and is **6.6x
+  pessimistic**. That number anchored the "GB10 has no GPUDirect, ~0.5 GB/s is the
+  ceiling" analysis, so **that analysis needs revisiting** — the communication budget is
+  far larger than it assumed, which bears directly on the EP=3 / PP=3 / seqs=32
+  rejections.
 - **Does prefill exceed the reference on a healthy fabric?** We are at 95–99%; nobody has
   tuned *for* prefill since the fix.
 - Does `max_num_seqs=64` continue the trend past 32? Untested by anyone.
