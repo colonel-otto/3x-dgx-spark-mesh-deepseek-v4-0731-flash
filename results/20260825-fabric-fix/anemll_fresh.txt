@@ -1,0 +1,21 @@
+target http://localhost:8100 model deepseek-v4-flash-0731 version 0.25.2.dev0+g752a3a504.d20260714 label freshseed
+warmup 1,024 tokens: TTFT 0.510s
+shape warmup 1,024 tokens (1/1): TTFT 0.528s
+shape warmup 8,192 tokens (1/1): TTFT 3.817s
+shape warmup 32,768 tokens (1/1): TTFT 15.652s
+=== 1,024 input tokens ===
+  trial=1: server=2003.9 tok/s | client=1981.8 tok/s | TTFT=0.517s | computed=1024
+  trial=2: server=2022.6 tok/s | client=1962.3 tok/s | TTFT=0.522s | computed=1024
+  trial=3: server=2031.5 tok/s | client=2007.4 tok/s | TTFT=0.510s | computed=1024
+=== 8,192 input tokens ===
+  trial=1: server=2159.2 tok/s | client=2151.6 tok/s | TTFT=3.807s | computed=8192
+  trial=2: server=1975.4 tok/s | client=1968.9 tok/s | TTFT=4.161s | computed=8192
+  trial=3: server=2069.5 tok/s | client=2057.5 tok/s | TTFT=3.982s | computed=8192
+=== 32,768 input tokens ===
+  trial=1: server=2097.1 tok/s | client=2090.4 tok/s | TTFT=15.675s | computed=32768
+  trial=2: server=2051.4 tok/s | client=2046.7 tok/s | TTFT=16.010s | computed=32768
+  trial=3: server=2094.9 tok/s | client=2089.4 tok/s | TTFT=15.683s | computed=32768
+=== MEDIANS ===
+   1,024: server 2022.6 tok/s | client 1981.8 tok/s | TTFT 0.517s
+   8,192: server 2069.5 tok/s | client 2057.5 tok/s | TTFT 3.982s
+  32,768: server 2094.9 tok/s | client 2089.4 tok/s | TTFT 15.683s

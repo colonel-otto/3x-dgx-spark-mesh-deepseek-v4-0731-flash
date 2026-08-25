@@ -1,0 +1,39 @@
+target http://localhost:8100 model deepseek-v4-flash-0731 version 0.25.2.dev0+g752a3a504.d20260714 label post-reboot-confirm
+warmup 1,024 tokens: TTFT 0.266s
+shape warmup 1,024 tokens (1/1): TTFT 0.264s
+shape warmup 2,048 tokens (1/1): TTFT 0.270s
+shape warmup 4,096 tokens (1/1): TTFT 0.272s
+shape warmup 8,192 tokens (1/1): TTFT 0.279s
+shape warmup 16,384 tokens (1/1): TTFT 0.289s
+shape warmup 32,768 tokens (1/1): TTFT 0.310s
+=== 1,024 input tokens ===
+  trial=1: server=986.8 tok/s | client=3868.9 tok/s | TTFT=0.265s | computed=256 cache-hit=768
+  trial=2: server=994.6 tok/s | client=3892.9 tok/s | TTFT=0.263s | computed=256 cache-hit=768
+  trial=3: server=986.8 tok/s | client=3873.0 tok/s | TTFT=0.264s | computed=256 cache-hit=768
+=== 2,048 input tokens ===
+  trial=1: server=977.6 tok/s | client=7652.2 tok/s | TTFT=0.268s | computed=256 cache-hit=1792
+  trial=2: server=973.1 tok/s | client=7603.3 tok/s | TTFT=0.269s | computed=256 cache-hit=1792
+  trial=3: server=972.9 tok/s | client=7585.5 tok/s | TTFT=0.270s | computed=256 cache-hit=1792
+=== 4,096 input tokens ===
+  trial=1: server=966.9 tok/s | client=14435.9 tok/s | TTFT=0.284s | computed=256 cache-hit=3840
+  trial=2: server=964.2 tok/s | client=14941.5 tok/s | TTFT=0.274s | computed=256 cache-hit=3840
+  trial=3: server=965.6 tok/s | client=14955.3 tok/s | TTFT=0.274s | computed=256 cache-hit=3840
+=== 8,192 input tokens ===
+  trial=1: server=963.5 tok/s | client=29235.6 tok/s | TTFT=0.280s | computed=256 cache-hit=7936
+  trial=2: server=963.6 tok/s | client=29291.6 tok/s | TTFT=0.280s | computed=256 cache-hit=7936
+  trial=3: server=957.7 tok/s | client=29173.9 tok/s | TTFT=0.281s | computed=256 cache-hit=7936
+=== 16,384 input tokens ===
+  trial=1: server=949.0 tok/s | client=56099.6 tok/s | TTFT=0.292s | computed=256 cache-hit=16128
+  trial=2: server=952.7 tok/s | client=56109.5 tok/s | TTFT=0.292s | computed=256 cache-hit=16128
+  trial=3: server=932.2 tok/s | client=55086.6 tok/s | TTFT=0.297s | computed=256 cache-hit=16128
+=== 32,768 input tokens ===
+  trial=1: server=928.9 tok/s | client=103629.2 tok/s | TTFT=0.316s | computed=256 cache-hit=32512
+  trial=2: server=919.0 tok/s | client=102548.4 tok/s | TTFT=0.320s | computed=256 cache-hit=32512
+  trial=3: server=918.5 tok/s | client=102503.1 tok/s | TTFT=0.320s | computed=256 cache-hit=32512
+=== MEDIANS ===
+   1,024: server 986.8 tok/s | client 3873.0 tok/s | TTFT 0.264s
+   2,048: server 973.1 tok/s | client 7603.3 tok/s | TTFT 0.269s
+   4,096: server 965.6 tok/s | client 14941.5 tok/s | TTFT 0.274s
+   8,192: server 963.5 tok/s | client 29235.6 tok/s | TTFT 0.280s
+  16,384: server 949.0 tok/s | client 56099.6 tok/s | TTFT 0.292s
+  32,768: server 919.0 tok/s | client 102548.4 tok/s | TTFT 0.320s

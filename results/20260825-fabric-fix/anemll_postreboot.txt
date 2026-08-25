@@ -1,0 +1,21 @@
+target http://localhost:8100 model deepseek-v4-flash-0731 version 0.25.2.dev0+g752a3a504.d20260714 label post-reboot-fabric
+warmup 1,024 tokens: TTFT 7.097s
+shape warmup 1,024 tokens (1/1): TTFT 5.204s
+shape warmup 8,192 tokens (1/1): TTFT 22.471s
+shape warmup 32,768 tokens (1/1): TTFT 1.043s
+=== 1,024 input tokens ===
+  trial=1: server=shared tok/s | client=1372.2 tok/s | TTFT=0.746s | computed=1280 cache-hit=768
+  trial=2: server=shared tok/s | client=1371.2 tok/s | TTFT=0.747s | computed=1280 cache-hit=768
+  trial=3: server=shared tok/s | client=873.0 tok/s | TTFT=1.173s | computed=2304 cache-hit=768
+=== 8,192 input tokens ===
+  trial=1: server=shared tok/s | client=1740.3 tok/s | TTFT=4.707s | computed=10240
+  trial=2: server=shared tok/s | client=1747.8 tok/s | TTFT=4.687s | computed=10240
+  trial=3: server=shared tok/s | client=1465.7 tok/s | TTFT=5.589s | computed=12288
+=== 32,768 input tokens ===
+  trial=1: server=shared tok/s | client=1688.4 tok/s | TTFT=19.408s | computed=40960
+  trial=2: server=shared tok/s | client=2056.9 tok/s | TTFT=15.931s | computed=33280 cache-hit=15872
+  trial=3: server=shared tok/s | client=2009.7 tok/s | TTFT=16.305s | computed=33024 cache-hit=7936
+=== MEDIANS ===
+   1,024: server n/a tok/s | client 1371.2 tok/s | TTFT 0.747s
+   8,192: server n/a tok/s | client 1740.3 tok/s | TTFT 4.707s
+  32,768: server n/a tok/s | client 2009.7 tok/s | TTFT 16.305s
