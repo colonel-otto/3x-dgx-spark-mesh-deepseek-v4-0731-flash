@@ -47,13 +47,31 @@ uses **management IPs and one common interface on every node** -- the playbook s
 Wi-Fi is explicitly supported for this path, which tells you it is a *control* plane, not
 a data plane.
 
-All three of our Sparks already share a management network:
+### Do the Sparks need Ethernet cables? **No.**
 
-| node | mgmt |
-|---|---|
-| sparkmain | 192.168.1.223 |
-| spark1 | 192.168.1.50 |
-| spark2 | 192.168.1.27 |
+This is worth stating plainly, because "management interface" sounds like it implies a
+cable. It does not.
+
+**Measured 2026-08-25 on all three nodes:**
+
+| node | `enP7s7` (Ethernet) | `wlP9s9` (Wi-Fi) |
+|---|---|---|
+| sparkmain | **down** | 192.168.1.223 |
+| spark1 | **down** | 192.168.1.50 |
+| spark2 | **down** | 192.168.1.27 |
+
+**Not one Spark is on Ethernet.** All three reach the LAN over Wi-Fi, and all six
+node-to-node paths on 192.168.1.x are reachable (3-135 ms RTT). The shared control network
+we need **already exists** -- no cabling required.
+
+The ConnectX-7 ring stays exactly as it is. It carries **all** the data. The only thing
+that would move is the few kilobytes of rendezvous traffic NCCL uses to agree on a
+topology before any payload flows -- and NVIDIA's playbook **explicitly supports Wi-Fi**
+for it, which is the clearest possible signal that it is a control plane, not a data path.
+
+> **Terminology note:** NVIDIA's playbook names `enP7s7` because that is the Ethernet port
+> on their reference setup. What matters is *one interface, common to every node, that is
+> not the fabric* -- `wlP9s9` satisfies that here. Substitute it throughout.
 
 Bootstrap traffic is tiny; RDMA still carries the payload. Putting rendezvous on a
 rank-specific fabric interface -- with the master address on loopback -- is a plausible way
@@ -130,7 +148,7 @@ Engine **stopped**. One variable at a time; capture `NCCL_DEBUG=INFO` every run.
 | # | Variable | Setting |
 |---|---|---|
 | 0 | baseline | our current config, for a same-day anchor |
-| 1 | **bootstrap** | management `wlP9s9`/`enP7s7` addresses, one common interface, MPI launcher |
+| 1 | **bootstrap** | `wlP9s9` (Wi-Fi) addresses on all three, one common interface, MPI launcher. **No cabling needed** |
 | 2 | **harness** | official MPI-enabled `nccl-tests` `all_gather_perf`, NCCL 2.30.7-1 `sm_121`, 20 iters |
 | 3 | **size** | 32 MiB **and** 16 GiB, matching the forum points exactly |
 | 4 | **merge** | `NCCL_IB_MERGE_NICS=0` vs default |
