@@ -146,6 +146,9 @@ Full rollback procedure in the operator's `docs\dsv4-2node-fallback.md`.
 | Patch 4 (shared expert) | **Does not apply** to vLLM 0.25.2 — the generic substring mapping already catches `.shared_experts.w1/.w3`. Verified three ways. Applying it would be redundant. |
 | KV dtype is not a speed lever | fp8 vs nvfp4 measured **identically** upstream (41.4 vs 41.5). Do not switch KV dtype for throughput reasons. |
 | The 60 tok/s "ceiling" | **False for this cluster.** We measure 93.8 / 92.3 / 86.1 tok/s single-stream. |
+| `MAX_NUM_SEQS=32` | **Rejected 2026-08-24.** Crashes the engine at sustained cc=32 (NCCL allgather stall); cc=16 also regressed. Keep 16. |
+| `NCCL_IB_MERGE_NICS` | **No-op 2026-08-24.** NCCL already merges both HCAs by default; measured identical both ways. |
+| GB10 GPUDirect RDMA | **Absent — architectural.** All inter-node collectives host-stage at ~0.5 GB/s. This is the prefill ceiling. |
 | Aggregate throughput as an MTP signal | **Useless** — every level sits inside its own run spread. Use the acceptance counters. |
 
 Full detail and evidence: [`MTP5-1M-AND-UPSTREAM-COMPARISON.md`](MTP5-1M-AND-UPSTREAM-COMPARISON.md).
@@ -214,14 +217,29 @@ These are not style preferences. Each was learned by getting a wrong answer firs
 
 ## 5. Next measurements — in priority order
 
-> **START HERE: §5a (`MAX_NUM_SEQS=32`, issue #10) is the next task.** §5b's
-> single-request half is done and settled — 500K passed clean, which was accepted as
-> sufficient. §5c is open but lower priority.
+> **START HERE: §5a (seqs=32) and §5c lead #1 (`NCCL_IB_MERGE_NICS`) are both CLOSED
+> as of 2026-08-24 — see [`SEQS32-AND-NCCL-FABRIC.md`](SEQS32-AND-NCCL-FABRIC.md).**
+> seqs=32 **crashes the engine** under sustained load and was rolled back; merge-NICs is
+> a **measured no-op** (NCCL already merges both HCAs by default). The real ceiling is
+> that **GB10 has no GPUDirect RDMA** — every inter-node byte is host-staged, giving
+> ~0.5 GB/s allgather busbw, which also explains the §5c prefill gap.
 >
-> The cluster is **idle, healthy, and serving** at 1M context / MTP=5 as of handoff.
-> Nothing is mid-experiment; no cleanup is pending.
+> **The next open task is §5b's concurrency half** (issue #12) — it needs no restart.
+> §5c remains open but its leading hypothesis is now falsified.
+>
+> The cluster is **idle, healthy, and serving** at 1M context / MTP=5 / seqs=16.
+> `NCCL_DEBUG=INFO` and `NCCL_TIMEOUT=3600` are now set on all three ranks.
 
-### 5a. `MAX_NUM_SEQS=32` → issue #10
+### 5a. `MAX_NUM_SEQS=32` → issue #10 — **CLOSED 2026-08-24: REJECTED**
+
+> **Do not retry this.** It boots and serves, then kills the engine at sustained
+> cc=32 — an `_ALLGATHER_BASE` stall on all three ranks with KV only 2.8% full and
+> zero link errors. cc=16 also measured *worse* than the seqs=16 baseline
+> (325.1 vs 374.2). KV cost was only -1.1%, so the memory risk this section warned
+> about was not the problem. Full analysis:
+> [`SEQS32-AND-NCCL-FABRIC.md`](SEQS32-AND-NCCL-FABRIC.md).
+
+<details><summary>Original scoping (kept for context)</summary>
 
 **Why:** the one upstream number we cannot match. The 3-node repo reports 618 tok/s
 aggregate at seqs=32 versus 431 at seqs=16 (+43%); we measure 374.2 at seqs=16.
@@ -254,6 +272,8 @@ cost 1.71 GiB. It plausibly fits, but it is not guaranteed.
 **Record:** aggregate at cc=32 with spread, whether saturation moves from cc=16 to
 cc=32, the KV pool delta, and single-stream (expected flat — this buys aggregate, not
 latency). **Rollback is a config revert plus one restart.**
+
+</details>
 
 ### 5b. NVFP4 KV output quality → issue #12 — **single-request half DONE 2026-08-24**
 
@@ -317,12 +337,18 @@ Any retest must hold the prompt constant. Note their harness targets 100,000
 *characters* ≈ 78K tokens — "100K" is not 100K tokens on either side.
 
 **Leads in order:**
-1. **`NCCL_IB_MERGE_NICS=1`** — absent from our env. `NCCL_IB_HCA` already lists both
-   HCAs without the merge flag. Upstream measures 98 → 161 Gb/s busbw (+64%) with both
-   listed *and* merged. **Caveat:** that note targets back-to-back QSFP pairs; our fabric
-   is switched, which they say may be a case where the second NIC is deliberately unused.
-   Cheap: one env var plus a restart. Verify with `NCCL_DEBUG=INFO` whether merge
-   actually engages.
+1. ~~**`NCCL_IB_MERGE_NICS=1`**~~ — **FALSIFIED 2026-08-24.** Measured both ways on our
+   own fabric, inside the production image: **no effect at any message size**
+   (0.47–0.52 GB/s busbw either way). `NCCL_DEBUG=INFO` shows NCCL **already merges both
+   HCAs by default** into a 400 Gb/s virtual device and routes every channel over it.
+   The upstream +64% targets a config where the merge was off. **Do not re-open.**
+
+   **What the measurement found instead:** `GPU Direct RDMA Disabled` on every HCA —
+   GB10 has no GPUDirect, so all inter-node traffic is host-staged at ~0.5 GB/s (≈2% of
+   line rate). Prefill is large-message and allgather-dominated; decode is not. That
+   asymmetry *is* the prefill gap, and it is architectural rather than a tuning miss.
+   See [`SEQS32-AND-NCCL-FABRIC.md`](SEQS32-AND-NCCL-FABRIC.md) §3.
+
 2. **Runtime version** — we are on 0.25.2, they are on an overlay on 0.21.1rc1. Most
    likely structural cause, most expensive to test.
 3. **`MAX_NUM_BATCHED_TOKENS`** — both run 8192. Prior work here found 16384 costs 43% of
