@@ -38,8 +38,18 @@ SUMMARY_COLS = [
 # and preemption instrumentation. The 2026-08-21 deep-concurrency run was ad-hoc
 # and left no script, so its rows cannot be reproduced byte-for-byte -- calling
 # both "bench-miaai" would hide exactly that.
-VALID_HARNESS = {"bench-miaai", "benchmark_tp3", "ours-bench.py", "deepconc.py"}
-VALID_PROMPT = {"code-brief", "dense-prose", "synthetic-numbered-words"}
+# benchmark_prefill.py is upstream anemll's, run UNMODIFIED (it embeds a
+# token_pool_sha256 that matched theirs byte-for-byte). It measures prefill
+# server-side from token IDs, so its tok/s is a PREFILL rate and must never be
+# divided against the decode rates the other harnesses produce.
+VALID_HARNESS = {"bench-miaai", "benchmark_tp3", "ours-bench.py", "deepconc.py",
+                 "benchmark_prefill.py"}
+# random-token-ids: upstream's prefill harness feeds pseudo-random token IDs
+# (seeded per size/trial so no two requests share a prefix). Not natural text at
+# all, which is the point -- it defeats the prefix cache and makes prefill cost
+# depend only on depth.
+VALID_PROMPT = {"code-brief", "dense-prose", "synthetic-numbered-words",
+                "random-token-ids"}
 VALID_STATISTIC = {"median", "single-observation", "mean", "engine-reported", ""}
 VALID_OBSERVATION = {"sweep-point", "acceptance-observation", "correctness-check"}
 VALID_SOURCE = {"local-measurement", "external-published"}
