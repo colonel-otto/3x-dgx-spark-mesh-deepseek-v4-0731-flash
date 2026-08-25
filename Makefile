@@ -4,10 +4,20 @@ CONTEXTS ?= 2048,8192,32768
 CONCURRENCIES ?= 1,3,6
 MAX_TOKENS ?= 256
 
-.PHONY: preflight nccl-bootstrap nccl fabric baseline candidate compare test \n	check-sensitive install-hooks summary
+.PHONY: preflight gate gate-full nccl-bootstrap nccl fabric baseline candidate compare test \n	check-sensitive install-hooks summary
 
 preflight:
 	bash scripts/preflight.sh $(CONFIG)
+
+# Run BEFORE every benchmark. Checks SSH liveness, the full fabric mesh with
+# latency, and NCCL collective bandwidth; exits non-zero if a link is degraded.
+# `gate` auto-skips bandwidth when the engine is up; `gate-full` measures every
+# pair plus the N-rank case and needs the engine STOPPED.
+gate:
+	bash scripts/fabric_gate.sh $(CONFIG)
+
+gate-full:
+	bash scripts/fabric_gate.sh $(CONFIG) --nccl=full
 
 nccl-bootstrap:
 	bash scripts/bootstrap_nccl.sh $(CONFIG)
