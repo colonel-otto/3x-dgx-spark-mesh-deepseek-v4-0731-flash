@@ -33,29 +33,57 @@ bound. **The +17% at cc=1 is the number that matters here.**
 - KV cache 4,457,627 (3-node) vs 1,711,307 (2-node) — a 2.6x ratio that, as established
   in issue #15, never binds.
 
-## ⚠ The noise is bimodal — read this before re-running
+## ⚠ The noise is a fast mode plus a stall tail — CAUSE FOUND
 
 The harness prints `<-- wide spread, check for other traffic` at cc≥4 on both arms. **That
-warning is misleading here and the medians are sound.** Characterized with 15 spaced cc=1
-runs on TP=3:
+warning is misleading here and the medians are sound.**
+
+> **Correction.** An earlier version of this file called the distribution *bimodal* from
+> n=15. That was under-resolved. At **n=30** three gaps appear, not one:
+>
+> | cluster | values | n | reading |
+> |---|---|---:|---|
+> | fast | 85.1–91.0 | 24 (80%) | steady state |
+> | slow-1 | 77.4, 79.1 | 2 | partial stall |
+> | slow-2 | 68.8, 69.8, 72.1 | 3 | full ~5 s compile |
+>
+> It is a fast mode with a **tail of stall severities**, consistent with variable-length
+> compiles rather than two discrete states. Do not quote "bimodal".
+
+**Root cause: JIT compilation during inference.** The engine says so itself:
 
 ```
-69.8 89.1 90.7 90.9 88.8 90.6 85.8 89.0 68.8 89.4 87.7 72.1 90.7 89.4 90.8
+TileLang begins to compile kernel `mhc_pre_big_fuse_with_norm_tilelang`   22:55:22
+TileLang completes                                                        22:55:27   (5 s)
+WARNING jit_monitor: CuTeDSL JIT compilation during inference: W4A16FusedMoeKernel.
+  This causes a latency spike; consider extending warmup to cover this shape/config.
 ```
 
-| mode | value | frequency |
-|---|---:|---:|
-| fast | **89.4 tok/s** (±1%) | 80% |
-| slow | 69.8 tok/s | 20% |
+A ~5 s compile landing inside a ~3 s benchmark run produces exactly the observed dropout.
 
-An intermittent ~22% dropout, not progressive degradation. Ruled out: thermal throttling
-(no active throttle reasons, clocks 2405–2411 MHz at spec, 57–65 °C), prefix cache (0
-hits), preemptions (0), and external traffic (the LiteLLM gateway holds an idle keepalive
-to `:8100` but sent nothing — completion counts matched our sweeps exactly).
+**Warming it up measurably helps** — 15 runs before vs after exercising the shapes:
 
-**Consequence: use the median and take ≥7 runs.** A mean, or a 3-run median, can land in
-the slow mode and manufacture a 20% difference that is not real. Root cause of the dropout
-is not known and is worth investigating separately.
+| | median | slow-mode rate | worst |
+|---|---:|---:|---:|
+| before | 89.1 | 20% | 68.8 |
+| after | **90.3** | **13%** | 77.4 |
+
+Once a shape is compiled it stays fast: re-probing an already-compiled 4K shape gave
+0.286 / 0.275 / 0.270 s, and total `JIT compilation during inference` warnings since
+engine start is **1**. The residual 13% means warm-up does not yet cover every shape.
+
+Note this makes the headline **conservative**: on the warmed median the 3-node gain at
+cc=1 is **+18.5%**, not +16.9%. The table above keeps the unwarmed 89.1 because that is
+what the matched TP=2 arm was measured against.
+
+Ruled out as causes: thermal throttling (no active throttle reasons, clocks 2405–2411 MHz
+at spec, 57–65 °C), prefix cache (0 hits), preemptions (0), external traffic (the LiteLLM
+gateway holds an idle keepalive to `:8100` but sent nothing — completion counts matched
+our sweeps exactly).
+
+**Consequence: use the median, take ≥7 runs, and warm every shape you intend to measure.**
+A mean, or a 3-run median, can land in the stall tail and manufacture a 20% difference
+that is not real.
 
 TP=2's cc=1 was unusually tight by comparison (2% spread, 7 runs within 75.8–77.4), so the
 +17% is not an artifact of picking TP=3's fast mode: even TP=3's *slow* mode (69.8) against
