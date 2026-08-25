@@ -327,6 +327,22 @@ run_nccl_group() {
     ndevs=$(grep -ohE 'Made virtual device \[[0-9]+\].*ndevs=[0-9]+' "$tmp/${group[0]}.log" \
             | grep -ohE 'ndevs=[0-9]+' | sort -u | tr '\n' ' ')
     ok "$label transport: ${transport}${ndevs:+(${ndevs% })}" "transport:$label" "$transport"
+
+    # WHICH devices NCCL merged, not just how many. On a RING this is the whole
+    # question: merging the two PCIe domains of the SAME port is what published
+    # working configs do, while merging f0+f1 spans two DIFFERENT physical
+    # ports -- which on a ring face DIFFERENT neighbours. NCCL then believes it
+    # has a pipe to each neighbour that it does not have.
+    # We previously captured only ndevs and threw the names away, so we could
+    # not tell the two cases apart.
+    local vdevs
+    vdevs=$(grep -ohE 'Made virtual device \[[0-9]+\] name=[^ ]+' "$tmp/${group[0]}.log" \
+            | sed -E 's/.*name=//' | sort -u | tr '\n' ' ')
+    if [[ -n "$vdevs" ]]; then
+      ok "$label merged devices: ${vdevs% }" "vdev:$label" "${vdevs% }"
+    else
+      skip "$label: no merged virtual device (NCCL using raw HCAs)" "vdev:$label" "none"
+    fi
   else
     skip "$label: transport not reported (NCCL_DEBUG output missing)" "transport:$label" ""
   fi
