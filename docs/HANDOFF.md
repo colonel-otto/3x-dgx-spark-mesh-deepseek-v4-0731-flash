@@ -59,6 +59,30 @@ fresh seed so prefix caching cannot hit, client agreeing within 1%.
 | 8,192 | **2,069.5** | 2,184.2 | **94.8%** |
 | 32,768 | **2,094.9** | 2,176.1 | **96.3%** |
 
+> ## ✅ ANSWERED 2026-08-25: is the third node worth it?
+>
+> **Yes for single-stream interactive work; no for batch throughput.** Fully matched,
+> healthy-fabric, node count the only variable:
+>
+> | measurement | 2-node | 3-node | winner |
+> |---|---:|---:|---|
+> | **decode cc=1** | 76.2 | **89.1** | **3-node, +17%** |
+> | decode cc=4 | 192.8 | **208.8** | 3-node, +8% |
+> | decode cc=8 | 302.7 | **322.7** | 3-node, +7% |
+> | decode cc=16 | **481.3** | 474.8 | 2-node, +1.4% |
+> | prefill 1K/8K/32K | 1913/2081/2066 | 2023/2070/2095 | parity (±2%) |
+> | deep-concurrency TTFT | **293,987 ms** | 396,804 ms | 2-node, 1.35x |
+> | KV capacity | 1,711,307 | **4,457,627** | 3-node 2.6x — never binds |
+>
+> The 3-node advantage decays monotonically with concurrency and crosses over near cc=16.
+> **This deployment is single-user interactive coding — per-stream-latency bound — so the
+> +17% at cc=1 is the number that matters.** A multi-user batch workload should run 2
+> nodes and free the third.
+>
+> This vindicates the old "+8–17% per-stream" claim, which had been degraded-fabric data
+> and therefore suspect under #14. Details and the bimodal-noise warning:
+> [`../results/20260825-decode-2v3/`](../results/20260825-decode-2v3).
+
 > **The third node does not buy prefill.** Measured 2026-08-25 on our own hardware, both
 > arms on this same production profile and the same unmodified harness:
 >
