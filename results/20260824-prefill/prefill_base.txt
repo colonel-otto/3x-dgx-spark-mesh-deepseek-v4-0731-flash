@@ -1,0 +1,15 @@
+warming
+warm done
+### REP 1
+target=   8000 prompt_tok=   6234 sec=   7.00 tok/s=     891
+target=  32000 prompt_tok=  24900 sec=  22.60 tok/s=    1102
+target= 100000 prompt_tok=  77790 sec=  67.10 tok/s=    1159
+### REP 2
+target=   8000 prompt_tok=   6234 sec=   0.54 tok/s=   11570
+target=  32000 prompt_tok=  24900 sec=   0.41 tok/s=   60800
+target= 100000 prompt_tok=  77790 sec=   0.94 tok/s=   82759
+### REP 3
+target=   8000 prompt_tok=   6234 sec=   0.27 tok/s=   22943
+target=  32000 prompt_tok=  24900 sec=   0.31 tok/s=   79933
+target= 100000 prompt_tok=  77790 sec=   0.74 tok/s=  105167
+DONE
