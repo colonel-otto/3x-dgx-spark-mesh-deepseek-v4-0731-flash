@@ -1,0 +1,35 @@
+target : http://localhost:8100
+model  : deepseek-v4-flash-0731
+tokens : 256 per completion, temperature 0
+runs   : 3 per level
+
+cc=1   wall=  3.03s  ok=1/1  aggregate=  84.6 tok/s  per-stream= 84.6 tok/s
+cc=1   wall=  2.99s  ok=1/1  aggregate=  85.6 tok/s  per-stream= 85.7 tok/s
+cc=1   wall=  3.04s  ok=1/1  aggregate=  84.3 tok/s  per-stream= 84.3 tok/s
+      median=  84.6 tok/s  spread=2%
+
+cc=8   wall=  8.34s  ok=8/8  aggregate= 245.5 tok/s  per-stream= 31.2 tok/s
+cc=8   wall=  8.30s  ok=8/8  aggregate= 246.9 tok/s  per-stream= 31.4 tok/s
+cc=8   wall=  9.92s  ok=8/8  aggregate= 206.5 tok/s  per-stream= 26.2 tok/s
+      median= 245.5 tok/s  spread=16%
+
+cc=16  wall= 13.11s  ok=16/16  aggregate= 312.4 tok/s  per-stream= 19.8 tok/s
+cc=16  wall= 11.45s  ok=16/16  aggregate= 357.7 tok/s  per-stream= 22.6 tok/s
+cc=16  wall= 12.60s  ok=16/16  aggregate= 325.1 tok/s  per-stream= 20.8 tok/s
+      median= 325.1 tok/s  spread=14%
+
+cc=24  wall= 23.43s  ok=24/24  aggregate= 262.2 tok/s  per-stream= 11.1 tok/s
+cc=24  wall= 16.44s  ok=24/24  aggregate= 373.6 tok/s  per-stream= 15.9 tok/s
+cc=24  wall= 15.46s  ok=24/24  aggregate= 397.4 tok/s  per-stream= 17.0 tok/s
+      median= 373.6 tok/s  spread=36%   <-- wide spread, check for other traffic
+
+cc=32  wall= 22.46s  ok=32/32  aggregate= 364.7 tok/s  per-stream= 11.7 tok/s
+cc=32  wall= 19.24s  ok=32/32  aggregate= 425.8 tok/s  per-stream= 13.6 tok/s
+cc=32  ALL REQUESTS FAILED
+      median= 395.2 tok/s  spread=15%
+
+cc=40  ALL REQUESTS FAILED
+cc=40  ALL REQUESTS FAILED
+cc=40  ALL REQUESTS FAILED
+
+wrote seqs32.json
