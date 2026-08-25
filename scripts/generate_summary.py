@@ -224,21 +224,37 @@ def build():
             "notes": note,
         })
 
-    # --- Deep concurrency: 4 x 200,000-token prompts. The negative result. ---
-    # BOTH configs are unusable here. The 3-node's 1.95x KV cache did NOT convert,
-    # because the bottleneck is serialized long prefill, not KV capacity
-    # (preemptions were 0 on both).
+    # --- Deep concurrency: 4 x ~200,000-token prompts. ---
+    # Both configs remain unusable at this depth, and preemptions stay 0 -- so
+    # the KV pool genuinely never binds. But the ORIGINAL 2026-08-21 rows were
+    # taken on the degraded spark1 fabric (issue #15), and the healthy-fabric
+    # re-run is materially faster, so the surrounding "serialized prefill"
+    # framing is scoped rather than restated as settled.
+    #
+    # Selection is by NEWEST matching run, and the note is derived from the row
+    # rather than hardcoded -- an earlier version pinned prompt_tokens to exactly
+    # "200000" and baked "~14.5 min wall" into the text, so a re-run would have
+    # been skipped while the stale conclusion kept being asserted.
     for cfg, rid, label in (
             ("tp2-matched-mtp4", "tp2-matched-deep-concurrency", "2-node TP=2"),
             ("tp3-seqs16", "tp3-seqs16-deep-concurrency", "3-node TP=3")):
-        r = None
-        for cand in m:
-            if (cand["config_id"] == cfg and cand["prompt_tokens"] == "200000"
-                    and cand["concurrency"] == "4"
-                    and cand["reverted"] == "false" and cand["decode_tok_s"]):
-                r = cand
-                break
-        if r:
+        cands = [c for c in m
+                 if c["config_id"] == cfg and c["concurrency"] == "4"
+                 and c["reverted"] == "false" and c["decode_tok_s"]
+                 and c["prompt_tokens"].isdigit()
+                 and 195000 <= int(c["prompt_tokens"]) <= 205000]
+        if cands:
+            r = max(cands, key=lambda c: c["timestamp_utc"])
+            ttft = r["ttft_ms"] or "?"
+            wall_min = ("%.1f" % (int(ttft) / 60000.0)) if ttft.isdigit() else "?"
+            note = (label + ", 4 concurrent ~200,000-token prompts: still "
+                    "UNUSABLE (TTFT " + ttft + " ms, i.e. >" + wall_min +
+                    " min to first token). preemptions 0, so the KV pool never "
+                    "binds at this depth. Measured " + r["timestamp_utc"][:10] +
+                    " with harness " + r["harness"] + ".")
+            if r["timestamp_utc"] < "2026-08-25":
+                note += (" TAKEN ON THE DEGRADED spark1 FABRIC - provisional, "
+                         "see issue #15.")
             out.append({
                 "result_id": rid,
                 "source_file": "measurements.csv",
@@ -250,11 +266,7 @@ def build():
                 "harness": r["harness"],
                 "comparability": "prompt-matched",
                 "evidence_status": "raw-measurements",
-                "notes": (label + ", 4 concurrent 200,000-token prompts: UNUSABLE "
-                          "on both (~14.5 min wall, TTFT " + (r["ttft_ms"] or "?")
-                          + " ms). The 3-node's 1.95x KV cache did NOT help - "
-                          "preemptions were 0 on both, so the bottleneck is "
-                          "serialized long prefill, not KV capacity."),
+                "notes": note,
             })
 
     # --- KV capacity: the structural 3-node result, prompt-independent. ---
