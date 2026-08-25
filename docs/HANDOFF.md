@@ -1,429 +1,279 @@
-# Handoff — DeepSeek-V4-Flash 3×DGX Spark, as of 2026-08-24
+# Handoff — DeepSeek-V4-Flash on 3×DGX Spark, as of 2026-08-25
 
-Read this first if you are picking up this work. It states what is running, what is
-settled, what is open, and exactly how to run the next three measurements.
+Read this first. It states what is running, what is settled, **what is now suspect**, and
+what to do next.
+
+> ## ⚠ Read this before trusting any number in this repo
+>
+> On 2026-08-25 we found that **spark1 had silently degraded RDMA fabric** — every NCCL
+> collective involving it ran at **~0.7 GB/s against 4.6 GB/s** for the healthy pair, a
+> **6.8x deficit with zero error indicators**. A reboot cleared it, and prefill roughly
+> doubled with no configuration change.
+>
+> **Every multi-node measurement recorded before 2026-08-25 was taken on that degraded
+> fabric.** They are provisional until re-run —
+> [issue #14](https://github.com/colonel-otto/3spark-dsv4/issues/14).
+>
+> Full detail: [`FABRIC-FIX-PARITY.md`](FABRIC-FIX-PARITY.md).
 
 ---
 
 ## 1. What is running right now
 
-**Verified live 2026-08-24 22:5x UTC.** The cluster is healthy and serving.
+**Verified live 2026-08-25 08:2x UTC.** Healthy and serving.
 
 | | value |
 |---|---|
 | Endpoint | `http://192.168.1.223:8100` (LAN), `http://localhost:8100` on the head |
 | Model id | `deepseek-v4-flash-0731` |
-| Weights | `/models/dsv4-abliterated` — DeepSeek-V4-Flash-0731, abliterated |
+| Weights | `/models/dsv4-abliterated` — DeepSeek-V4-Flash-0731, abliterated, 156 GiB / 48 FP8 shards |
 | Image | `ghcr.io/anemll/dspark-vllm-gx10:0.1.1` |
 | vLLM | `0.25.2.dev0+g752a3a504.d20260714` |
 | Topology | TP=3, PP=1, NNODES=3, `flashinfer_b12x` MoE |
-| `MAX_MODEL_LEN` | **1,048,576** |
-| `MTP_NUM_TOKENS` | **5** |
+| `MAX_MODEL_LEN` | 1,048,576 |
+| `MTP_NUM_TOKENS` | 5 |
 | `MAX_NUM_SEQS` | 16 |
-| `GPU_MEMORY_UTILIZATION` | **0.80** |
+| `GPU_MEMORY_UTILIZATION` | **0.80** (was 0.85; see §3) |
 | `kv-cache-dtype` | `nvfp4_ds_mla` |
-| CUDA-graph capture | 96 (`16 × (5+1)`), 1.24 GiB / 15 s |
-| GPU KV cache | **4,480,480 tokens** (4.3x concurrency at full context) |
+| CUDA-graph capture | 96 (`16 × (5+1)`) |
+| GPU KV cache | **4,493,602 tokens** |
 
 ### The three nodes
 
 | rank | host | note |
 |---:|---|---|
 | 0 | `sparkmain` | head — **the only node that serves**; workers emit nothing |
-| 1 | `spark1` (`gx10-e146`) | worker |
-| 2 | `spark2` (`gx10-6b41`) | worker. **`spark2` and `spark-sep` are the same machine** — two aliases, one host. Do not count them as four nodes. |
+| 1 | `spark1` (`gx10-e146`) | worker. **This is the node that had degraded fabric.** Rebooted 2026-08-25. |
+| 2 | `spark2` (`gx10-6b41`) | worker. **`spark2` and `spark-sep` are the same machine** — two aliases, one host. Not four nodes. |
 
-### Memory headroom — read before raising anything
+## 2. Current performance
 
-```
-sparkmain: total 121Gi  used 117Gi  available  3Gi
-spark1:    total 121Gi  used 117Gi  available  4Gi
-spark2:    total 121Gi  used 117Gi  available  4Gi
-```
+Measured with upstream anemll's `benchmark_prefill.py` **unmodified**, server-side timer,
+fresh seed so prefix caching cannot hit, client agreeing within 1%.
 
-Roughly **4 GiB available per node**. Any change that grows CUDA-graph capture or the
-KV pool has to fit in that. This is the single most important constraint on issue #10.
+**Prefill — at parity with the upstream reference:**
 
----
+| input tokens | ours | anemll reference (TP=2) | % of reference |
+|---:|---:|---:|---:|
+| 1,024 | **2,022.6** | 2,033.0 | **99.5%** |
+| 8,192 | **2,069.5** | 2,184.2 | **94.8%** |
+| 32,768 | **2,094.9** | 2,176.1 | **96.3%** |
 
-## 2. How to operate the cluster
+**Decode** (warm, idle engine, 3 reps, `bench_tp3.py`):
 
-### `dsv4.service` now starts the 3-node cluster — FIXED 2026-08-24
+| | value | vs pre-fix baseline |
+|---|---:|---:|
+| cc=1 median | **85.6** tok/s | 80.4 (+6%) |
+| cc=16 median | **491.0** tok/s | 374.2 (+31%) |
+| cc=16 peak | **593.1** tok/s | 374.2 (+59%) |
 
-It previously started a **2-node TP=2** topology from `config/head.env`. It now drives
-`config/tp3.env` on all three ranks:
+Both numbers are post-fabric-fix and are the only ones in this repo not taken on the
+degraded fabric.
 
-- `~/bin/dsv4-service-start` — waits for **both** workers' SSH (150 × 4 s; a Spark can
-  take 10–20 min to open port 22 after a cold boot, which is normal), **verifies
-  `tp3.env` is byte-identical across all three ranks**, then starts workers → 15 s →
-  head, and waits for `/health`.
-- `~/bin/dsv4-service-stop` — head first, then workers, best-effort so an unreachable
-  node cannot block teardown. `ExecStop` previously called the 2-node `dsv4 down`.
-- Unit: `TimeoutStartSec` raised 900 → 2400 (900 could not cover a real cold boot).
-
-The config-verification step is the valuable part: a mismatch between ranks otherwise
-hangs startup **forever with no error**, and this turns that into a clear failure in two
-seconds.
-
-Old versions kept as `~/bin/dsv4-service-start.bak-2node-*` and
-`/etc/systemd/system/dsv4.service.bak-2node-*`.
-
-> **`~/bin/dsv4` and `~/dsv4/dsv4` are still the old 2-node launcher** (they are the
-> same file — one is a symlink). The service no longer calls them, but do not invoke
-> them by hand on this cluster.
-
-**Status: `active` but `disabled`** — it will not auto-start on boot. Enabling it is a
-deliberate decision that has not been made; auto-start on boot sits close to the
-standing "no autonomous recovery actions" rule.
-
-### Config location
-
-`~/localai/dspark-vllm-gx10/config/tp3.env` on **each of the three nodes**, separately.
-
-> **Trap:** a mismatched `MAX_MODEL_LEN` (or any parallelism flag) between nodes hangs
-> startup **forever with no error message**. Always edit all three, then verify all
-> three before restarting.
-
-### Restart procedure — workers first, then head
-
-```bash
-# 1. Edit config on ALL THREE ranks, then verify:
-for h in sparkmain spark1 spark2; do ...grep -E 'MAX_MODEL_LEN|MAX_NUM_SEQS|MTP_NUM_TOKENS|GPU_MEMORY' tp3.env; done
-
-# 2. Down: head first, then workers
-ssh sparkmain "cd ~/localai/dspark-vllm-gx10 && COMPOSE_DISABLE_ENV_FILE=1 \
-  docker compose -p dspark-vllm-gx10 --env-file config/tp3.env -f docker-compose.yml down"
-# then the same on spark1 and spark2
-
-# 3. Up: WORKERS FIRST (rank 1, rank 2), wait ~15s, THEN head (rank 0)
-#    Rank 0 blocks waiting for the workers to join the collective.
-
-# 4. Wait for health. Cold start is ~7 min (375-425s observed).
-curl -sf http://localhost:8100/health
-```
-
-A full restart cycle is **~12 minutes** end to end. Budget for it.
-
-> **Warn the user before restarting.** VS Code Remote-SSH forwards these ports and its
-> session drops when they go away.
-
-### Verify a restart took effect
-
-```bash
-curl -s http://localhost:8100/v1/models | python3 -c \
-  'import json,sys;d=json.load(sys.stdin)["data"][0];print(d["id"],d["max_model_len"])'
-
-docker logs dspark-vllm-gx10-vllm-dspark-1 2>&1 | grep -oE \
-  "num_spec_tokens=[0-9]+|max_cudagraph_capture_size': [0-9]+|GPU KV cache size: [0-9,]+"
-```
-
-Never assume the config applied. Read it back from the engine.
-
----
-
-### The 2-node fallback is intact
-
-A complete **TP=2 profile** survived the move to three nodes and is verified coherent as
-of 2026-08-24: `config/head.env` on the head plus `config/worker.env` on worker 1, with
-worker 2 simply unused. It runs on a separate fabric path and needs **no padding patch**
-(64 heads divide by 2 cleanly), which makes it a genuinely simpler fallback.
-
-Neither file sets `TP_SIZE` or `NNODES` — compose defaults them to 2
-(`${TP_SIZE:-2}`, `${NNODES:-2}`). **That absence is load-bearing, not a bug.**
-
-Keep it for **availability**, not performance: TP=3 currently *leads* the published
-2-node recipe on decode (peak 91.1 vs 84.3, mean 76.0 vs 67.6). The real cost of falling
-back is KV capacity — roughly 1.86M tokens against 5.44M.
-
-Full rollback procedure in the operator's `docs\dsv4-2node-fallback.md`.
-
-## 3. What is settled — do not re-litigate
+## 3. What is settled
 
 | Finding | Status |
 |---|---|
-| `MTP_NUM_TOKENS=5` beats `4` | **Settled 2026-08-24** with the matched control (seqs held at 16). +8–13% single-stream on structured/code. Accepted draft length rises ~1 full token while acceptance % stays flat. Prose is the one workload preferring 4. |
-| 1M context is free | **Settled.** KV pool *grew* 3.57M → 5.44M tokens; aggregate unchanged within spread. Never run this cluster at 460,800 again. |
-| Patch 4 (shared expert) | **Does not apply** to vLLM 0.25.2 — the generic substring mapping already catches `.shared_experts.w1/.w3`. Verified three ways. Applying it would be redundant. |
-| KV dtype is not a speed lever | fp8 vs nvfp4 measured **identically** upstream (41.4 vs 41.5). Do not switch KV dtype for throughput reasons. |
-| The 60 tok/s "ceiling" | **False for this cluster.** We measure 93.8 / 92.3 / 86.1 tok/s single-stream. |
-| `MAX_NUM_SEQS=32` | **Rejected 2026-08-24.** Crashes the engine at sustained cc=32 (NCCL allgather stall); cc=16 also regressed. Keep 16. |
-| `NCCL_IB_MERGE_NICS` | **No-op 2026-08-24.** NCCL already merges both HCAs by default; measured identical both ways. |
-| GB10 GPUDirect RDMA | **Absent — architectural.** All inter-node collectives host-stage at ~0.5 GB/s. This is the prefill ceiling. |
-| `GPU_MEMORY_UTILIZATION=0.80` | **Shipped 2026-08-24.** +14% prefill at 78K vs 0.85, decode unaffected. Costs 17% of KV pool. |
-| TP=3 attention head padding | **50% waste is real, but NOT prefill-limiting.** Kernel widths {8,16,32,64,128}; 24 heads/rank snap to 32. But TP=2 and TP=3 measure IDENTICAL prefill at 8K (1,081 both), so this is not the prefill bottleneck. |
-| TP=2 as a prefill fallback | **Rejected 2026-08-25.** Same prefill as TP=3, but decode cc=1 drops 82.4 -> 70.1 and KV 4.48M -> 1.82M. TP=3 is correct. |
-| Prefill gap | **SOLVED 2026-08-25.** A degraded RDMA stack on spark1 (0.69 vs 4.6 GB/s allgather) throttled every collective. `sudo reboot` on spark1 fixed it: prefill 1,075 -> 2,089 @8K (96% of reference), decode +28%. Invisible to error counters, firmware, PCIe, port state, and TCP tests. |
-| GB10 GPU health | **Verified healthy.** 93.3 TFLOP/s bf16, 236 GB/s memory, 2,470 MHz vs a 2,418 MHz application-clock spec. An earlier claim of '82% of rated' was WRONG — 3,003 MHz is a hardware ceiling, not the operating spec. |
-| Upstream harness on our cluster | **Reproduces our numbers.** anemll's benchmark_prefill.py gives 1,075 tok/s @ 8K (server timer, 0.3% agreement with client). Not a measurement artifact. |
-| Aggregate throughput as an MTP signal | **Useless** — every level sits inside its own run spread. Use the acceptance counters. |
+| **Prefill parity** | **Reached 2026-08-25.** The ~2x gap was one degraded node, not software. |
+| `GPU_MEMORY_UTILIZATION=0.80` | Shipped. Was +14% prefill at 78K on the old fabric; **re-confirm on the healthy one**. |
+| `MTP_NUM_TOKENS=5` beats 4 | Settled 2026-08-24 via matched control. Acceptance counters are compute-local, so probably unaffected by the fabric. |
+| 1M context is free | Settled. Memory-bound, not communication-bound, so likely still valid. |
+| `MTP_NUM_TOKENS=0` is invalid | vLLM rejects `num_speculative_tokens: 0`; the service fails to start. **Use 1 as the floor.** MTP=1 leaves prefill flat but collapses decode to ~47 tok/s. |
+| KV dtype is not a speed lever | fp8 vs nvfp4 measured identically. Do not switch for throughput. |
+| NVFP4 KV quality to 464K | Clean at every depth, single-request. Concurrency half still open (#12). |
+| Patch 4 (shared expert) | Does not apply to vLLM 0.25.2 — already handled by generic substring mapping. |
+| `NCCL_IB_MERGE_NICS` | **No-op.** NCCL already merges both HCAs by default into a 400 Gb/s virtual device. |
+| GB10 GPU health | 93.3 TFLOP/s bf16, 236 GB/s memory, 2,470 MHz under load vs a **2,418 MHz application-clock spec** (3,003 MHz is a hardware ceiling, not a target). All healthy. |
 
-Full detail and evidence: [`MTP5-1M-AND-UPSTREAM-COMPARISON.md`](MTP5-1M-AND-UPSTREAM-COMPARISON.md).
-Historical traps and falsified experiments: [`TP3-TUNING.md`](TP3-TUNING.md).
+## 4. What is now SUSPECT — issue #14
 
----
+Re-run these on the healthy fabric. Priority order:
 
-## 4. Measurement discipline — read before running anything
+1. **Decode baselines** (374.2 cc=16, ~80 cc=1). These anchor most other conclusions in
+   `docs/`. Already partly superseded by §2, but the full concurrency sweep needs redoing.
+2. **`MAX_NUM_SEQS=32` rejection.** It died on an `_ALLGATHER_BASE` timeout with KV at
+   **2.8%** — a degraded link is a plausible cause of exactly that crash. **seqs=32 may
+   well be viable now.** See [`SEQS32-AND-NCCL-FABRIC.md`](SEQS32-AND-NCCL-FABRIC.md).
+3. **2-node vs 3-node comparison.** spark1 was in the 3-node arm, so the comparison was
+   unfair to three nodes.
+4. **EP=3 and PP=3.** Communication-heavy, disproportionately penalised.
+5. **`GPU_MEMORY_UTILIZATION` 0.80 vs 0.85.** The +14% was measured on the bad fabric.
+6. **MTP=4 vs 5 aggregate throughput.** Acceptance counters are fine; aggregates are not.
 
-These are not style preferences. Each was learned by getting a wrong answer first.
+**The encouraging read:** we were beating the 2-node reference on decode *while one node
+ran at 15% of its collective bandwidth*. Every tuning conclusion here was reached under a
+communication handicap — including the 0.49 GB/s figure that anchored the "GB10 has a
+~0.5 GB/s ceiling" analysis, which was itself measured on the degraded fabric. Re-running
+the matrix should find **better** settings, not merely confirm the old ones.
 
-1. **Warm up until two sweeps agree.** A cold sweep reads **~40% low** here — cc=16
-   measured 206–222 tok/s cold against a steady-state 340–375. One warm-up pass is not
-   enough after any change that alters graph capture. Discard warm-up output entirely.
+## 5. Operating the cluster
 
-2. **Confirm the endpoint is idle before every run.**
-   ```bash
-   curl -s http://localhost:8100/metrics | grep -E '^vllm:num_requests_running\{'
-   ```
-   One in-flight request from elsewhere skews a level badly.
+### Restart
 
-3. **Change one variable at a time.** The MTP question stayed open for weeks because an
-   earlier sweep moved `MTP_NUM_TOKENS` and `MAX_NUM_SEQS` together. If you must change
-   two, you have produced no answer about either.
+`sudo systemctl restart dsv4.service` on sparkmain. It verifies config across all three
+ranks, starts workers → 15 s → head, and waits for `/health`. **Cold start is ~7 min;
+budget ~12 min for a full cycle.** Warn the user first — VS Code Remote-SSH forwards
+these ports and drops when they go away.
 
-4. **Prefer acceptance counters over throughput for spec-decode questions.** At
-   temperature 0 with a fixed prompt they are near-deterministic (identical to 2 decimals
-   across reps), while aggregate throughput spreads 12–34%.
+Config lives at `~/localai/dspark-vllm-gx10/config/tp3.env` on **each** of the three
+nodes. **A mismatch in any parallelism flag hangs startup forever with no error.** Verify
+before restarting:
 
-5. **Measure at the head node only.** Under TP the workers serve nothing. Summing
-   per-node double-counts.
+```bash
+KEYS='MAX_MODEL_LEN|MAX_NUM_SEQS|MTP_NUM_TOKENS|GPU_MEMORY_UTILIZATION|TP_SIZE|NNODES'
+for h in sparkmain spark1 spark2; do printf "%-10s " $h
+  ssh $h "grep -E '^($KEYS)=' ~/localai/dspark-vllm-gx10/config/tp3.env|sort|md5sum"; done
+```
+The rank-specific header (NODE_RANK, VLLM_HOST_IP, IFNAME, home paths) **must** differ —
+the files are not byte-identical and should not be.
 
-6. **Run upstream harnesses unmodified.** Every cross-repo number in this repo comes from
-   running *their* script against our endpoint — never from quoting our harness against
-   their published table. Those measure different things.
+Always read the applied config back from the engine; never assume:
+```bash
+ps aux | grep -oE '\-\-tensor-parallel-size [0-9]+|--max-num-seqs [0-9]+|--gpu-memory-utilization [0-9.]+'
+docker logs dspark-vllm-gx10-vllm-dspark-1 2>&1 | grep -oE 'num_spec_tokens=[0-9]+|GPU KV cache size: [0-9,]+'
+```
 
-7. **State what you did not test.** An unexplained gap recorded honestly beats a
-   fabricated cause.
+### Networking — persisted, but understand it
 
-8. **Launch long remote runs with `nohup` and redirect to a file.** A benchmark that
-   takes more than a few minutes must survive its launcher dying:
-   ```bash
-   ssh sparkmain "nohup python3 /tmp/thing.py args > /tmp/thing.log 2>&1 &"
-   ```
-   On 2026-08-24 a ~25-minute run was launched through a plain `ssh` pipe. The local
-   wrapper was torn down; the **remote process kept running** (found alive 17 minutes
-   later, still mid-request) but its stdout went to a dead pipe, so every result it had
-   produced was unrecoverable. Prefer small batches per invocation too, so a loss costs
-   one depth rather than all of them.
+Gloo needs a **full mesh**: every rank must reach every other rank's advertised
+`VLLM_HOST_IP`. spark1's reboot lost runtime-only state and **the cluster would not
+start** — spark1 routed the master address over **WiFi**, and spark2 had no route to
+spark1 at all.
 
-   If a background task reports "stopped" with no completion record, check
-   `pgrep -af <script>` on the remote host before assuming it never ran — and note that
-   a killed client can leave an in-flight request on the server for minutes afterwards.
+Now persisted via NetworkManager (verified 2026-08-25):
+
+```bash
+# sparkmain — the master address lives on loopback and was NOT persisted before
+sudo nmcli con mod lo +ipv4.addresses '192.168.200.1/32'
+# spark1
+sudo nmcli con mod dac-link        +ipv4.routes '192.168.200.1/32 192.168.100.1'
+sudo nmcli con mod dac-link-spark2 +ipv4.routes '192.168.101.2/32 192.168.102.2'
+# spark2
+sudo nmcli con mod dac-link-spark1 +ipv4.routes '192.168.100.2/32 192.168.102.1'
+```
+
+Verify all six directions before starting:
+```bash
+declare -A A=( [sparkmain]=192.168.200.1 [spark1]=192.168.100.2 [spark2]=192.168.101.2 )
+for s in sparkmain spark1 spark2; do for d in sparkmain spark1 spark2; do
+  [ "$s" = "$d" ] && continue
+  ssh $s "ping -c1 -W2 ${A[$d]} >/dev/null 2>&1 && echo $s->$d OK || echo $s->$d FAIL"; done; done
+```
+
+Physical topology, confirmed by MAC: sparkmain-f0 ↔ spark1-f1, spark1-f0 ↔ spark2-f1,
+sparkmain-f1 ↔ spark2-f0. A clean ring. Each node also has **two unused `roceP2p1s0f*`
+ports**, cabled and ACTIVE.
+
+## 6. ⚠ Pre-benchmark fabric check — do this before trusting any number
+
+This is the single most important addition to this document.
+
+```bash
+# pairwise, vLLM must be STOPPED (live vLLM holds ~119/121 GiB; no second CUDA context)
+results/20260824-seqs32-nccl/agbench.py
+```
+
+| result @64 MiB busbw | meaning |
+|---|---|
+| **~4.6 GB/s** | healthy GB10 pair |
+| **~0.7 GB/s** | **degraded node — reboot it before measuring anything** |
+
+**TCP throughput is NOT a valid check.** It showed the degraded link at 858 MB/s vs 1,019
+for a healthy one — 1.19x — while RDMA was 6.8x down. TCP does not exercise the RDMA
+verbs path. Use the NCCL collective, which is what vLLM actually uses.
+
+Nothing else revealed the fault: ports were ACTIVE at 200,000 Mb/s, every error counter
+was 0, NIC firmware and PCIe link were identical across nodes, and NCCL selected the same
+merged `NET/IB/2` transport on fast and slow paths alike.
+
+## 7. Measurement discipline
+
+Each of these was learned by getting a wrong answer first.
+
+1. **Check the fabric (§6) before anything else.** New, and it invalidated months of work.
+2. **Warm up until two sweeps agree.** The engine JIT-compiles *during inference* — a
+   fresh shape can fire a compile several sweeps in and cost 40%+ on that sweep. One
+   observed cc=1 request took 187 s against a steady 3 s. **Discard any sweep containing
+   a `jit_monitor` warning.**
+3. **Confirm the endpoint is idle before every run:**
+   `curl -s localhost:8100/metrics | grep -E '^vllm:num_requests_running\{'`
+   A single stray request skews a level badly, and one orphaned run blocked us for an hour.
+4. **Defeat the prefix cache.** Re-running identical prompts returns **105,167 tok/s** at
+   78K — that is the cache, not prefill. Use unique prefixes or upstream's token-ID
+   harness, and verify zero cache hits.
+5. **Change one variable at a time.**
+6. **Measure at the head node only.** Under TP the workers serve nothing.
+7. **Run upstream harnesses unmodified.** Their `benchmark_prefill.py` embeds a
+   `token_pool_sha256`; ours matched theirs byte-for-byte, which is what made the
+   comparison exact.
+8. **`pgrep -f <script>` matches its own SSH command string** and will report a finished
+   run as RUNNING forever. Use `pgrep -f '[b]ench_tp3.py'`.
+9. **Run long remote jobs detached with output to a file** (`nohup … > file 2>&1 &`), then
+   poll. A dead local wrapper otherwise orphans the remote process *and* loses its output.
+10. **An ad-hoc `docker run` is not the production environment.** Omitting
+    `--device /dev/infiniband` silently measures socket fallback. Mirror the compose
+    service's devices, ulimits and shm_size, and confirm the transport in
+    `NCCL_DEBUG=INFO` before trusting a fabric number.
 
 ### The harnesses
 
 | script | source | measures |
 |---|---|---|
-| `/tmp/bench_tp3.py` | `localaiguyy/...-3x-DGX-Spark` | concurrency sweep, aggregate + per-stream |
-| `/tmp/bench_full.py` | `tonyd2wild/...-2x-DGX-Spark` | decode by content type, concurrency, prefill |
-| `results/20260824-mtp5-1m/accept.py` | written here | tok/s + acceptance % + accepted draft length |
+| `results/20260825-fabric-fix/harness/benchmark_prefill.py` (also `~/results/harness/` on sparkmain) | `Anemll/dspark-vllm-gx10` | **prefill, server-side, token IDs — the authoritative one** |
+| `results/20260824-prefill/pf3–pf8.py` | written here | prefill variants (cache-defeated, TTFT, content types) |
+| `~/results/seqs32/bench_tp3.py` | `localaiguyy/…-3x-DGX-Spark` | decode concurrency sweep |
+| `results/20260824-seqs32-nccl/agbench.py` | written here | **NCCL allgather — the fabric check** |
+| `results/20260824-mtp5-1m/accept.py` | written here | MTP acceptance counters |
 
-`/tmp` is not durable. Re-copy from `results/20260824-mtp5-1m/` or the upstream repos.
+`/tmp` is not durable. Copies of the key ones live under `results/`.
 
----
+## 8. Next steps
 
-## 5. Next measurements — in priority order
+1. **Work issue #14** — re-run the suspect matrix (§4) on the healthy fabric. Start with
+   `MAX_NUM_SEQS=32`, which is the most likely to have been wrongly rejected.
+2. **Issue #12** — NVFP4 KV quality under *concurrency*. The single-request half is done
+   and clean to 464K; the concurrent half is untested and needs no restart.
+3. **Close #11** — the prefill gap is resolved by the fabric fix; the issue's original
+   leads (NIC merge, runtime version) were both falsified.
+4. **Close #13** if it duplicates the persistence work already done (§5).
+5. **Investigate why spark1 degraded.** It had been up a long time. If this recurs, a
+   periodic fabric check or a documented reboot cadence is warranted.
+6. **Separately: assistant-prefill correctness.** The API advertises
+   `add_generation_prompt` / `continue_final_message` but the DeepSeek-V4 tokenizer
+   adapter ignores both, so an assistant prefix is EOS-terminated instead of continued.
+   Fix is to port [vLLM PR #46257](https://github.com/vllm-project/vllm/pull/46257) into
+   the anemll overlay. **This is a correctness bug, not a throughput one** — it does not
+   affect any number in this document.
 
-> **START HERE: PREFILL PARITY REACHED 2026-08-25 — 95-99% of the upstream reference.**
-> Read [`FABRIC-FIX-PARITY.md`](FABRIC-FIX-PARITY.md) FIRST.
->
-> **Root cause was not software.** spark1 had **silently degraded RDMA fabric**: every
-> collective involving it ran at ~0.7 GB/s vs 4.6 GB/s for the healthy pair (6.8x), with
-> **ZERO error indicators** — ports ACTIVE at 200,000 Mb/s, all error counters 0,
-> identical firmware/PCIe, same NCCL transport. **A reboot of spark1 cleared it.**
->
-> | | before | after | reference |
-> |---|---:|---:|---:|
-> | prefill @1K | 1,063 | **2,023** | 2,033 |
-> | prefill @8K | 1,075 | **2,070** | 2,184 |
-> | prefill @32K | 1,034 | **2,095** | 2,176 |
-> | decode cc=1 | 80.4 | **85.6** | — |
-> | decode cc=16 | 374.2 | **491** (peak 593) | — |
->
-> **⚠ ALL PRIOR MULTI-NODE NUMBERS ARE SUSPECT — see
-> [issue #14](https://github.com/colonel-otto/3spark-dsv4/issues/14).** Every measurement
-> before 2026-08-25 ran with one of three nodes at 15% collective bandwidth. Especially
-> re-check the **decode baselines** and the **`MAX_NUM_SEQS=32` rejection** — that crash
-> was an `_ALLGATHER_BASE` timeout at KV 2.8%, which a degraded link plausibly caused.
-> **seqs=32 may be viable on a healthy fabric.**
->
-> **The upside:** we were beating the 2-node reference on decode *while one node ran at
-> 15%*. Every tuning conclusion here was reached under a communication handicap, so
-> re-running the matrix on the healthy fabric is likely to find BETTER settings, not just
-> confirm old ones. The 0.49 GB/s figure behind the "GB10 ~0.5 GB/s ceiling" analysis was
-> itself measured on the degraded fabric.
->
-> **PRE-BENCHMARK CHECK (do this before trusting any number):** run
-> `results/20260824-seqs32-nccl/agbench.py` pairwise. Healthy GB10 pair = **~4.6 GB/s**
-> busbw @64 MiB. ~0.7 GB/s = degraded node; reboot it. **TCP throughput is NOT a valid
-> check** — it showed 1.19x while RDMA was 6.8x down.
->
-> Network state is now **persisted** via NetworkManager (master loopback + fabric host
-> routes). It was runtime-only and spark1's reboot took the cluster down until restored.
->
-> Cluster: TP=3, 1M context, MTP=5, seqs=16, gpu-mem 0.80, KV 4,493,602.
-
-### 5a. `MAX_NUM_SEQS=32` → issue #10 — **CLOSED 2026-08-24: REJECTED**
-
-> **Do not retry this.** It boots and serves, then kills the engine at sustained
-> cc=32 — an `_ALLGATHER_BASE` stall on all three ranks with KV only 2.8% full and
-> zero link errors. cc=16 also measured *worse* than the seqs=16 baseline
-> (325.1 vs 374.2). KV cost was only -1.1%, so the memory risk this section warned
-> about was not the problem. Full analysis:
-> [`SEQS32-AND-NCCL-FABRIC.md`](SEQS32-AND-NCCL-FABRIC.md).
-
-<details><summary>Original scoping (kept for context)</summary>
-
-**Why:** the one upstream number we cannot match. The 3-node repo reports 618 tok/s
-aggregate at seqs=32 versus 431 at seqs=16 (+43%); we measure 374.2 at seqs=16.
-Configuration, not silicon, has been the ceiling through three of their settings.
-
-**The risk, concretely.** Capture size is *derived*:
-
-```
-capture = MAX_NUM_SEQS × (MTP_NUM_TOKENS + 1) = 32 × 6 = 192
-```
-
-That is **double** our current 96. Two things make this riskier for us than for them:
-our `GPU_MEMORY_UTILIZATION` is 0.85 against their 0.80, and we run MTP=5 so the
-multiplier is 6 rather than 6 at their k=5 — same multiplier, but from a higher base.
-**We have ~4 GiB available per node.** Our capture at 96 cost 1.24 GiB; theirs at 192
-cost 1.71 GiB. It plausibly fits, but it is not guaranteed.
-
-**Steps:**
-1. Set `MAX_NUM_SEQS=32` in `config/tp3.env` on all three ranks. Verify all three.
-2. Restart (workers → head). Watch for OOM during capture specifically.
-3. Confirm `max_cudagraph_capture_size: 192` and record the KV pool delta.
-4. Warm at the concurrencies you will measure — **a capture-size change invalidates
-   prior warm-up.** The 3-node repo found sweep 1 read 40% low after exactly this change,
-   which would have hidden the entire gain. Repeat until two sweeps agree.
-5. `python3 /tmp/bench_tp3.py --host localhost:8100 --concurrency 1,8,16,24,32,40 --runs 3 --json /tmp/seqs32.json`
-
-**If capture OOMs:** lower `GPU_MEMORY_UTILIZATION` toward 0.78. **Do not drop
-`MAX_MODEL_LEN` first** — that trades away context for no reason.
-
-**Record:** aggregate at cc=32 with spread, whether saturation moves from cc=16 to
-cc=32, the KV pool delta, and single-stream (expected flat — this buys aggregate, not
-latency). **Rollback is a config revert plus one restart.**
-
-</details>
-
-### 5b. NVFP4 KV output quality → issue #12 — **single-request half DONE 2026-08-24**
-
-**Result: clean through 463,792 prompt tokens.** Needles at 10/50/90% depth all recovered
-exactly at every depth from 2K to 500K, with no garble of any kind. 500K is the depth the
-upstream warning specifically aims at. **Keep `nvfp4_ds_mla`** — the case for switching is
-currently zero on both axes (performance measured identical to fp8; quality shows no
-degradation). Full writeup: [`KV-QUALITY-LONG-CONTEXT.md`](KV-QUALITY-LONG-CONTEXT.md).
-
-**What remains open on #12** — the untested half, and the more likely failure mode:
-
-1. **Concurrency.** Every measurement was a single request against an idle engine. The
-   upstream warning pairs long context *with* concurrency ("clean output **under
-   concurrency**"), and KV pressure is a plausible trigger this test never applied.
-2. **Agentic structure.** Filler was prose, not tool calls / JSON state / multi-turn
-   history. Upstream describes *"heavy agentic context"* specifically.
-3. **Repetitions and temperature > 0.** One prompt shape, one seed, temp 0 — the most
-   favourable case. A rare intermittent failure would not have appeared.
-
-Run `results/20260824-kv-quality/kvquality.py` concurrently (several simultaneous
-long-context requests) as the next probe. **Only if something fails** is an fp8 A/B at
-matched context warranted — there is no effect to attribute otherwise.
-
-Depths above ~464K were not measured: a 700K/900K run was started and deliberately
-abandoned once 500K passed, since 500K is the depth the upstream warning targets.
-
-<details><summary>Original scoping for this issue (kept for context)</summary>
-
-**Why:** this is a **correctness** test, not a benchmark, and it is the one open risk to
-the 1M context we just adopted. The 2-node repo warns 4-bit KV *"can collapse into salad
-under long, heavy agentic context"* while fp8 stays clean.
-
-**Do not switch KV dtype on throughput grounds** — that rationale is measured false
-(§3). Only quality justifies it.
-
-**Steps:**
-1. Drive genuine agentic context toward 200K, then 500K, then beyond. Watch for
-   multilingual / BOS "salad" and coherence collapse.
-2. Determine whether any degradation correlates with context depth, concurrency, or both.
-3. **Only if degradation appears:** A/B against `fp8_ds_mla` at matched context, holding
-   every other variable fixed, to confirm KV dtype is the cause.
-
-**The decision this informs:** if 4-bit KV is clean at the depths actually used, keep it
-— it is what buys the 5.44M pool. If it degrades, the tradeoff becomes explicit: fp8 for
-clean output at reduced pool, NVFP4 for maximum context.
-
-</details>
-
-### 5c. Prefill gap → issue #11
-
-**Why:** the only axis where we trail. 1,512 vs 2,639 tok/s at 100K against the 2-node
-recipe, while leading on every decode metric.
-
-**Already ruled out:** node count (decode leads at TP=3), the shared-expert bug (§3),
-and long-context falloff (prefill is flat ~1,000–1,075 across 25K/50K/100K).
-
-**Already known:** prompt content moves prefill **51%** on the same server, same day —
-random-word filler gives ~1,000 tok/s, repeated-sentence gives 1,512. **Their 2,639 is a
-best case, not a general rate**, so the true gap is smaller than the raw numbers suggest.
-Any retest must hold the prompt constant. Note their harness targets 100,000
-*characters* ≈ 78K tokens — "100K" is not 100K tokens on either side.
-
-**Leads in order:**
-1. ~~**`NCCL_IB_MERGE_NICS=1`**~~ — **FALSIFIED 2026-08-24.** Measured both ways on our
-   own fabric, inside the production image: **no effect at any message size**
-   (0.47–0.52 GB/s busbw either way). `NCCL_DEBUG=INFO` shows NCCL **already merges both
-   HCAs by default** into a 400 Gb/s virtual device and routes every channel over it.
-   The upstream +64% targets a config where the merge was off. **Do not re-open.**
-
-   **What the measurement found instead:** `GPU Direct RDMA Disabled` on every HCA —
-   GB10 has no GPUDirect, so all inter-node traffic is host-staged at ~0.5 GB/s (≈2% of
-   line rate). Prefill is large-message and allgather-dominated; decode is not. That
-   asymmetry *is* the prefill gap, and it is architectural rather than a tuning miss.
-   See [`SEQS32-AND-NCCL-FABRIC.md`](SEQS32-AND-NCCL-FABRIC.md) §3.
-
-2. **Runtime version** — we are on 0.25.2, they are on an overlay on 0.21.1rc1. Most
-   likely structural cause, most expensive to test.
-3. **`MAX_NUM_BATCHED_TOKENS`** — both run 8192. Prior work here found 16384 costs 43% of
-   KV for zero gain and reverted it. Retest only in a prefill-specific context, and
-   expect the KV cost.
-
----
-
-## 6. Where things live
+## 9. Where things live
 
 | what | where |
 |---|---|
-| Repo | `github.com/colonel-otto/3spark-dsv4` (working copy lives under the operator's `Local LAN AI` control-room folder) |
-| Open PR | [#9](https://github.com/colonel-otto/3spark-dsv4/pull/9) — this experiment, **open, not merged** |
-| Open issues | [#10](https://github.com/colonel-otto/3spark-dsv4/issues/10) seqs=32 · [#11](https://github.com/colonel-otto/3spark-dsv4/issues/11) prefill · [#12](https://github.com/colonel-otto/3spark-dsv4/issues/12) KV quality |
-| Latest results | `results/20260824-mtp5-1m/` — raw JSON, acceptance reps, `accept.py` |
+| Repo | `github.com/colonel-otto/3spark-dsv4` |
+| Open PR | [#9](https://github.com/colonel-otto/3spark-dsv4/pull/9) — open, not merged |
+| Open issues | [#10](../../issues/10) seqs=32 · [#11](../../issues/11) prefill (resolved, close) · [#12](../../issues/12) KV quality · [#13](../../issues/13) mesh persistence (done) · [#14](../../issues/14) **re-run suspect benchmarks** |
+| Parity writeup | [`FABRIC-FIX-PARITY.md`](FABRIC-FIX-PARITY.md) |
+| Prefill investigation | [`PREFILL-MEASURED.md`](PREFILL-MEASURED.md) — 5 addenda, several self-corrections |
+| seqs=32 / NCCL | [`SEQS32-AND-NCCL-FABRIC.md`](SEQS32-AND-NCCL-FABRIC.md) |
+| Post-fix results | `results/20260825-fabric-fix/` |
 | Live config | `~/localai/dspark-vllm-gx10/config/tp3.env` on each of the 3 nodes |
-| Config backups | `tp3.env.bak-*` beside it, timestamped per experiment |
+| Config backups | `tp3.env.bak-*` beside it, timestamped |
 | Grafana / Prometheus | `sparkmain:3001` / `sparkmain:9090` |
 
 ### Before committing
 
 The repo has a pre-commit hook (`.githooks/pre-commit` → `scripts/check_no_sensitive.py`)
-that blocks serials and sensitive data. Run `make install-hooks` after cloning. Verify
-manually with:
+that blocks serials and sensitive data. Run `make install-hooks` after cloning. Docs here
+contain internal IPs and hostnames, so this matters.
 
-```bash
-py scripts/check_no_sensitive.py     # or python3, depending on platform
-```
+## 10. Open questions
 
-Docs here contain internal IPs and hostnames, so this matters. It passed clean across
-94 tracked files as of this handoff.
-
----
-
-## 7. Open questions nobody has answered
-
-- Does prefill parity with the 2-node recipe exist at all on TP=3? **Neither public repo
-  publishes a TP=3 prefill number**, so there is no reference to compare against.
-- Does `max_num_seqs=64` continue the trend past 32? Untested by anyone, including
-  upstream.
-- Is MTP=5 optimal, or would a multiple of 5 (k=10) go further? The 2-node repo reports
-  k=10 boots but crashes every generation on *their* stack; untested on 0.25.2. MTP=5
-  boots and runs cleanly here.
-- What does abliteration cost against the stock checkpoint? Upstream states plainly that
-  no censored-vs-uncensored A/B exists behind their numbers either.
+- **Why did spark1's fabric degrade?** No error indicator of any kind. Unknown.
+- **Is `MAX_NUM_SEQS=32` viable on a healthy fabric?** The rejection is now suspect.
+- **What is the real 3-rank allgather ceiling?** The 0.49 GB/s figure was measured on the
+  degraded fabric; the healthy pairwise number is 4.6 GB/s.
+- **Does prefill exceed the reference on a healthy fabric?** We are at 95–99%; nobody has
+  tuned *for* prefill since the fix.
+- Does `max_num_seqs=64` continue the trend past 32? Untested by anyone.
+- Is MTP=5 optimal, or would k=10 go further? Untested on 0.25.2.
+- What does abliteration cost against the stock checkpoint? No A/B exists anywhere.
