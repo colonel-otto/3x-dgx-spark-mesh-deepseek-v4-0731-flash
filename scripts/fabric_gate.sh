@@ -131,6 +131,34 @@ for s in "${NODES[@]}"; do
   done
 done
 
+# ---- 3b. Fabric addressing sanity -------------------------------------------
+# We once found 192.168.100.2/24 assigned to BOTH of spark1's NICs, advertising
+# sparkmain's subnet out the port physically cabled to spark2. rp_filter=2 hid
+# it, traffic happened to take the right port anyway, and it was recorded as
+# "latent, not active" and left in place. That is the kind of thing that stops
+# being latent after a reboot, so check it every time rather than remembering.
+#
+# NCCL_IB_SUBNET_AWARE_ROUTING=1 picks the HCA whose SUBNET reaches the peer --
+# so a duplicated or overlapping subnet directly mis-steers it.
+echo "-- fabric addressing (duplicate/overlapping subnets)"
+for n in "${NODES[@]}"; do
+  dup=$(ssh_node "$n" \
+    "ip -o -4 addr show 2>/dev/null | awk '\$2 ~ /^(enp1s0f|roceP2p)/ {print \$4}' \
+     | sort | uniq -d" 2>/dev/null)
+  # Same address on two fabric NICs is the exact failure we hit.
+  same=$(ssh_node "$n" \
+    "ip -o -4 addr show 2>/dev/null | awk '\$2 ~ /^(enp1s0f|roceP2p)/ {split(\$4,a,\"/\"); print a[1]}' \
+     | sort | uniq -d" 2>/dev/null)
+  if [[ -n "$same" ]]; then
+    bad "$n: address on MULTIPLE fabric NICs: $(echo "$same" | tr '\n' ' ')" "subnet:$n" "$same"
+  elif [[ -n "$dup" ]]; then
+    bad "$n: duplicate fabric CIDR: $(echo "$dup" | tr '\n' ' ')" "subnet:$n" "$dup"
+  else
+    addrs=$(ssh_node "$n" "ip -o -4 addr show 2>/dev/null | awk '\$2 ~ /^(enp1s0f|roceP2p)/ {print \$2\"=\"\$4}' | tr '\n' ' '" 2>/dev/null)
+    ok "$n fabric addressing clean: ${addrs}" "subnet:$n" "$addrs"
+  fi
+done
+
 # ---- 4. NCCL collective bandwidth ------------------------------------------
 # The only check that would have caught the 2026-08-25 degradation.
 echo "-- nccl collective bandwidth"
@@ -171,12 +199,35 @@ run_nccl_group() {
         -e TAG=$label \
         -e NCCL_IB_HCA=${NCCL_IB_HCA_DEFAULT:-rocep1s0f0,rocep1s0f1} \
         -e NCCL_IB_DISABLE=0 -e NCCL_NET=IB \
+        -e NCCL_DEBUG=INFO -e NCCL_DEBUG_SUBSYS=INIT,NET \
         -e NCCL_IB_SUBNET_AWARE_ROUTING=1 -e NCCL_NET_PLUGIN=none \
         ${VLLM_IMAGE:-ghcr.io/anemll/dspark-vllm-gx10:0.1.1} /results/gate/agbench.py" \
       > "$tmp/$n.log" 2>&1 &
     pids+=($!); rank=$((rank+1))
   done
   for p in "${pids[@]}"; do wait "$p" || rc=1; done
+
+  # --- TRANSPORT VERIFICATION -----------------------------------------------
+  # A bandwidth number is meaningless without knowing what carried it.
+  # NCCL_NET=IB is a REQUEST, not a guarantee: if IB init fails NCCL falls back
+  # to sockets and still reports a plausible-looking number. We measured exactly
+  # that once -- NET/Socket at 0.44 GB/s -- and it looked like a real result.
+  # So assert the transport from NCCL's own log rather than trusting the flag.
+  local transport gdr
+  transport=$(grep -ohE 'via NET/[A-Za-z]+/?[0-9]*' "$tmp/${group[0]}.log" | sort -u | tr '\n' ' ')
+  if grep -q 'via NET/Socket' "$tmp/${group[0]}.log" 2>/dev/null; then
+    bad "$label: NCCL fell back to NET/Socket -- this is NOT an RDMA measurement" \
+        "transport:$label" "socket"
+  elif [[ -n "$transport" ]]; then
+    # Also surface the merged-device width; a merge that silently did not happen
+    # halves the available bandwidth and is invisible in the throughput alone.
+    local ndevs
+    ndevs=$(grep -ohE 'Made virtual device \[[0-9]+\].*ndevs=[0-9]+' "$tmp/${group[0]}.log" \
+            | grep -ohE 'ndevs=[0-9]+' | sort -u | tr '\n' ' ')
+    ok "$label transport: ${transport}${ndevs:+(${ndevs% })}" "transport:$label" "$transport"
+  else
+    skip "$label: transport not reported (NCCL_DEBUG output missing)" "transport:$label" ""
+  fi
 
   local bw
   bw=$(awk '/^64MiB/{for(i=1;i<=NF;i++) if($i ~ /^busbw=/) {sub(/busbw=/,"",$i); print $i}}' "$tmp/${group[0]}.log" | tail -1)
