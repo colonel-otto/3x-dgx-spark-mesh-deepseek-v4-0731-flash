@@ -321,3 +321,113 @@ GPU KV cache 4,499,499 tokens. Backups: `tp3.env.bak-preSeqs6` on all three rank
   [#40969](https://github.com/vllm-project/vllm/issues/40969) reports hangs and another
   GB10 recipe reports silent correctness bugs above 2 sequences with it. **This is a
   correctness question, unrelated to speed, and deserves its own check.**
+
+---
+
+# ADDENDUM 2 — the hunt for parity, and where it actually ends
+
+The addendum above claimed the residual gap was structural (the 50% head-padding tax) and
+therefore unfixable. **That claim was wrong, and a direct A/B falsified it.** What follows
+is the full search for parity and the real reason it is not reachable by configuration.
+
+## TP=2 vs TP=3, matched — the structural claim is FALSE
+
+Ran TP=2 with *every* variable matched to TP=3 (seqs=16, gpu-mem 0.80, 1M context,
+MTP=5), same harness, same night. If the 24->32 head snap were prefill-limiting, TP=2
+should have been ~1.5x faster.
+
+| depth | TP=3 | TP=2 | ratio |
+|---|---:|---:|---:|
+| ~6.3K | 1,081 | 1,081 | **1.00x** |
+| ~24.9K | 1,349 | 1,446 | 1.07x |
+| ~77.8K | 1,472 | 1,545 | 1.05x |
+
+**Identical at 8K.** The head padding is real in the kernel (verified in source) but it is
+**not the prefill bottleneck**. Prefill is not attention-bound here.
+
+Decisively: **TP=2 on our hardware also gets 1,081 at 8K — not the reference's 1,513.**
+So the gap is not topology, not node count, and not head geometry. Two nodes or three, we
+land in the same place.
+
+TP=2 is also strictly worse overall: decode cc=1 drops to **70.1** tok/s (vs 82.4 at
+TP=3, -15%) and the KV pool falls to **1.82M** (vs 4.48M, -60%). **TP=3 is the correct
+configuration** and was restored.
+
+## Everything else that was tested and falsified
+
+| change | 8K result | verdict |
+|---|---:|---|
+| `MAX_NUM_SEQS` 16 -> 6 | 1,082 | no effect |
+| `GPU_MEMORY_UTILIZATION` 0.85 -> 0.80 | 1,081 | **no effect at 8K**, +14% at 78K (kept) |
+| TP=3 -> TP=2 | 1,081 | no effect |
+| `VLLM_SPARSE_INDEXER_MAX_LOGITS_MB` 256 -> 512 | 1,081 | no effect (reverted) |
+| prompt content: sentence / words / digits | 931 / 891 / 940 @ 30K | no effect |
+
+**8K prefill is 5.79-5.88 s in every single configuration tested.** A number that refuses
+to move under five independent levers is not a tuning problem.
+
+### The "server prefills faster" theory was also wrong
+
+Earlier this document reported vLLM logging 1,878-5,925 tok/s prompt throughput against a
+client-observed ~1,000, and suggested the client measurement was at fault. **It is not.**
+Measuring `vllm:prompt_tokens_total` deltas around single cold requests:
+
+| prompt tokens | server counter delta | client wall | client rate |
+|---:|---:|---:|---:|
+| 7,199 | 7,199 | 7.01 s | 1,027 |
+| 28,799 | 28,799 | 31.05 s | 928 |
+| 89,999 | 89,999 | 98.73 s | 912 |
+
+The server counter exactly equals the prompt size and the client wall time accounts for
+all of it. There is **no hidden server-side speed**. Those 5,925 tok/s log lines were
+10-second windows containing cache-assisted chunks, not a sustained rate.
+
+## Where the gap actually is
+
+Our honest, cache-defeated rate is **~920-1,080 tok/s**, flat across depth and content.
+
+The reference gets 1,513 at 8K. More tellingly, **anemll — whose image we run
+(`ghcr.io/anemll/dspark-vllm-gx10:0.1.1`) — publish 2,184 tok/s at 8K on 2-node GB10**,
+and their own 0.21.1-vs-0.25.2 A/B shows **our vLLM version is the faster one** (2,184 vs
+2,049 at 8K). So we are roughly 2x below the published number *for our own stack on
+comparable hardware*, and the version-delta hypothesis is dead: upgrading would move us
+the wrong way.
+
+**That 2x is not explained by anything tested here.** It is the open question, and it is
+now sharply scoped:
+
+- Not topology (TP=2 == TP=3, measured).
+- Not head padding (would have shown as a TP=2 win, did not).
+- Not vLLM/flashinfer version (upstream A/B says 0.25.2 > 0.21.1).
+- Not prompt content, seqs, gpu-mem, or indexer chunk size (all measured flat).
+- Not client-side measurement overhead (server counters agree with the client).
+- Not the fabric (TCP legs all within 1.27x; prefill is compute-bound anyway).
+
+**The next step is to run anemll's own `benchmarks/benchmark_prefill.py` unmodified**
+against our endpoint. Their harness measures server-side prefill duration over 3 trials
+with explicit warm-up exclusion. Running *their* script against *our* cluster is the only
+remaining apples-to-apples comparison, and it is the correct next experiment per the
+"run upstream harnesses unmodified" rule in HANDOFF §4.6. It was not run here because it
+requires fetching their repo, which is a clean, cheap follow-up.
+
+## Final shipped state
+
+| var | value | note |
+|---|---|---|
+| `TP_SIZE` / `NNODES` | 3 | TP=2 measured worse on decode and KV; restored |
+| `MAX_NUM_SEQS` | 16 | 6 falsified |
+| `GPU_MEMORY_UTILIZATION` | **0.80** | the one shipped win: +14% prefill at 78K |
+| `VLLM_SPARSE_INDEXER_MAX_LOGITS_MB` | 256 (default) | 512 falsified, reverted |
+| `MAX_MODEL_LEN` | 1048576 | unchanged |
+| `MTP_NUM_TOKENS` | 5 | unchanged |
+
+GPU KV cache 4,480,480 tokens. **Decode verified warm, 3 reps: cc=1 median 82.4 tok/s
+(baseline 80.4), cc=16 median 337.1 with 5% spread.** No regression.
+
+Config backups on all three ranks: `tp3.env.bak-preSeqs6`, `head.env.bak-preParity`
+(sparkmain), `worker.env.bak-preParity` (spark1).
+
+> **Honest bottom line: parity was not achieved.** We improved deep-prefill by 14% and
+> eliminated six hypotheses with measurements, but ~920-1,080 tok/s stands against a
+> 1,513-2,184 reference. The remaining factor is not something this session found, and
+> claiming otherwise would be fabricating a cause.

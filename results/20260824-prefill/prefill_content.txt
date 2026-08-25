@@ -1,0 +1,11 @@
+warm
+
+### REP 1
+repeated_sentence  prompt_tok=  30828 sec=  33.12 tok/s=     931
+random_words       prompt_tok=  40171 sec=  45.11 tok/s=     891
+random_digits      prompt_tok=  27629 sec=  29.40 tok/s=     940
+### REP 2
+repeated_sentence  prompt_tok=  30828 sec=  33.85 tok/s=     911
+random_words       prompt_tok=  40385 sec=  43.29 tok/s=     933
+random_digits      prompt_tok=  27626 sec=  30.04 tok/s=     920
+DONE
