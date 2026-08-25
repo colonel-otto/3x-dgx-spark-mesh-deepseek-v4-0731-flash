@@ -1,0 +1,72 @@
+{
+  "tag": "tp3-postfabricfix-200k",
+  "timestamp_utc": "20260825T173148Z",
+  "model": "deepseek-v4-flash-0731",
+  "concurrency": 4,
+  "prompt_tokens_requested": 200000,
+  "prompt_tokens_actual": [
+    200045,
+    200048,
+    200047,
+    200045
+  ],
+  "wall_s": 610.7630772590637,
+  "ttft_s_median": 396.80428194999695,
+  "ttft_ms_median": 396804.28194999695,
+  "decode_tok_s_median": 0.8522764926310666,
+  "aggregate_tok_s": 0.8382955994945124,
+  "preemptions_delta": 0.0,
+  "prefix_cache": {
+    "cpu": {
+      "queries": 800185.0,
+      "hits": 0.0
+    },
+    "gpu": {
+      "queries": 0,
+      "hits": 0
+    }
+  },
+  "errors": [],
+  "streams": [
+    {
+      "i": 0,
+      "wall_s": 343.4398601055145,
+      "ttft_s": 162.17744660377502,
+      "chunks": 32,
+      "completion_tokens": 128,
+      "prompt_tokens": 200045,
+      "decode_tok_s": 0.7006416694257535,
+      "sample": "1. the\n2. of\n3. and\n4. to\n5. in\n6. is\n7. it\n8. for\n9. on\n10. with\n11. as\n12. by\n13. at\n14. from\n15. be\n16. this\n17. that\n18. are\n19. was\n20. have\n21. has\n22. had\n23. not\n24. but\n25. or\n26. if\n27. then"
+    },
+    {
+      "i": 1,
+      "wall_s": 609.2717659473419,
+      "ttft_s": 473.9534742832184,
+      "chunks": 29,
+      "completion_tokens": 128,
+      "prompt_tokens": 200048,
+      "decode_tok_s": 0.9385279583282757,
+      "sample": "1. speculative\n2. decoding\n3. tensor\n4. parallelism\n5. router\n6. quantized\n7. prefix\n8. continuous\n9. sampler\n10. scheduler\n11. attention\n12. block\n13. speculative\n14. tensor\n15. router\n16. quantized\n"
+    },
+    {
+      "i": 2,
+      "wall_s": 485.4460175037384,
+      "ttft_s": 319.6550896167755,
+      "chunks": 28,
+      "completion_tokens": 128,
+      "prompt_tokens": 200047,
+      "decode_tok_s": 0.7660250269338577,
+      "sample": "1. quantized\n2. weights\n3. are\n4. dequantized\n5. inside\n6. the\n7. kernel\n8. just\n9. before\n10. the\n11. matmul\n12. prefix\n13. caching\n14. lets\n15. a\n16. shared\n17. conversation\n18. prefix\n19. skip\n20. "
+    },
+    {
+      "i": 3,
+      "wall_s": 610.7530295848846,
+      "ttft_s": 609.1006193161011,
+      "chunks": 31,
+      "completion_tokens": 128,
+      "prompt_tokens": 200045,
+      "decode_tok_s": 76.85742602743066,
+      "sample": "1. the\n2. of\n3. and\n4. to\n5. a\n6. in\n7. is\n8. that\n9. for\n10. it\n11. on\n12. with\n13. as\n14. at\n15. by\n16. from\n17. be\n18. this\n19. an\n20. or\n21. are\n22. which\n23. but\n24. not\n25. have\n26. has\n27. all\n"
+    }
+  ]
+}
