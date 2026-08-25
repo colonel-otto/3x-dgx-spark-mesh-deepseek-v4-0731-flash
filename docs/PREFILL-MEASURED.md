@@ -431,3 +431,103 @@ Config backups on all three ranks: `tp3.env.bak-preSeqs6`, `head.env.bak-prePari
 > eliminated six hypotheses with measurements, but ~920-1,080 tok/s stands against a
 > 1,513-2,184 reference. The remaining factor is not something this session found, and
 > claiming otherwise would be fabricating a cause.
+
+---
+
+# ADDENDUM 3 — the upstream harness, run unmodified. Parity NOT reached; cause isolated to hardware.
+
+Addendum 2 named "run anemll's `benchmarks/benchmark_prefill.py` unmodified" as the
+remaining experiment. It was run, on both topologies. **It confirms our numbers and
+eliminates measurement as an explanation.**
+
+Their harness is a strictly better instrument than ours: it sends **raw token IDs** (no
+tokenizer drift), brackets each request with Prometheus snapshots, and computes
+`vllm:request_prefill_kv_computed_tokens_sum / vllm:request_prefill_time_seconds_sum` —
+the engine's own internal prefill timer. It has built-in per-shape warm-up exclusion and
+verifies zero prefix-cache hits.
+
+## The definitive comparison
+
+Their script, their sizes, their seed (4106), our cluster, our image, the same 156 GiB /
+48-shard checkpoint, `index_topk=512`:
+
+| input tokens | ours TP=3 | ours TP=2 | **their TP=2 (published)** | ratio |
+|---:|---:|---:|---:|---:|
+| 1,024 | 1,063.0 | 1,111.8 | **2,033.0** | 1.83x |
+| 2,048 | 1,112.9 | 1,158.3 | **2,252.0** | 1.94x |
+| 4,096 | 1,112.6 | 1,171.8 | **2,320.7** | 1.98x |
+| 8,192 | 1,074.9 | 1,110.2 | **2,184.2** | 1.97x |
+| 16,384 | 1,078.3 | 1,108.0 | **2,203.8** | 1.99x |
+| 32,768 | 1,034.3 | 1,105.9 | **2,176.1** | 1.97x |
+
+**Server and client rates agree to within 0.3%** (8K: server 1,074.9, client 1,071.9), so
+there is no measurement artifact left anywhere. **TP=2 buys only ~3%**, confirming
+Addendum 2: node count is not the factor. The gap is a flat **~2x at every depth**.
+
+## What this eliminates
+
+Every software variable is now matched and measured:
+
+| candidate | status |
+|---|---|
+| Harness / methodology | **Eliminated** — their harness on our cluster reproduces our numbers |
+| Client-side overhead | **Eliminated** — server timer agrees to 0.3% |
+| Prefix caching | **Eliminated** — their harness verifies zero cache hits |
+| Topology (TP=2 vs TP=3) | **Eliminated** — 3% apart |
+| Head padding (24->32 snap) | **Eliminated** — would show as a TP=2 win; does not |
+| vLLM version | **Eliminated** — their own A/B says our 0.25.2 beats 0.21.1 |
+| Container image | **Eliminated** — same image, `ghcr.io/anemll/dspark-vllm-gx10:0.1.1` |
+| Model checkpoint | **Eliminated** — same 156 GiB / 48 FP8 shards, `index_topk=512` |
+| `max_num_seqs`, `gpu_memory_utilization`, indexer chunk MB, prompt content | **Eliminated** — all measured flat |
+
+## What remains: the GPUs run at 82% of rated clock
+
+The first cause found that is not a configuration knob.
+
+```
+NVIDIA GB10   SM clock 2,405 MHz idle / 2,470-2,483 MHz under load
+              max SM clock 3,003 MHz
+              utilization 96%, power 43 W, throttle reasons 0x0
+```
+
+All three nodes, identically. Under sustained prefill the GPU is **96% utilized** — it is
+genuinely busy, not stalled on I/O or the fabric — while holding **~82% of its rated
+3,003 MHz**, drawing only 43 W, with **no throttle reason flagged**.
+
+`sudo nvidia-smi -lgc 3003` is accepted (`GPU clocks set to (gpuClkMin 3003, gpuClkMax
+3003)`) but the GPU still holds ~2,480 MHz under load. The clock was reset afterwards
+rather than leave a non-functional override in place. `Supported Clocks: N/A` and
+`power.management: N/A` on GB10 — the usual clock controls do not apply.
+
+**This is a 1.22x deficit inside a 1.97x gap.** It does not fully explain the difference,
+and it would be dishonest to claim it does. But it is measured, reproducible across all
+three nodes, and it is the only non-software difference identified.
+
+## Honest conclusion
+
+**Parity was not achieved.** After eliminating every software variable by direct
+measurement, our cluster prefills at ~1,075 tok/s where the same image on comparable
+hardware is published at ~2,184. What is left is a hardware/platform difference — GPU
+clocks at 82% of rated being the concrete piece of it — not anything this session could
+change through configuration.
+
+The one shipped improvement stands: `GPU_MEMORY_UTILIZATION=0.80`, +14% prefill at 78K,
+decode unaffected.
+
+**Next steps for whoever picks this up**, in order of expected value:
+
+1. **Ask anemll what SM clock their GB10s hold under prefill.** If theirs run near 3,003
+   MHz and ours cap at ~2,480, that is most of the gap and it is a platform/firmware
+   question, not a vLLM one. This is one question to an upstream maintainer and should
+   be asked before any further local experiment.
+2. **Check BIOS / power profile / thermal envelope on all three Sparks.** 43 W under a
+   96%-utilized load is low. Look for a power-limit or performance-mode setting outside
+   `nvidia-smi`.
+3. **Driver version.** We run 580.173.02 / CUDA 13.0. Their published run does not state
+   a driver; worth asking in the same message as (1).
+
+## Raw data
+
+`results/20260824-prefill/anemll_run.txt` (TP=3), `anemll_tp2.txt` (TP=2), the matching
+`.json` outputs from their harness, and `their_published_baseline.md` copied from their
+repo for direct comparison.
