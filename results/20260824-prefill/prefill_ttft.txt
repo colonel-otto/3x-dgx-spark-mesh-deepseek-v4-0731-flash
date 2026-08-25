@@ -1,0 +1,18 @@
+warming
+warm done
+### REP 1
+approx_tok=  2000 words=   769 ttft=   2.21s rate~     904 tok/s
+approx_tok=  8000 words=  3076 ttft=   8.87s rate~     902 tok/s
+approx_tok= 24000 words=  9230 ttft=  26.98s rate~     890 tok/s
+approx_tok= 78000 words= 30000 ttft= 101.00s rate~     772 tok/s
+### REP 2
+approx_tok=  2000 words=   769 ttft=   2.41s rate~     831 tok/s
+approx_tok=  8000 words=  3076 ttft=  10.09s rate~     793 tok/s
+approx_tok= 24000 words=  9230 ttft=  26.77s rate~     897 tok/s
+approx_tok= 78000 words= 30000 ttft=  96.39s rate~     809 tok/s
+### REP 3
+approx_tok=  2000 words=   769 ttft=   2.18s rate~     919 tok/s
+approx_tok=  8000 words=  3076 ttft=   8.68s rate~     922 tok/s
+approx_tok= 24000 words=  9230 ttft=  27.63s rate~     869 tok/s
+approx_tok= 78000 words= 30000 ttft=  94.31s rate~     827 tok/s
+DONE
