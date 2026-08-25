@@ -136,19 +136,21 @@ Inconsistent masks on a fabric are a latent trap; the user was right to insist. 
 on all six addresses. **Fix: "correct in isolation" is not the standard for shared
 infrastructure.**
 
-### 4.5 Comparing across a boundary the harness was not built for
+### 4.5 Reasoning from resemblance instead of checking the source
 
-`agbench.py` was built to mirror the vLLM MTP allgather shape (4–8 MB) — the right size
-for "does our workload run well". We then used its top point (67 MB) as a **peak
-bandwidth** figure and compared it against a forum number measured at **16 GB**, and
-treated the 3-6x difference as a hardware defect for days.
+Faced with a 3-6x bandwidth gap, we produced a tidy explanation — metric convention plus
+message size — that fit the numbers and required no further work. **It was wrong.**
+Checking `nccl-tests/doc/PERFORMANCE.md` takes minutes and shows the published DGX Spark
+figures use the same collective and the same formula we do. There was never a factor of 2
+to find.
 
-Both variables that differed — message size and algbw-vs-busbw convention — push the
-number the same way. Our own `w=2` algbw (19.40 GB/s) already sits inside the band we
-thought we were missing.
+Two supporting errors rode along: a 48.5 GB/s ceiling estimated from line rate (PCIe caps
+it near 24), and message size credited with ~3x when the published curve shows ~29% — and
+when the closest comparison was taken at a *smaller* size than ours.
 
-**Fix: match the independent variable before calling a gap a defect.** And state
-collective, size, rank count and convention on every bandwidth number, ours or theirs.
+**Fix: when an explanation would let you stop investigating, verify it against a primary
+source before acting on it.** The convention discipline it recommended was still correct;
+the conclusion it reached was not.
 
 ### 4.6 Stale pointers outliving the data they point at
 
@@ -185,17 +187,20 @@ fault** and confirming exit 1.
 
 ## 6. Open, and honestly unresolved
 
-1. ~~**Our 3-rank collective is 3.25 GB/s where published 3-Spark rings report 18–21.**~~
-   **Largely explained, and it was our error.** Two things:
-   - The `roceP2p` path was indeed the candidate. Addressed 2026-08-25 → **2.0x**
-     (3-rank 2.85 → 5.80 GB/s), live gate clean.
-   - The *remaining* gap is mostly a bad comparison. We measured `all_gather` **busbw** at
-     a **67 MB** input; the forum figure is `all_gather` at **16 GB** — 238x larger, and
-     far closer to the asymptote. Our own `w=2` **algbw is 19.40 GB/s**, inside the
-     18–21 band. See [`BANDWIDTH-COMPARISON.md`](BANDWIDTH-COMPARISON.md).
+1. **Our 3-rank collective is 5.80 GB/s where a published 3-Spark ring reports 18.70 at a
+   SMALLER message size.** Still open, and **still ~3.2x**.
+   - Four HCAs gave a real 2.0x (2.85 → 5.80), live-gate clean.
+   - An earlier draft claimed the residual was a metric-convention artifact. **Source
+     verification refuted that** — published figures are `all_gather` busbw, the same
+     collective and formula we use.
+   - **Live lead: HCA *pairing*.** Working configs merge the two PCIe domains of the *same*
+     port (`rocep1s0f1,roceP2p1s0f1`); our debug log shows NCCL merging `f0+f1`, i.e. two
+     *different* ports. On a ring those face different neighbours. This predicts a
+     ring-specific deficit — and our 3-rank gap (3.2x) is indeed worse than our 2-rank
+     (2.0x). See [`BANDWIDTH-COMPARISON.md`](BANDWIDTH-COMPARISON.md).
+   - Ceiling correction: PCIe Gen5 x4 shared across both ports caps this near **24 GB/s**,
+     not the 48.5 a line-rate estimate suggests.
 
-   **We never ran the collective at the size the comparison used.** Settle it with
-   `scripts/bwsweep.py`, which prints all three conventions per line.
 2. **The JIT stall tail** — 13% of runs still stall after warming. Warm-up does not cover
    every shape.
 3. **Root cause of spark1's original degradation** — never determined. It had been up a
