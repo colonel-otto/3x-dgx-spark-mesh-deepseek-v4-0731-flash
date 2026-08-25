@@ -1,0 +1,42 @@
+target : http://127.0.0.1:8100
+model  : deepseek-v4-flash-0731
+tokens : 256 per completion, temperature 0
+runs   : 7 per level
+
+cc=1   wall=  2.89s  ok=1/1  aggregate=  88.6 tok/s  per-stream= 88.6 tok/s
+cc=1   wall=  2.84s  ok=1/1  aggregate=  90.2 tok/s  per-stream= 90.2 tok/s
+cc=1   wall=  2.87s  ok=1/1  aggregate=  89.3 tok/s  per-stream= 89.3 tok/s
+cc=1   wall=  3.13s  ok=1/1  aggregate=  81.7 tok/s  per-stream= 81.7 tok/s
+cc=1   wall=  3.79s  ok=1/1  aggregate=  67.5 tok/s  per-stream= 67.5 tok/s
+cc=1   wall=  3.77s  ok=1/1  aggregate=  67.9 tok/s  per-stream= 67.9 tok/s
+cc=1   wall=  3.51s  ok=1/1  aggregate=  73.0 tok/s  per-stream= 73.0 tok/s
+      median=  81.7 tok/s  spread=28%   <-- wide spread, check for other traffic
+
+cc=4   wall=  5.07s  ok=4/4  aggregate= 201.9 tok/s  per-stream= 51.3 tok/s
+cc=4   wall=  4.42s  ok=4/4  aggregate= 231.6 tok/s  per-stream= 58.7 tok/s
+cc=4   wall=  4.90s  ok=4/4  aggregate= 208.8 tok/s  per-stream= 52.8 tok/s
+cc=4   wall=  4.78s  ok=4/4  aggregate= 214.3 tok/s  per-stream= 54.7 tok/s
+cc=4   wall=  5.32s  ok=4/4  aggregate= 192.5 tok/s  per-stream= 49.5 tok/s
+cc=4   wall=  4.64s  ok=4/4  aggregate= 220.9 tok/s  per-stream= 56.0 tok/s
+cc=4   wall=  5.83s  ok=4/4  aggregate= 175.6 tok/s  per-stream= 44.7 tok/s
+      median= 208.8 tok/s  spread=27%   <-- wide spread, check for other traffic
+
+cc=8   wall=  7.02s  ok=8/8  aggregate= 291.6 tok/s  per-stream= 37.0 tok/s
+cc=8   wall=  5.83s  ok=8/8  aggregate= 351.2 tok/s  per-stream= 44.8 tok/s
+cc=8   wall=  6.35s  ok=8/8  aggregate= 322.7 tok/s  per-stream= 41.3 tok/s
+cc=8   wall=  6.54s  ok=8/8  aggregate= 313.3 tok/s  per-stream= 40.3 tok/s
+cc=8   wall=  6.18s  ok=8/8  aggregate= 331.5 tok/s  per-stream= 42.3 tok/s
+cc=8   wall=  6.35s  ok=8/8  aggregate= 322.7 tok/s  per-stream= 41.3 tok/s
+cc=8   wall=  8.49s  ok=8/8  aggregate= 241.2 tok/s  per-stream= 30.6 tok/s
+      median= 322.7 tok/s  spread=34%   <-- wide spread, check for other traffic
+
+cc=16  wall=  6.94s  ok=16/16  aggregate= 590.0 tok/s  per-stream= 36.9 tok/s
+cc=16  wall=  8.63s  ok=16/16  aggregate= 474.8 tok/s  per-stream= 30.2 tok/s
+cc=16  wall=  8.82s  ok=16/16  aggregate= 464.4 tok/s  per-stream= 29.9 tok/s
+cc=16  wall=  9.43s  ok=16/16  aggregate= 434.3 tok/s  per-stream= 28.1 tok/s
+cc=16  wall= 10.02s  ok=16/16  aggregate= 408.7 tok/s  per-stream= 26.3 tok/s
+cc=16  wall=  6.95s  ok=16/16  aggregate= 589.5 tok/s  per-stream= 36.9 tok/s
+cc=16  wall=  8.20s  ok=16/16  aggregate= 499.6 tok/s  per-stream= 31.8 tok/s
+      median= 474.8 tok/s  spread=38%   <-- wide spread, check for other traffic
+
+wrote tp3_final.json
