@@ -32,7 +32,13 @@ SUMMARY_COLS = [
     "prompt_shape", "harness", "comparability", "evidence_status", "notes",
 ]
 
-VALID_HARNESS = {"bench-miaai", "benchmark_tp3", "ours-bench.py"}
+# deepconc.py is a SEPARATE harness from bench-miaai, not a re-label of it. It
+# reproduces bench-miaai's sampling and prompt shape but is a different script
+# with a different TTFT definition (first SSE chunk) and its own cache-defeat
+# and preemption instrumentation. The 2026-08-21 deep-concurrency run was ad-hoc
+# and left no script, so its rows cannot be reproduced byte-for-byte -- calling
+# both "bench-miaai" would hide exactly that.
+VALID_HARNESS = {"bench-miaai", "benchmark_tp3", "ours-bench.py", "deepconc.py"}
 VALID_PROMPT = {"code-brief", "dense-prose", "synthetic-numbered-words"}
 VALID_STATISTIC = {"median", "single-observation", "mean", "engine-reported", ""}
 VALID_OBSERVATION = {"sweep-point", "acceptance-observation", "correctness-check"}
