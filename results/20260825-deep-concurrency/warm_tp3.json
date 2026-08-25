@@ -1,0 +1,72 @@
+{
+  "tag": "tp3-warmup",
+  "timestamp_utc": "20260825T171431Z",
+  "model": "deepseek-v4-flash-0731",
+  "concurrency": 4,
+  "prompt_tokens_requested": 200000,
+  "prompt_tokens_actual": [
+    185529,
+    185532,
+    185528,
+    185518
+  ],
+  "wall_s": 462.90818071365356,
+  "ttft_s_median": 275.285969376564,
+  "ttft_ms_median": 275285.969376564,
+  "decode_tok_s_median": 1.0228268462856942,
+  "aggregate_tok_s": 1.1060508786227603,
+  "preemptions_delta": 0.0,
+  "prefix_cache": {
+    "cpu": {
+      "queries": 742107.0,
+      "hits": 0.0
+    },
+    "gpu": {
+      "queries": 0,
+      "hits": 0
+    }
+  },
+  "errors": [],
+  "streams": [
+    {
+      "i": 0,
+      "wall_s": 235.9237778186798,
+      "ttft_s": 117.41721510887146,
+      "chunks": 28,
+      "completion_tokens": 128,
+      "prompt_tokens": 185529,
+      "decode_tok_s": 1.0716706070615671,
+      "sample": "1. the\n2. quick\n3. brown\n4. fox\n5. jumps\n6. over\n7. the\n8. lazy\n9. dog\n10. a\n11. b\n12. c\n13. d\n14. e\n15. f\n16. g\n17. h\n18. i\n19. j\n20. k\n21. l\n22. m\n23. n\n24. o\n25. p\n26. q\n27. r\n28. s\n29. t\n30. u\n31."
+    },
+    {
+      "i": 1,
+      "wall_s": 362.80898690223694,
+      "ttft_s": 220.01315069198608,
+      "chunks": 31,
+      "completion_tokens": 128,
+      "prompt_tokens": 185532,
+      "decode_tok_s": 0.889381675058135,
+      "sample": "1. the\n2. of\n3. and\n4. to\n5. in\n6. a\n7. is\n8. that\n9. for\n10. on\n11. with\n12. as\n13. by\n14. at\n15. from\n16. be\n17. this\n18. are\n19. it\n20. or\n21. an\n22. was\n23. but\n24. not\n25. have\n26. has\n27. had\n28"
+    },
+    {
+      "i": 2,
+      "wall_s": 460.95119619369507,
+      "ttft_s": 330.55878806114197,
+      "chunks": 31,
+      "completion_tokens": 128,
+      "prompt_tokens": 185528,
+      "decode_tok_s": 0.9739830855098214,
+      "sample": "1. the\n2. quick\n3. brown\n4. fox\n5. jumps\n6. over\n7. the\n8. lazy\n9. dog\n10. and\n11. then\n12. runs\n13. away\n14. into\n15. the\n16. woods\n17. where\n18. it\n19. finds\n20. a\n21. hidden\n22. lake\n23. with\n24. c"
+    },
+    {
+      "i": 3,
+      "wall_s": 462.8970456123352,
+      "ttft_s": 460.55041694641113,
+      "chunks": 29,
+      "completion_tokens": 128,
+      "prompt_tokens": 185518,
+      "decode_tok_s": 54.12019457709515,
+      "sample": "1. the\n2. a\n3. an\n4. and\n5. of\n6. to\n7. in\n8. is\n9. it\n10. you\n11. that\n12. he\n13. was\n14. for\n15. on\n16. are\n17. with\n18. as\n19. his\n20. they\n21. be\n22. at\n23. one\n24. have\n25. this\n26. from\n27. or\n2"
+    }
+  ]
+}
