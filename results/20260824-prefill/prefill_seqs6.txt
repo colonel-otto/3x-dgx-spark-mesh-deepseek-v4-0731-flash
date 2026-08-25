@@ -1,0 +1,15 @@
+warming
+warm done
+### PASS 1 (upstream ascending method, cold base)
+target=   8000 prompt_tok=   6264 sec=   7.36 tok/s=     851
+target=  32000 prompt_tok=  24930 sec=  22.62 tok/s=    1102
+target= 100000 prompt_tok=  77820 sec=  66.53 tok/s=    1170
+### PASS 2 (upstream ascending method, cold base)
+target=   8000 prompt_tok=   6265 sec=   5.79 tok/s=    1082
+target=  32000 prompt_tok=  24931 sec=  19.80 tok/s=    1259
+target= 100000 prompt_tok=  77821 sec=  55.74 tok/s=    1396
+### PASS 3 (upstream ascending method, cold base)
+target=   8000 prompt_tok=   6266 sec=   5.79 tok/s=    1082
+target=  32000 prompt_tok=  24932 sec=  19.25 tok/s=    1295
+target= 100000 prompt_tok=  77822 sec=  79.40 tok/s=     980
+DONE
