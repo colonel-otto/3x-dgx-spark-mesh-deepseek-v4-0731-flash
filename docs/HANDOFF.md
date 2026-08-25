@@ -20,10 +20,10 @@ settled, what is open, and exactly how to run the next three measurements.
 | `MAX_MODEL_LEN` | **1,048,576** |
 | `MTP_NUM_TOKENS` | **5** |
 | `MAX_NUM_SEQS` | 16 |
-| `GPU_MEMORY_UTILIZATION` | 0.85 |
+| `GPU_MEMORY_UTILIZATION` | **0.80** |
 | `kv-cache-dtype` | `nvfp4_ds_mla` |
 | CUDA-graph capture | 96 (`16 × (5+1)`), 1.24 GiB / 15 s |
-| GPU KV cache | **5,444,869 tokens** (5.19x concurrency at full context) |
+| GPU KV cache | **4,499,499 tokens** (4.3x concurrency at full context) |
 
 ### The three nodes
 
@@ -149,6 +149,8 @@ Full rollback procedure in the operator's `docs\dsv4-2node-fallback.md`.
 | `MAX_NUM_SEQS=32` | **Rejected 2026-08-24.** Crashes the engine at sustained cc=32 (NCCL allgather stall); cc=16 also regressed. Keep 16. |
 | `NCCL_IB_MERGE_NICS` | **No-op 2026-08-24.** NCCL already merges both HCAs by default; measured identical both ways. |
 | GB10 GPUDirect RDMA | **Absent — architectural.** All inter-node collectives host-stage at ~0.5 GB/s. This is the prefill ceiling. |
+| `GPU_MEMORY_UTILIZATION=0.80` | **Shipped 2026-08-24.** +14% prefill at 78K vs 0.85, decode unaffected. Costs 17% of KV pool. |
+| TP=3 attention head padding | **50% waste, structural.** Kernel widths are {8,16,32,64,128}; 24 heads/rank snap to 32. TP=2 wastes 0%. Not fixable by config. |
 | Aggregate throughput as an MTP signal | **Useless** — every level sits inside its own run spread. Use the acceptance counters. |
 
 Full detail and evidence: [`MTP5-1M-AND-UPSTREAM-COMPARISON.md`](MTP5-1M-AND-UPSTREAM-COMPARISON.md).
@@ -217,18 +219,23 @@ These are not style preferences. Each was learned by getting a wrong answer firs
 
 ## 5. Next measurements — in priority order
 
-> **START HERE: §5a (seqs=32) and §5c lead #1 (`NCCL_IB_MERGE_NICS`) are both CLOSED
-> as of 2026-08-24 — see [`SEQS32-AND-NCCL-FABRIC.md`](SEQS32-AND-NCCL-FABRIC.md).**
-> seqs=32 **crashes the engine** under sustained load and was rolled back; merge-NICs is
-> a **measured no-op** (NCCL already merges both HCAs by default). The real ceiling is
-> that **GB10 has no GPUDirect RDMA** — every inter-node byte is host-staged, giving
-> ~0.5 GB/s allgather busbw, which also explains the §5c prefill gap.
+> **START HERE: §5a, §5c lead #1, and the §5c prefill question are all CLOSED as of
+> 2026-08-24.** See [`SEQS32-AND-NCCL-FABRIC.md`](SEQS32-AND-NCCL-FABRIC.md) and
+> [`PREFILL-MEASURED.md`](PREFILL-MEASURED.md).
+>
+> - seqs=32 **crashes the engine**; rolled back to 16.
+> - `NCCL_IB_MERGE_NICS` is a **measured no-op** (NCCL already merges both HCAs).
+> - **Prefill fix SHIPPED: `GPU_MEMORY_UTILIZATION` 0.85 -> 0.80, +14% at 78K.**
+>   Decode verified unaffected. `MAX_NUM_SEQS=6` was tested and falsified.
+> - The residual prefill gap is **structural**: the FlashInfer SM120 kernel exists only
+>   at head widths {8,16,32,64,128}, so TP=3's 24 heads/rank snap to 32 and **50% of
+>   attention compute is dead**. TP=2 lands exactly on 32. No config recovers this.
 >
 > **The next open task is §5b's concurrency half** (issue #12) — it needs no restart.
-> §5c remains open but its leading hypothesis is now falsified.
+> The one untested prefill lead left is the **vLLM/flashinfer version delta**
+> (0.25.2 + fi 0.6.15 vs their 0.21.1rc1 + fi 0.6.18.dev).
 >
-> The cluster is **idle, healthy, and serving** at 1M context / MTP=5 / seqs=16.
-> `NCCL_DEBUG=INFO` and `NCCL_TIMEOUT=3600` are now set on all three ranks.
+> The cluster is **idle, healthy, and serving** at 1M context / MTP=5 / seqs=16 / 0.80.
 
 ### 5a. `MAX_NUM_SEQS=32` → issue #10 — **CLOSED 2026-08-24: REJECTED**
 
