@@ -223,43 +223,46 @@ These are not style preferences. Each was learned by getting a wrong answer firs
 
 ## 5. Next measurements — in priority order
 
-> **START HERE: §5a and §5c lead #1 CLOSED. §5c prefill: one fix shipped, parity NOT
-> reached, cause localised to a fixed per-token communication cost.**
-> Read [`PREFILL-MEASURED.md`](PREFILL-MEASURED.md) — ALL FOUR addenda — and
-> [`SEQS32-AND-NCCL-FABRIC.md`](SEQS32-AND-NCCL-FABRIC.md).
+> **START HERE: prefill parity NOT reached, but the cause is now a MEASURED HARDWARE
+> ASYMMETRY: one fabric link runs 6.8x slower than the other.**
+> Read [`PREFILL-MEASURED.md`](PREFILL-MEASURED.md) — all five addenda.
 >
-> - seqs=32 **crashes the engine**; rolled back to 16.
+> **THE FINDING (maintenance window, vLLM stopped, 64 MiB allgather):**
+>
+> | pair | busbw |
+> |---|---:|
+> | sparkmain <-> spark2 (f0<->f0) | **4.64 GB/s** |
+> | sparkmain <-> spark1 (f0<->f1) | **0.69 GB/s** |
+> | all 3 ranks | **0.49 GB/s** |
+>
+> A TP collective is paced by its slowest link, which is why 3-rank sits below even the
+> bad pair. All six ports negotiate 200,000 Mb/s with zero error counters.
+>
+> **NEXT ACTION — a targeted hardware test with a predicted outcome:** swap the
+> sparkmain-f0 <-> spark1-f1 cable, or move that pair onto the unused `roceP2p1s0f*`
+> HCAs. Predicted: 0.69 -> ~4.6 GB/s. Then re-run the prefill benchmark immediately.
+>
 > - **Shipped: `GPU_MEMORY_UTILIZATION` 0.80** (+14% prefill at 78K, decode unaffected).
-> - **The comparison is now EXACT**: upstream's harness, run unmodified, produced a
->   **byte-identical `token_pool_sha256`** to their published run. Same prompts, same
->   vLLM version string, same image. Ours 1,075 tok/s @ 8K vs their 2,184.
-> - **Eliminated by measurement:** harness, prefix caching, TP=2 vs TP=3, head padding,
->   vLLM version, image, checkpoint, `MAX_MODEL_LEN` (350K vs 1M), `MTP_NUM_TOKENS`
->   (1 vs 5), seqs, gpu-mem, indexer chunk MB, prompt content, GPU compute
->   (**93.3 TFLOP/s bf16 = healthy**), GPU clocks (**2,470 MHz vs a 2,418 MHz
->   application spec — at spec, NOT throttled**), memory bandwidth (**236 GB/s of a
->   273 GB/s spec**).
+> - **Fixed (NOT persistent — reverts on spark1 reboot):** duplicate `192.168.100.2/24`
+>   on both of spark1's NICs, plus two stale routes. Correct hygiene; did NOT change
+>   bandwidth or prefill. Make it persistent in spark1's network config.
+> - **Ruled out by measurement:** `NCCL_DMABUF_ENABLE=1` + `NCCL_NET_GDR_LEVEL=5`
+>   (0.49 GB/s either way), harness (byte-identical `token_pool_sha256` to upstream's
+>   published run), prefix caching, TP=2 vs TP=3, head padding, vLLM version, image,
+>   checkpoint, `MAX_MODEL_LEN`, `MTP_NUM_TOKENS`, seqs, gpu-mem, indexer chunk MB,
+>   prompt content, GPU compute (93.3 TFLOP/s), clocks (2,470 vs a 2,418 spec — at
+>   spec), memory bandwidth (236 GB/s of 273).
 >
-> **THE LEAD:** the gap is a **flat ~450-508 us PER TOKEN** across a 32x range of prompt
-> sizes. A compute deficit scales with work; a constant per-token cost does not. This is
-> a communication signature. Our 3-rank allgather measures **~0.5 GB/s on live RDMA**
-> (`Using network IB`, 768 channels via NET/IB/2) against published GB10 figures of
-> 18-23 GB/s with GPUDirect and 10-12 GB/s on socket fallback — an order of magnitude
-> below even the fallback.
+> **CAUTION:** `MTP_NUM_TOKENS=0` is invalid (service fails to start); use 1 as a floor.
+> MTP=1 leaves prefill flat but **collapses decode to 46.7 tok/s**.
 >
-> **NEXT EXPERIMENT (needs a maintenance window):** stop vLLM, then re-run
-> `results/20260824-seqs32-nccl/agbench.py` with `NCCL_DMABUF_ENABLE=1` and
-> `NCCL_NET_GDR_LEVEL=5`. Live vLLM holds ~119/121 GiB so a second CUDA context cannot
-> be created on GB10 — that is why this is not already answered. Also check whether
-> `nvidia-peermem` failed to load (GPU driver installed before MLNX_OFED is a documented
-> GB10 failure costing 3-5x in distributed work).
+> **A method note:** an earlier probe flagged this same spark1 leg and I dismissed it
+> using a TCP test (within 1.27x). TCP does not exercise the RDMA verbs path — wrong
+> instrument. Use the NCCL allgather (`results/20260824-seqs32-nccl/agbench.py`), which
+> is what vLLM actually uses.
 >
-> **CAUTION:** `MTP_NUM_TOKENS=0` is invalid (vLLM rejects it; the service fails to
-> start). Use 1 as the floor. MTP=1 leaves prefill unchanged but **collapses decode to
-> 46.7 tok/s** — MTP is load-bearing for decode only.
->
-> The cluster is **idle, healthy, and serving**: TP=3, 1M context, MTP=5, seqs=16, 0.80.
-> Decode verified: cc=1 82.5 tok/s, cc=16 340.1, both 2% spread.
+> Cluster: **idle, healthy, serving** — TP=3, 1M context, MTP=5, seqs=16, 0.80,
+> KV 4,604,327. Decode cc=1 82.6 tok/s, cc=16 341.9.
 
 ### 5a. `MAX_NUM_SEQS=32` → issue #10 — **CLOSED 2026-08-24: REJECTED**
 
