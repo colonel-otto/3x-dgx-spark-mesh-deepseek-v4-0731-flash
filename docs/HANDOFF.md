@@ -59,6 +59,27 @@ fresh seed so prefix caching cannot hit, client agreeing within 1%.
 | 8,192 | **2,069.5** | 2,184.2 | **94.8%** |
 | 32,768 | **2,094.9** | 2,176.1 | **96.3%** |
 
+> **The third node does not buy prefill.** Measured 2026-08-25 on our own hardware, both
+> arms on this same production profile and the same unmodified harness:
+>
+> | input tokens | our TP=2 | our TP=3 | 3-node gain |
+> |---:|---:|---:|---:|
+> | 1,024 | 1,913.1 | 2,022.6 | +5.7% |
+> | 8,192 | 2,080.6 | 2,069.5 | **−0.5%** |
+> | 32,768 | 2,065.8 | 2,094.9 | +1.4% |
+>
+> Parity within ±2% at realistic depths. This is the expected shape: TP allreduce volume
+> in prefill scales with batched-tokens × hidden-size, so a third rank adds collective
+> cost that the extra compute must earn back, and at these depths it does not. vLLM
+> maintainers say the same — PP is preferred with *"more communication volume from
+> prefills, cross-node"* ([#10118](https://github.com/vllm-project/vllm/discussions/10118)).
+>
+> **The case for the third node therefore does not rest on prefill**, and the
+> deep-concurrency re-run has 2-node reaching first token 1.35x sooner. What is still
+> untested is **decode**: the numbers below are TP=3 only, and the "+8–17% per-stream at
+> long context" claim that justifies three nodes remains a *degraded-fabric* measurement.
+> See [`../results/20260825-prefill-2v3/`](../results/20260825-prefill-2v3).
+
 **Decode** (warm, idle engine, 3 reps, `bench_tp3.py`):
 
 | | value | vs pre-fix baseline |
@@ -82,7 +103,7 @@ degraded fabric.
 | KV dtype is not a speed lever | fp8 vs nvfp4 measured identically. Do not switch for throughput. |
 | NVFP4 KV quality to 464K | Clean at every depth, single-request. Concurrency half still open (#12). |
 | Patch 4 (shared expert) | Does not apply to vLLM 0.25.2 — already handled by generic substring mapping. |
-| `NCCL_IB_MERGE_NICS` | **No-op.** NCCL already merges both HCAs by default into a 400 Gb/s virtual device. |
+| `NCCL_IB_MERGE_NICS` | ~~No-op~~ **RE-OPENED 2026-08-25** — measured on the degraded fabric, and published 3-Spark results are 5-6x above ours. See §4a. |
 | GB10 GPU health | 93.3 TFLOP/s bf16, 236 GB/s memory, 2,470 MHz under load vs a **2,418 MHz application-clock spec** (3,003 MHz is a hardware ceiling, not a target). All healthy. |
 
 ## 4. What is now SUSPECT — issue #14
@@ -99,6 +120,49 @@ Re-run these on the healthy fabric. Priority order:
 4. **EP=3 and PP=3.** Communication-heavy, disproportionately penalised.
 5. **`GPU_MEMORY_UTILIZATION` 0.80 vs 0.85.** The +14% was measured on the bad fabric.
 6. **MTP=4 vs 5 aggregate throughput.** Acceptance counters are fine; aggregates are not.
+
+## 4a. ⚠ Our fabric may STILL be ~5x slower than this hardware does
+
+**This outranks every tuning question below it.** Independent measurements on the
+**identical 3-Spark ring topology** report far higher NCCL bandwidth than we get:
+
+| source | topology | busbw |
+|---|---|---:|
+| [NVIDIA forum (Turtle7777)](https://forums.developer.nvidia.com/t/test-the-sample-about-connect-three-dgx-spark-in-a-ring-topology/365160) | 3-Spark ring, allgather 16 GB | **20.84 GB/s** |
+| same thread, NVIDIA staff expectation | 3-Spark ring | ~24 GB/s |
+| [route179.dev](https://route179.dev/2026/07/21/dgx-spark-nccl-roce-benchmarking/) | 2-Spark allgather | 22.1 GB/s |
+| **ours (2026-08-25, post-fix)** | 3-Spark ring | **3.25 GB/s** 3-rank, ~4.6 pairwise |
+
+The detail that makes this worth chasing: **that same forum user first measured 2.86
+GB/s** — very close to ours — and traced it to NCCL binding the wrong interface
+addresses. Fixing it took them to 18–21 GB/s.
+
+**Prime suspect: `NCCL_IB_MERGE_NICS`.** GB10 is PCIe Gen5 x4 per device, so NVIDIA uses
+ConnectX-7 multi-host mode in which each physical QSFP port appears as **two logical
+interfaces capped at 100G each**. Without merging, NCCL uses only one.
+
+**The honest caveat:** every published merge result is from a **2-node** setup where both
+ports face the same peer. In our ring the two ports face **different neighbours**, and no
+source we found says whether merging is valid or even coherent there. Strong lead, not a
+known fix.
+
+Two things that ARE settled and shape any answer:
+
+- **GPUDirect is architecturally impossible on GB10**, not merely absent. NVIDIA staff:
+  memory from `cudaMalloc` *"cannot be coherently accessed by the CPU complex nor by I/O
+  peripherals"*; `nvidia-peermem`, `dma-buf` and GDRCopy are all non-functional
+  ([source](https://forums.developer.nvidia.com/t/dgx-spark-gpudirect-rdma/348787)).
+  Every TP collective bounces through system memory over PCIe. That is a fixed tax no
+  flag removes.
+- **A 4-node Spark benchmarker found RoCE 2x SLOWER than TCP/socket** on their setup
+  ([source](https://forums.developer.nvidia.com/t/multi-node-dgx-spark-cluster-4x-k3s-sglang-vllm-connectx-7-sr-iov-full-benchmark-matrix/365555)).
+  This contradicts route179's RDMA results, so treat it as setup-dependent — but it is a
+  cheap A/B given GPUDirect is off regardless.
+
+**Do not tune vLLM prefill/parallelism flags before resolving this number.** If 3.25
+becomes ~18 GB/s, every node-count conclusion in this repo changes again — including the
+prefill parity in §2 and the EP=3 / PP=3 / seqs=32 rejections, all of which were decided
+against a communication budget that may be ~5x too small.
 
 **The encouraging read:** we were beating the 2-node reference on decode *while one node
 ran at 15% of its collective bandwidth*. Every tuning conclusion here was reached under a
