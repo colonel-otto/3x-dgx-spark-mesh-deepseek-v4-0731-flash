@@ -1,5 +1,12 @@
 # NVFP4 KV-cache output quality under long context
 
+> [!NOTE]
+> **SINGLE-ARM RESULT.** Quality was measured clean to 464K on `nvfp4_ds_mla` — but with
+> **no comparison against `fp8_ds_mla`**, which is what both official recipes specify.
+> `nvfp4_ds_mla` has no published accuracy evaluation anywhere, and the two dtypes are
+> **memory-identical** on DeepSeek-V4 (both use the 584-byte sparse-MLA envelope), so the
+> choice is free and should be made on evidence. Tracked as [#16](../../issues/16).
+
 Experiment date: 2026-08-24 (UTC). Cluster: 3-node TP=3, `MAX_MODEL_LEN=1048576`,
 `MTP_NUM_TOKENS=5`, `MAX_NUM_SEQS=16`, `GPU_MEMORY_UTILIZATION=0.85`,
 `--kv-cache-dtype nvfp4_ds_mla`, KV pool 5,444,869 tokens. Image

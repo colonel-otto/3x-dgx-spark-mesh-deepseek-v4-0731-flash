@@ -108,7 +108,7 @@ the bottleneck is **serialized long prefill**, not KV capacity.
 
 > ### ⚠️ RE-RUN 2026-08-25 on healthy fabric — the two halves of this fare differently
 >
-> The rows above were taken on the degraded spark1 fabric ([issue #15](../../../issues/15)).
+> The rows above were taken on the degraded spark1 fabric ([issue #15](../../issues/15)).
 > Re-run at matched depth with byte-identical prompts on both arms
 > (`results/20260825-deep-concurrency/`, harness `deepconc.py`):
 >
