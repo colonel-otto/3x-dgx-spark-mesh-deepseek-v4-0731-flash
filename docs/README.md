@@ -33,6 +33,7 @@ is marked **provisional** — not wrong, but not trustworthy without a re-run.
 | [`FABRIC-FIX-PARITY.md`](FABRIC-FIX-PARITY.md) | ✅ | The 6.8x RDMA degradation, how it hid, and the parity re-run. |
 | [`../results/20260825-upper-mesh/`](../results/20260825-upper-mesh) | ⚠️ | **Four-HCA fabric measures 2.0x and is gate-clean.** Not adopted until it survives an engine run. |
 | [`PREFILL-MEASURED.md`](PREFILL-MEASURED.md) | ✅ | Prefill has **two rates, ~30x apart**. The long one. |
+| [`NCCL-TESTS-BUILD.md`](NCCL-TESTS-BUILD.md) | ✅ | How to build a **version-matched** nccl-tests. The container ships two NCCL versions; the wrong one invalidates the comparison. |
 | [`BANDWIDTH-COMPARISON.md`](BANDWIDTH-COMPARISON.md) | ✅ | **The ~3.2x gap vs published 3-Spark rings, verified against primary sources.** What it is, and what it is not. |
 | [`BANDWIDTH-NEXT-TEST.md`](BANDWIDTH-NEXT-TEST.md) | ⏳ | **The matched test that would settle it.** Four variables still differ; the public result started at our number and recovered via *bootstrap*. |
 | [`KV-QUALITY-LONG-CONTEXT.md`](KV-QUALITY-LONG-CONTEXT.md) | ⚠️ | NVFP4 KV quality, clean to 464K — but **single-arm**, no comparison. Open as [#16](../../issues/16). |
