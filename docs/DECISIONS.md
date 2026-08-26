@@ -5,7 +5,7 @@ change it. If a value is not here, it is not settled.
 
 > [!IMPORTANT]
 > **Not every row is closed.** Rows marked ⚠️ carry an open question — currently the
-> four-HCA soak ([#17](../../issues/17)), the KV dtype A/B ([#16](../../issues/16)), and
+> four-HCA **throughput** benefit ([#17](../../issues/17) — its soak has passed), the KV dtype A/B ([#16](../../issues/16)), and
 > `MAX_NUM_SEQS=32` awaiting retest ([#10](../../issues/10)). The **value** in each is what
 > we run today; the **justification** is still being tested.
 
@@ -46,7 +46,7 @@ speed knob only. Raising it cannot buy accuracy.
 
 | Knob | Value | Settled by | If you change it |
 |---|---|---|---|
-| `NCCL_IB_HCA` | **all four** (`rocep1s0f0,rocep1s0f1,roceP2p1s0f0,roceP2p1s0f1`) | Upper mesh addressed 2026-08-25: **2.0x** bandwidth, live gate 21/21 with `rdma:*` **0 errors** | ⚠️ Prerequisite is IPv4 + routing + persistence on the upper pair. Without it NCCL picks the pair anyway and wedges under load while every container stays `running`. Soak pending — [#17](../../issues/17) |
+| `NCCL_IB_HCA` | **all four** (`rocep1s0f0,rocep1s0f1,roceP2p1s0f0,roceP2p1s0f1`) | Upper mesh addressed 2026-08-25: **2.0x** bandwidth, live gate 21/21 with `rdma:*` **0 errors** | ⚠️ Prerequisite is IPv4 + routing + persistence on the upper pair. Without it NCCL picks the pair anyway and wedges under load while every container stays `running`. **Soak PASSED** 2026-08-26 (408 req, 0 RDMA deltas, 0 log events) — [#17](../../issues/17). Throughput benefit still unmeasured |
 | `NCCL_NET` | `IB` | — | ⚠️ A **request, not a guarantee.** On failure NCCL falls back to sockets and reports a plausible number. We measured `NET/Socket` at 0.44 GB/s and it looked real. Always confirm `via NET/IB/x` |
 | `NCCL_IB_SUBNET_AWARE_ROUTING` | `1` | Required on a switchless ring | Undocumented in NVIDIA's public env reference, but present in the NCCL 2.30.7 binary |
 | subnet masks | **`/30` on all six** | Consistency | Mixed masks on a fabric are a latent trap even when they cannot overlap |

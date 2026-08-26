@@ -78,10 +78,41 @@ API health and inference both passed. KV capacity after restart: **4,502,448 tok
 - ✅ Addressing is persistent, so a reboot will not silently revert it.
 - ✅ Follows NVIDIA's guidance that each logical controller gets a unique address/subnet.
 
+### Sustained soak — PASS (2026-08-26T00:16-00:37Z)
+
+The outstanding item is closed. 20.5 min, 8 concurrent streams, mixed 1K/4K/16K shapes.
+
+| | |
+|---|---|
+| requests | **408 / 408 successful, 0 failures** |
+| latency | p50 21.86s · p95 45.73s · p99 58.62s |
+| volume | 2,347,035 prompt + 16,071 completion tokens |
+| **RDMA counter deltas** | **0 on all 132 counters, all three hosts** |
+| log patterns | **0 hits** for `IBV_WC` / `RETRY_EXC` / `GID table changed` / `NET/Socket` / NCCL warn/error |
+| container restarts | none — all up across the whole window |
+| correctness | **391** ✓ |
+| gate (engine up) | **24 pass / 0 fail / 1 skip**, `rdma:*` clean on all three |
+
+**The failure mode from the earlier attempt did not reproduce.** That attempt wedged under
+traffic *after* passing init; this one carried 2.3M prompt tokens with zero RDMA events.
+
+#### The counter trap this surfaced
+
+The `roceP2p` pair shows **nonzero absolute** error counters on every host, identically:
+`local_ack_timeout_err=192, req_cqe_error=64, req_cqe_flush_error=32, resp_cqe_error=128,
+resp_cqe_flush_error=96`. The lower `rocep1s0f*` pair reads zero.
+
+**These are pre-existing residue, not a live fault.** Verified frozen twice — across a 45 s
+idle sample, and again mid-soak under active load. They are cumulative since boot, left by
+the earlier failed enable, and nothing clears them short of a reboot.
+
+**Judge these counters by DELTA, never by absolute value.** An absolute-value check would
+false-positive permanently. The gate is already immune: `rdma:*` reads the engine log
+(live events), not sysfs (lifetime totals).
+
 ### What is still outstanding
 
-- ⏳ **Sustained-load soak.** `IBV_WC_RETRY_EXC_ERR` appeared under traffic, not at init.
-  An immediate inference check is not a soak.
+- ✅ ~~Sustained-load soak~~ — **done, PASS.** See above.
 - ⏳ **No tok/s yet.** Fabric bandwidth is not throughput. Prefill measured at *parity*
   between 2 and 3 nodes, which is evidence prefill is not fabric-bound — so a 2x fabric
   gain may deliver little. Decode at cc=1/4/8/16 against
