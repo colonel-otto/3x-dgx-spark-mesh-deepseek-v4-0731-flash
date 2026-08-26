@@ -71,7 +71,6 @@ docker0          DOWN           172.17.0.1/16
 ## docker
 Docker version 29.2.1, build a5c7197
 ## docker-images
-ghcr.io/open-webui/open-webui main sha256:6a773e5c3a246b65cbe74ce942b294292c0e5f81c138f703d111bc162f7d7c3d 6d8efb3fc96c
 ghcr.io/anemll/dspark-vllm-gx10 0.1.1 sha256:a83948492cf13df455170fb42885f5ef4db54fefe0feff0f841ecbff464ac9d8 3430d6614a8e
 nvcr.io/nvidia/vllm 25.11-py3 sha256:c94cef75a33ff40dd34d45429809d840b64f416f957fbe73af11944213b6b994 d33d4cadbe0f
 ## python

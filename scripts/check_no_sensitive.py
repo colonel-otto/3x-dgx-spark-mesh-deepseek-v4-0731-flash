@@ -63,6 +63,23 @@ RULES = [
      re.compile(r"\b(benjiconner|benjamin\s+conner|benjamin)\b", re.I),
      "Replace with the GitHub handle or a generic role name"),
 
+    # --- management network / hardware identity ---
+    ("management-network address",
+     re.compile(r"\b192\.168\.1\.[0-9]{1,3}\b"),
+     "Use the documented placeholder range 192.168.10.0/24 instead"),
+
+    ("MAC address",
+     re.compile(r"\b(?:[0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2}\b"),
+     "Redact, e.g. <mac-node0-p0>"),
+
+    ("IPv6 link-local address",
+     re.compile(r"fe80::[0-9a-fA-F]{1,4}(?::[0-9a-fA-F]{1,4})+"),
+     "Redact to <link-local>; the interface identifier fingerprints the host"),
+
+    ("real DGX hostname",
+     re.compile(r"\b(gx10-[0-9a-f]{4}|spark-[0-9a-f]{4})\b"),
+     "Use a generic node label such as node0/node1/node2"),
+
     # --- paths that leak a username ---
     ("home directory with username",
      re.compile(r"(/home/(?!sparkmain|spark1|spark2|spark-sep)[a-z][a-z0-9_-]{2,}"
