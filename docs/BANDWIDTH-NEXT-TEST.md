@@ -180,7 +180,7 @@ Engine **stopped**. One variable at a time; capture `NCCL_DEBUG=INFO` every run.
 |---|---|---|
 | 0 | baseline | our current config, for a same-day anchor |
 | 1 | **bootstrap** | `wlP9s9` (Wi-Fi) addresses on all three, one common interface, MPI launcher. **No cabling needed** |
-| 2 | **harness** | official MPI-enabled `nccl-tests` `all_gather_perf`, NCCL 2.30.7-1 `sm_121`, 20 iters |
+| 2 | **harness** | official `nccl-tests` `all_gather_perf`, **NCCL 2.30.7**, 20 iters. Not built yet — see [`NCCL-TESTS-BUILD.md`](NCCL-TESTS-BUILD.md); the container ships 2.28.9 headers alongside the 2.30.7 the engine actually loads |
 | 3 | **size** | 32 MiB **and** 16 GiB, matching the forum points exactly |
 | 4 | **merge** | `NCCL_IB_MERGE_NICS=0` vs default |
 | 5 | **discovery** | automatic vs our explicit 4-HCA list |
