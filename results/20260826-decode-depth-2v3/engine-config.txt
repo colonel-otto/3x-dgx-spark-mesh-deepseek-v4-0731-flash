@@ -1,0 +1,39 @@
+Engine configuration for both arms, read from the LIVE process and container log
+rather than from config files. 2026-08-26.
+
+# NOTE: hostnames omitted; nodes are node0 (head) / node1 / node2.
+
+=== TP=3 arm (3 nodes) ===
+--tensor-parallel-size 3
+--pipeline-parallel-size 1
+--max-model-len 1048576
+--max-num-seqs 16
+--gpu-memory-utilization 0.80
+--kv-cache-dtype nvfp4_ds_mla
+MTP_NUM_TOKENS=5
+
+GPU KV cache size: 4,512,769 tokens
+Maximum concurrency for 1,048,576 tokens per request: 4.30x
+transport: via NET/IB/4 via NET/IB/5
+IBV_WC / NET/Socket / retry_exc occurrences: 0
+
+=== TP=2 arm (2 nodes: head + node1; node2 confirmed containerless) ===
+--tensor-parallel-size 2
+--pipeline-parallel-size 1
+--max-model-len 1048576
+--max-num-seqs 16
+--gpu-memory-utilization 0.80
+--kv-cache-dtype nvfp4_ds_mla
+MTP_NUM_TOKENS=5
+
+GPU KV cache size: 1,844,001 tokens
+Maximum concurrency for 1,048,576 tokens per request: 1.76x
+vllm:prefix_cache_hits_total = 0.0   (whole arm, not merely per-request)
+vllm:num_preemptions_total   = 0.0
+IBV_WC / NET/Socket / retry_exc occurrences: 0
+
+=== KV ratio ===
+4,512,769 / 1,844,001 = 2.45x
+
+Node count is the only variable. Every other engine-shaping flag is identical,
+verified by `ps -eo args` on the live process in BOTH arms.
