@@ -175,6 +175,7 @@ fault** and confirming exit 1.
 |---|---|
 | SSH liveness (reads banner) | wedged node; open port 22 is not proof of life |
 | directed mesh over **fabric** addrs | missing route / silent WiFi fallback |
+| **peer egress device** | peer traffic that would leave via Wi-Fi/mgmt instead of the fabric |
 | per-pair RTT ceiling | link up but pathological |
 | duplicate/overlapping subnets | the same address on two fabric NICs |
 | **ARP peer-on-cabled-port** | wrong-port entries — flushes them |

@@ -45,6 +45,7 @@ speed knob only. Raising it cannot buy accuracy.
 | `NCCL_IB_SUBNET_AWARE_ROUTING` | `1` | Required on a switchless ring | Undocumented in NVIDIA's public env reference, but present in the NCCL 2.30.7 binary |
 | subnet masks | **`/30` on all six** | Consistency | Mixed masks on a fabric are a latent trap even when they cannot overlap |
 | MTU | **9000** | Persisted via netplan | ⚠️ netplan **owns** the config; NetworkManager is only a renderer |
+| **peer egress** | **fabric only** | Fabric RTT 0.47-0.93 ms vs Wi-Fi 3-135 ms | ☠️ **No Spark-to-Spark data over Wi-Fi, ever.** Wi-Fi is operator access + API responses only. A missing fabric route falls back to Wi-Fi silently — everything still pings. Gated as `egress:*` ([#13](../../issues/13)) |
 
 ## Measured constants
 

@@ -49,10 +49,7 @@ a data plane.
 
 ### Do the Sparks need Ethernet cables? **No.**
 
-This is worth stating plainly, because "management interface" sounds like it implies a
-cable. It does not.
-
-**Measured 2026-08-25 on all three nodes:**
+Measured 2026-08-25 on all three nodes:
 
 | node | `enP7s7` (Ethernet) | `wlP9s9` (Wi-Fi) |
 |---|---|---|
@@ -60,27 +57,52 @@ cable. It does not.
 | spark1 | **down** | 192.168.10.2 |
 | spark2 | **down** | 192.168.10.3 |
 
-**Not one Spark is on Ethernet.** All three reach the LAN over Wi-Fi, and all six
-node-to-node paths on 192.168.1.x are reachable (3-135 ms RTT). The shared control network
-we need **already exists** -- no cabling required.
+**No Spark is on Ethernet.** All three reach the LAN over Wi-Fi. The shared control
+network already exists -- no cabling required.
 
-The ConnectX-7 ring stays exactly as it is. It carries **all** the data. The only thing
-that would move is the few kilobytes of rendezvous traffic NCCL uses to agree on a
-topology before any payload flows -- and NVIDIA's playbook **explicitly supports Wi-Fi**
-for it, which is the clearest possible signal that it is a control plane, not a data path.
+### THE HARD RULE: no Spark-to-Spark data over Wi-Fi
+
+**Wi-Fi carries operator access and API responses only. Never inter-node data.**
+
+This is not a preference -- it is a correctness constraint, and the numbers show why:
+
+| path | RTT |
+|---|---|
+| fabric (ConnectX-7) | **0.47-0.93 ms** |
+| Wi-Fi | 3-135 ms, highly variable |
+
+**Currently satisfied.** Verified on every directed pair: `ip route get` for every peer
+fabric address resolves to `enp1s0f*` / `enP2p1s0f*`. Zero peer routes touch `wlP9s9`.
+
+**Now enforced.** The gate's `egress:*` check asserts it on every run. Reachability alone
+was never sufficient: if a fabric route disappears, the kernel silently falls back to
+Wi-Fi and *everything still pings* while inter-node traffic crawls with no error anywhere.
+That has already happened here once -- a reboot sent TCPStore traffic over Wi-Fi
+([#13](../../issues/13)).
+
+### What the bootstrap change would and would not move
+
+This is the part that needs care, given the rule above.
+
+| traffic | carrier | changes? |
+|---|---|---|
+| model/tensor data (TP collectives) | **ConnectX-7 fabric** | **No. Never.** |
+| NCCL rendezvous (a few KB, once at startup) | currently fabric | would move to the common interface |
+| API requests/responses | Wi-Fi | no |
+
+`NCCL_SOCKET_IFNAME` selects the **bootstrap/out-of-band** channel, not the data path.
+Once ranks agree on a topology, payload moves over RDMA via `NCCL_IB_HCA` -- which stays
+on the fabric regardless. NVIDIA's playbook **explicitly supports Wi-Fi** for this
+channel, which is the clearest signal it is control, not data.
+
+> **Verify, do not assume.** After any bootstrap change, confirm from `NCCL_DEBUG=INFO`
+> that transport still reads `via NET/IB/*` and **not** `via NET/Socket`. If it reads
+> Socket, data has fallen onto TCP -- possibly over Wi-Fi -- and the run must be discarded.
+> The gate asserts this too (`transport:*`).
 
 > **Terminology note:** NVIDIA's playbook names `enP7s7` because that is the Ethernet port
-> on their reference setup. What matters is *one interface, common to every node, that is
-> not the fabric* -- `wlP9s9` satisfies that here. Substitute it throughout.
-
-Bootstrap traffic is tiny; RDMA still carries the payload. Putting rendezvous on a
-rank-specific fabric interface -- with the master address on loopback -- is a plausible way
-to get a wrong or asymmetric topology decision, and it is exactly the class of thing the
-forum reporter fixed to go from 2.86 -> 18.64.
-
-> **Note:** the gate does **not** set `NCCL_SOCKET_IFNAME` at all (verified: 0 occurrences).
-> It only sets `INIT_METHOD` to a fabric address. The serving config *does* pin it. So the
-> two paths differ from each other as well -- worth keeping straight when comparing.
+> on their reference box. The requirement is *one interface common to every node that is
+> not the fabric* -- `wlP9s9` satisfies it here.
 
 ### 2. NIC merging was never tested correctly
 
