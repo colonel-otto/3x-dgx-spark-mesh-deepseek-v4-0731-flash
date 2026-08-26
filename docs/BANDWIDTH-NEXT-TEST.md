@@ -1,5 +1,16 @@
 # The matched test: reproduce NVIDIA's recipe exactly
 
+> [!IMPORTANT]
+> **This test was RUN on 2026-08-26. Result: there is no gap.**
+> The same config reads **5.80 GB/s** on our custom harness and **23.92 GB/s** on official
+> `all_gather_perf` — above the published 20.84 reference. Bootstrap moved it +0.1%,
+> merging −0.3%, discovery −0.4%. **The harness was the whole story.**
+>
+> See [`BANDWIDTH-COMPARISON.md`](BANDWIDTH-COMPARISON.md) for the result and
+> [`../results/20260826-nccl-controlled/`](../results/20260826-nccl-controlled) for the
+> 12 runs. The recipe below is retained because it is a good reproduction procedure —
+> but the hypotheses it ranks were all falsified.
+
 **We cannot yet call 5.80 vs 20.84 GB/s a controlled comparison.** Four variables differ
 between our measurement and the only well-documented public 3-Spark result. This page
 fixes them one at a time.

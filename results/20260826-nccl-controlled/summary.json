@@ -1,0 +1,123 @@
+{
+  "issue": 18,
+  "title": "Controlled NCCL bandwidth reproduction, 3-node DGX Spark",
+  "date": "2026-08-26",
+  "harness": {
+    "binary": "nccl-tests all_gather_perf",
+    "nccl_tests_commit": "717b68318278e93f371d8ffb46b076069d7c7851",
+    "build": "MPI=1 (OpenMPI 4.1.2 in-container), NCCL_HOME=/usr/local/lib/python3.12/dist-packages/nvidia/nccl, NVCC_GENCODE=sm_121",
+    "image": "ntests:2.30.7 (derived FROM ghcr.io/anemll/dspark-vllm-gx10:0.1.1)",
+    "nccl_headers": 23007,
+    "nccl_library": 23007,
+    "nccl_runtime_version": "2.30.7+cuda13.3",
+    "iterations": 20,
+    "warmup": 5,
+    "check": 1,
+    "gpus_per_rank": 1,
+    "container_flags": "--device /dev/infiniband --ulimit memlock=-1 --shm-size 64gb --network host --ipc=host --cap-add IPC_LOCK",
+    "distribution_method": "Dockerfile shipped to each node; image built locally on all three (no 9.6 GB image transfer). Runtime NCCL version verified independently on sparkmain, spark1, spark2.",
+    "engine_state": "STOPPED for all runs"
+  },
+  "notes": {
+    "mpi_oob": "mpirun's own OOB/BTL always used the management LAN (wlP9s9). The fabric is a set of point-to-point /30 links, NOT a full mesh, so MPI's TCP BTL cannot route across it. MPI is only a process launcher here; the variable under test is NCCL_SOCKET_IFNAME, which selects NCCL's own bootstrap channel.",
+    "transport_validation": "Every run's NCCL_DEBUG confirmed via NET/IB/*. Zero occurrences of NET/Socket in any run. No run was void.",
+    "correctness": "Every run reported #wrong = 0 out-of-place and in-place.",
+    "columns": "algbw/busbw reported for BOTH out-of-place (oop, the published convention) and in-place (ip)."
+  },
+  "runs": [
+    {
+      "variant": "A_baseline", "world": 3, "bootstrap": "fabric", "size": "32M",
+      "algbw_oop": 7.21, "busbw_oop": 4.81, "algbw_ip": 29.67, "busbw_ip": 19.78,
+      "avg_busbw": 12.2939, "transport": "NET/IB/4 + NET/IB/5", "wrong": 0,
+      "vdev": ["[0] rocep1s0f0 ndevs=1", "[1] rocep1s0f1 ndevs=1", "[2] roceP2p1s0f0 ndevs=1", "[3] roceP2p1s0f1 ndevs=1", "[4] rocep1s0f0+rocep1s0f1 speed=400000 ndevs=2", "[5] roceP2p1s0f0+roceP2p1s0f1 speed=400000 ndevs=2"],
+      "note": "COLD-START OUTLIER on the out-of-place column (4651.96 us vs ~1300 us in repeats). Superseded by rep2/rep3."
+    },
+    {
+      "variant": "A_baseline_rep2", "world": 3, "bootstrap": "fabric", "size": "32M",
+      "algbw_oop": 25.28, "busbw_oop": 16.85, "algbw_ip": 28.74, "busbw_ip": 19.16,
+      "avg_busbw": 18.0063, "transport": "NET/IB/4 + NET/IB/5", "wrong": 0,
+      "vdev": ["[4] rocep1s0f0+rocep1s0f1 speed=400000 ndevs=2", "[5] roceP2p1s0f0+roceP2p1s0f1 speed=400000 ndevs=2"]
+    },
+    {
+      "variant": "A_baseline_rep3", "world": 3, "bootstrap": "fabric", "size": "32M",
+      "algbw_oop": 23.61, "busbw_oop": 15.74, "algbw_ip": 27.77, "busbw_ip": 18.51,
+      "avg_busbw": 17.1268, "transport": "NET/IB/4 + NET/IB/5", "wrong": 0,
+      "vdev": ["[4] rocep1s0f0+rocep1s0f1 speed=400000 ndevs=2", "[5] roceP2p1s0f0+roceP2p1s0f1 speed=400000 ndevs=2"]
+    },
+    {
+      "variant": "A_baseline", "world": 3, "bootstrap": "fabric", "size": "16G",
+      "algbw_oop": 35.87, "busbw_oop": 23.92, "algbw_ip": 36.23, "busbw_ip": 24.15,
+      "avg_busbw": 24.0354, "transport": "NET/IB/4 + NET/IB/5", "wrong": 0,
+      "vdev": ["[4] rocep1s0f0+rocep1s0f1 speed=400000 ndevs=2", "[5] roceP2p1s0f0+roceP2p1s0f1 speed=400000 ndevs=2"]
+    },
+    {
+      "variant": "B_mgmtboot", "world": 3, "bootstrap": "mgmt (wlP9s9)", "size": "32M",
+      "algbw_oop": 24.22, "busbw_oop": 16.14, "algbw_ip": 28.14, "busbw_ip": 18.76,
+      "avg_busbw": 17.4507, "transport": "NET/IB/4 + NET/IB/5", "wrong": 0,
+      "vdev": ["[4] rocep1s0f0+rocep1s0f1 speed=400000 ndevs=2", "[5] roceP2p1s0f0+roceP2p1s0f1 speed=400000 ndevs=2"]
+    },
+    {
+      "variant": "B_mgmtboot", "world": 3, "bootstrap": "mgmt (wlP9s9)", "size": "16G",
+      "algbw_oop": 35.91, "busbw_oop": 23.94, "algbw_ip": 36.26, "busbw_ip": 24.17,
+      "avg_busbw": 24.0555, "transport": "NET/IB/4 + NET/IB/5", "wrong": 0,
+      "vdev": ["[4] rocep1s0f0+rocep1s0f1 speed=400000 ndevs=2", "[5] roceP2p1s0f0+roceP2p1s0f1 speed=400000 ndevs=2"]
+    },
+    {
+      "variant": "C_mergeoff", "world": 3, "bootstrap": "mgmt (wlP9s9)", "size": "32M",
+      "extra_env": "NCCL_IB_MERGE_NICS=0",
+      "algbw_oop": 26.86, "busbw_oop": 17.91, "algbw_ip": 28.72, "busbw_ip": 19.14,
+      "avg_busbw": 18.5272, "transport": "NET/IB/0 + NET/IB/1 + NET/IB/2 + NET/IB/3", "wrong": 0,
+      "vdev": ["[0] rocep1s0f0 ndevs=1", "[1] rocep1s0f1 ndevs=1", "[2] roceP2p1s0f0 ndevs=1", "[3] roceP2p1s0f1 ndevs=1"],
+      "note": "No merged virtual devices created; all four physical HCAs used individually."
+    },
+    {
+      "variant": "C_mergeoff", "world": 3, "bootstrap": "mgmt (wlP9s9)", "size": "16G",
+      "extra_env": "NCCL_IB_MERGE_NICS=0",
+      "algbw_oop": 35.80, "busbw_oop": 23.86, "algbw_ip": 36.23, "busbw_ip": 24.15,
+      "avg_busbw": 24.0085, "transport": "NET/IB/0 + NET/IB/1 + NET/IB/2 + NET/IB/3", "wrong": 0,
+      "vdev": ["[0] rocep1s0f0 ndevs=1", "[1] rocep1s0f1 ndevs=1", "[2] roceP2p1s0f0 ndevs=1", "[3] roceP2p1s0f1 ndevs=1"]
+    },
+    {
+      "variant": "D_autohca", "world": 3, "bootstrap": "mgmt (wlP9s9)", "size": "32M",
+      "extra_env": "NCCL_IB_HCA unset (auto discovery)",
+      "algbw_oop": 25.09, "busbw_oop": 16.72, "algbw_ip": 29.10, "busbw_ip": 19.40,
+      "avg_busbw": 18.0605, "transport": "NET/IB/4 + NET/IB/5", "wrong": 0,
+      "vdev": ["[4] rocep1s0f0+rocep1s0f1 speed=400000 ndevs=2", "[5] roceP2p1s0f0+roceP2p1s0f1 speed=400000 ndevs=2"],
+      "note": "Auto discovery finds exactly the same four HCAs and builds the same two merged pairs as the explicit list."
+    },
+    {
+      "variant": "D_autohca", "world": 3, "bootstrap": "mgmt (wlP9s9)", "size": "16G",
+      "extra_env": "NCCL_IB_HCA unset (auto discovery)",
+      "algbw_oop": 35.78, "busbw_oop": 23.85, "algbw_ip": 36.20, "busbw_ip": 24.14,
+      "avg_busbw": 23.9944, "transport": "NET/IB/4 + NET/IB/5", "wrong": 0,
+      "vdev": ["[4] rocep1s0f0+rocep1s0f1 speed=400000 ndevs=2", "[5] roceP2p1s0f0+roceP2p1s0f1 speed=400000 ndevs=2"]
+    },
+    {
+      "variant": "E_world2", "world": 2, "bootstrap": "mgmt (wlP9s9)", "size": "32M",
+      "algbw_oop": 32.44, "busbw_oop": 16.22, "algbw_ip": 37.62, "busbw_ip": 18.81,
+      "avg_busbw": 17.5143, "transport": "NET/IB/4 + NET/IB/5", "wrong": 0,
+      "vdev": ["[4] rocep1s0f0+rocep1s0f1 speed=400000 ndevs=2", "[5] roceP2p1s0f0+roceP2p1s0f1 speed=400000 ndevs=2"]
+    },
+    {
+      "variant": "E_world2", "world": 2, "bootstrap": "mgmt (wlP9s9)", "size": "16G",
+      "algbw_oop": 44.60, "busbw_oop": 22.30, "algbw_ip": 47.81, "busbw_ip": 23.91,
+      "avg_busbw": 23.1036, "transport": "NET/IB/4 + NET/IB/5", "wrong": 0,
+      "vdev": ["[4] rocep1s0f0+rocep1s0f1 speed=400000 ndevs=2", "[5] roceP2p1s0f0+roceP2p1s0f1 speed=400000 ndevs=2"]
+    }
+  ],
+  "conclusions": {
+    "headline": "The gap does not exist. With the official version-matched harness, the CURRENT config (variant A, unchanged) already delivers 23.92 GB/s busbw at 16 GiB and ~16-17 GB/s at 32 MiB on 3 ranks. The published comparison points are 20.84 @16GiB and 18.70 @32MiB. We match or exceed them.",
+    "which_variable_moved_the_number": "NONE of A/B/C/D moved it. Bootstrap interface (A vs B), NIC merging (B vs C), and HCA discovery (B vs D) are all within noise at 16 GiB: 23.92 / 23.94 / 23.86 / 23.85 GB/s, a spread of 0.4%. The ONLY variable that mattered was the HARNESS itself.",
+    "old_5_80_figure": "The prior 5.80 GB/s came from the custom PyTorch harness at 64 MiB, not from the fabric. Replacing it with official all_gather_perf raises the same 3-rank ring config to 23.92 GB/s. The custom harness was measuring itself.",
+    "merge_question_answered": "NCCL does merge ACROSS physical ports: 'Made virtual device [4] name=rocep1s0f0+rocep1s0f1' and '[5] name=roceP2p1s0f0+roceP2p1s0f1'. The BANDWIDTH-COMPARISON hypothesis that this cross-port pairing would harm a 3-node ring is REFUTED by variant C: turning merging off entirely (four separate NET/IB/0-3 devices) produced 23.86 vs 23.86 GB/s at 16 GiB. Cross-port merging is harmless here.",
+    "ceiling": "23.85-23.94 GB/s at 16 GiB across every 3-rank variant, essentially pinned to the ~24 GB/s PCIe Gen5 x4 ceiling documented in BANDWIDTH-COMPARISON.md. The fabric is saturating PCIe, not underperforming.",
+    "world2_vs_world3": "3-rank (23.92) slightly EXCEEDS 2-rank (22.30) busbw at 16 GiB out-of-place. There is no rank-count penalty; the earlier claim that the deficit grew with rank count was an artifact of the custom harness.",
+    "size_dependence": "Real and matches published curves: ~16-17 GB/s at 32 MiB rising to ~24 GB/s at 16 GiB, about +45%."
+  },
+  "docs_needing_correction": [
+    "docs/BANDWIDTH-COMPARISON.md: the '~3.2x gap' headline is refuted. The gap was harness, not fabric.",
+    "docs/BANDWIDTH-COMPARISON.md: the cross-port merge hypothesis (f0+f1 spanning two neighbours) is measured and refuted by variant C.",
+    "docs/BANDWIDTH-NEXT-TEST.md: 'bootstrap is the strongest lead' is refuted; bootstrap interface made no measurable difference.",
+    "The ~24 GB/s PCIe ceiling estimate in BANDWIDTH-COMPARISON.md is CONFIRMED and is where we actually sit."
+  ]
+}

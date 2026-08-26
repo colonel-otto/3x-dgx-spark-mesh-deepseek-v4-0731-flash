@@ -1,0 +1,14 @@
+target : http://localhost:8100
+model  : deepseek-v4-flash-0731
+tokens : 256 per completion, temperature 0
+runs   : 1 per level
+
+cc=1   wall=  3.02s  ok=1/1  aggregate=  84.9 tok/s  per-stream= 84.9 tok/s
+
+cc=8   wall=  8.15s  ok=8/8  aggregate= 251.2 tok/s  per-stream= 32.2 tok/s
+
+cc=16  wall= 13.02s  ok=16/16  aggregate= 314.6 tok/s  per-stream= 20.1 tok/s
+
+cc=32  wall= 20.29s  ok=32/32  aggregate= 403.7 tok/s  per-stream= 12.9 tok/s
+
+wrote warmup5.json
