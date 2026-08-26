@@ -18,14 +18,24 @@ This page is the *reasoning*; that file is the *artifact*.
 
 | Knob | Value | Settled by | If you change it |
 |---|---|---|---|
-| `TP_SIZE` | **3** | Decode cc=1 76.2 → 89.1 tok/s vs 2 nodes (2026-08-25, healthy fabric, matched) | cc≥16 favours 2 nodes; see the crossover below |
+| `TP_SIZE` | **3** | Decode at depth: 54.4 → **72.6** tok/s at 131K, 71.5 → 84.4 at 262K (2026-08-26, healthy, matched, 7 reps/depth) | Below 32K it is **parity** — the third node earns nothing there. cc≥16 favours 2 nodes; see the two crossovers below |
 | `PP_SIZE` | **1** | [`PP3-PIPELINE-PARALLEL.md`](PP3-PIPELINE-PARALLEL.md) | ❌ Blocked by MTP + a DSA stride constraint. No PP tok/s exists |
 | expert parallel | **off** | [`EP3-EXPERT-PARALLEL.md`](EP3-EXPERT-PARALLEL.md) | ❌ ~2.5x slower — the B12X kernel refuses EP by an explicit source-code check. Also blocks EPLB, whose prerequisite is EP. ⚠️ The **mechanism** is settled (source check + `ValueError`); the **2.5x** came from a degraded-fabric run over TCP fallback and has never been re-measured on RDMA |
 | TP=3 padding patch | **required** | Correctness 14/14; [`patch.md`](patch.md) | ☠️ **Silently serves fluent nonsense.** Stock vLLM computes `8 // 3 == 2` and drops 6 of 8 attention groups |
 
-**The node-count answer is conditional.** The 3-node advantage decays monotonically with
-concurrency and crosses over near cc=16: three nodes win per-stream latency, two win batch
-aggregate. Single-user interactive coding is per-stream-bound → three nodes.
+**The node-count answer is conditional, on two axes independently.**
+
+- **Concurrency** (2026-08-25, 18-token prompt): the 3-node advantage decays monotonically
+  and crosses over near **cc=16**. Three nodes win per-stream latency, two win batch
+  aggregate.
+- **Context depth** (2026-08-26, cc=1, 7 reps/depth): the 3-node advantage **does not exist
+  below 32K** (+0.8% / +0.3% / −0.9%) and crosses over between **32K and 131K**, reaching
+  **+33.6%** at 131K and +17.9% at 262K.
+  [`../results/20260826-decode-depth-2v3/`](../results/20260826-decode-depth-2v3)
+
+So the third node is justified here by **long-context work**, not by short interactive
+turns. TTFT at depth runs the other way: two nodes reach first token 6–13% sooner, so a
+deep prompt with a short answer is a two-node workload.
 
 ## Engine shape
 

@@ -28,7 +28,10 @@ Three findings, in order of how much time they cost:
 **1. A machine was silently broken for days.** One Spark ran at ~15% of its network speed
 with **every status indicator reading healthy** — link up at 200 Gb/s, all error counters
 zero. A reboot fixed it. It had been distorting every prior measurement, and because it
-sat in the *3-node* arm, it made 2 and 3 nodes look equivalent when they are not.
+sat in the *3-node* arm, the handicap fell on the configuration under test. The re-runs
+found it had **flattened** the comparison in both directions: a strongly depth-dependent
+per-stream advantage was compressed into a uniform ~13% band, so the third node looked
+mildly useful everywhere when in fact it is useless below 32K and worth +33.6% at 131K.
 → [`docs/DEGRADED-DATA-CATALOGUE.md`](docs/DEGRADED-DATA-CATALOGUE.md)
 
 **2. We chased a network deficit that never existed.** Our own tool measured 5.80 GB/s
@@ -65,13 +68,45 @@ higher-fidelity originals — the full-precision master was never released. Load
 307 GB version would cost you 1M context and the fast MoE kernel **for an identical
 model**.
 
-The third node buys **latency**, not quality or capacity.
+The third node buys **latency at depth**, not quality or capacity.
 
 ## Is the third node worth it?
 
-**Yes for single-stream interactive work; no for batch throughput.** Measured
-2026-08-25 on healthy fabric, identical config on both arms (`1M` / `seqs 16` / `MTP=5` /
-`0.80`), same harness, node count the only variable:
+**It depends on context depth, and it depends on concurrency.** Those are two separate
+axes and we measured them separately. A single percentage cannot answer this question —
+the honest answer is a workload description.
+
+### Axis 1: context depth, single stream
+
+Measured 2026-08-26 on healthy fabric, matched arms, node count the only variable, 7 reps
+per cell, median, prefill excluded. Per-stream decode tok/s:
+
+| context | 2 Spark | 3 Spark | 3-node gain |
+|---:|---:|---:|---:|
+| 2,036 | 75.8 | 76.3 | +0.8% |
+| 8,081 | 72.4 | 72.6 | +0.3% |
+| 32,268 | **70.8** | 70.2 | −0.9% |
+| 129,006 | 54.4 | **72.6** | **+33.6%** |
+| 257,993 | 71.5 | **84.4** | **+17.9%** |
+
+**Below 32K the third node buys nothing** — three cells inside run-to-run noise, one
+negative. **The crossover is between 32K and 131K**, and past it the gain is large. The
+mechanism is KV pressure: 1,844,001 tokens on two nodes against ~4.5M on three. Below 32K
+neither pool is under pressure and decode is bound by per-token compute, which a third rank
+does not improve.
+
+Two findings from the same run that complicate the story:
+
+- **Time to first token favours TWO nodes at depth** — 158.4 s vs 181.6 s at 262K (13%
+  sooner), 72.4 s vs 77.1 s at 131K. Deep prompts with short answers are a two-node
+  workload; deep prompts with substantial output are a three-node one.
+- **The depth curve is a U, not a decay.** At 262K this cluster decodes *faster* than at
+  8K (84.4 vs 72.6), on both node counts. Likely MTP acceptance rising with context.
+
+### Axis 2: concurrency, short prompt
+
+Measured 2026-08-25 on healthy fabric, 18-token prompt — this measures request
+concurrency, not context depth:
 
 | measurement | 2 Spark | 3 Spark | winner |
 |---|---:|---:|---|
@@ -86,15 +121,30 @@ The third node buys **latency**, not quality or capacity.
 The 3-node advantage **decays monotonically with concurrency and crosses over near
 cc=16**. Three nodes win per-stream latency; two win batch aggregate.
 
-**Choose by workload, not by node count.** Single-user interactive coding is
-per-stream-latency bound → three nodes. Multi-user batch serving → two nodes, and the
-third is free for another model.
+Both axes are true at once, and they are not in conflict: three nodes win per-stream **at
+depth**, two nodes win aggregate **under concurrency**.
 
-Two things the third node does **not** buy: prefill throughput (parity), and usable KV
-capacity (`vllm:num_preemptions_total` has read **0 in every test ever run here**,
-including a 4×200K test designed specifically to make KV bite).
+### Choose by workload
 
-Evidence: [`results/20260825-decode-2v3/`](results/20260825-decode-2v3) ·
+| Your workload | Node count |
+|---|---|
+| Long context (>100K) with substantial generation | **3** — +18–34% per stream |
+| Interactive coding under ~32K | **either** — measured parity |
+| Deep one-shot prompt, short answer | **2** — first token 6–13% sooner |
+| Several concurrent users, agent swarm, batch | **2** — 12–19% more aggregate, third GB10 freed |
+
+Two things the third node does **not** buy: prefill throughput (parity at every depth
+tested), and usable KV capacity (`vllm:num_preemptions_total` has read **0 in every test
+ever run here**, including a 4×200K test designed specifically to make KV bite — the KV
+advantage shows up as *decode speed at depth*, not as capacity headroom that binds).
+
+> **Retracted:** an earlier headline claimed **"+8–17% per-stream from 2K context upward."**
+> That was degraded-fabric data ([#14](../../issues/14)) and it is wrong in both
+> directions — no benefit below 32K, more than double the claim above 100K. Kept and
+> labelled in [`docs/WHY-THREE-NODES.md`](docs/WHY-THREE-NODES.md).
+
+Evidence: [`results/20260826-decode-depth-2v3/`](results/20260826-decode-depth-2v3) ·
+[`results/20260825-decode-2v3/`](results/20260825-decode-2v3) ·
 [`results/20260825-prefill-2v3/`](results/20260825-prefill-2v3) ·
 [`results/20260825-deep-concurrency/`](results/20260825-deep-concurrency)
 
@@ -108,7 +158,7 @@ Evidence: [`results/20260825-decode-2v3/`](results/20260825-decode-2v3) ·
 
 | Question | Status | Where |
 |---|---|---|
-| Is the 3rd node worth it? | ✅ **Yes for single-stream** (+17% at cc=1), no for batch | table above |
+| Is the 3rd node worth it? | ✅ **Depends on depth** — parity below 32K, **+33.6% at 131K**; no for batch | tables above |
 | Is our fabric slow vs published rings? | ✅ **No — 23.92 GB/s, above reference** | [#18](../../issues/18) |
 | Does the 4-HCA fabric survive load? | ✅ **Yes** — 408/408 requests, 0 RDMA errors | [#17](../../issues/17) |
 | Is `nvfp4_ds_mla` costing us quality? | ✅ **No** — 23/24 cells byte-identical vs `fp8` | [#16](../../issues/16) |

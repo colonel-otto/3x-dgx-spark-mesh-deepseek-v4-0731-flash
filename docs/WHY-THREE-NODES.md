@@ -11,20 +11,19 @@
 > shared bandwidth floor looks like. Gate the fabric before believing either arm —
 > [`DEGRADED-DATA-CATALOGUE.md`](DEGRADED-DATA-CATALOGUE.md) maps the symptom to the fix.
 >
-> **What survives:** the direction and the rough range. A matched healthy-fabric re-run on
-> 2026-08-25 measured **+16.9% at cc=1** ([`../results/20260825-decode-2v3/`](../results/20260825-decode-2v3)),
-> landing inside the +8–17% band claimed here. The *shape* of the argument — three nodes
-> win per-stream, two win aggregate — survives too, and was strengthened.
+> **What survives:** the *shape* of the argument — three nodes win per-stream, two win
+> aggregate. Nothing else.
 >
-> **What is void:** every absolute tok/s in the tables below. Also **incomplete**: the
-> healthy re-run found a **crossover near cc=16** that this page could not see, because
-> the degraded fabric compressed the arms together.
+> **What is void:** every absolute tok/s in the tables below, **and the depth range**. The
+> matched long-context re-run landed 2026-08-26
+> ([`../results/20260826-decode-depth-2v3/`](../results/20260826-decode-depth-2v3)) and the
+> "+8–17% from 2K upward" headline is wrong in **both** directions: below 32K the advantage
+> **does not exist** (+0.8% / +0.3% / −0.9%), and at 131K it is **+33.6%**, more than double
+> what was claimed. The degradation had compressed a strongly depth-dependent effect into a
+> flat ~13% band. See **§1 below**.
 >
-> **What has not been matched yet:** the healthy re-run used an **18-token prompt**, so it
-> confirms the direction at cc=1 but does **not** re-measure the 2K/8K/32K/131K
-> long-context decode table below. That gap is tracked and a matched long-context re-run is
-> in progress; until it lands, the per-context magnitudes here have no healthy-fabric
-> counterpart.
+> **Also incomplete:** the 2026-08-25 healthy re-run found a **crossover near cc=16** that
+> this page could not see, because the degraded fabric compressed the arms together.
 >
 > **Quote instead:** the table in [`../README.md`](../README.md#is-the-third-node-worth-it).
 
@@ -38,13 +37,37 @@ Measured 2026-08-21 on DeepSeek-V4-Flash-0731, three GB10 DGX Sparks over a swit
 
 ## The one-sentence version
 
-**A third Spark makes every response 8–17% faster for the person waiting on it, from 2K
-context upward, and serves contexts up to 409,600 tokens with ~2x the KV headroom — at the cost
-of total throughput when many requests run at once.**
+> **Superseded 2026-08-26.** The sentence that stood here — *"8–17% faster from 2K context
+> upward"* — is degraded-fabric data and is retracted. The matched healthy-fabric
+> replacement:
+
+**A third Spark buys nothing per-stream below 32K context and a great deal above it —
++33.6% at 131K and +17.9% at 262K — plus ~2.4x the KV headroom, at the cost of total
+throughput under concurrency and of time-to-first-token on deep one-shot prompts.**
+
+Measured 2026-08-26, matched arms, five depths, 7 reps each:
+[`../results/20260826-decode-depth-2v3/`](../results/20260826-decode-depth-2v3).
 
 ---
 
 ## Side by side: what each configuration gives you
+
+> [!CAUTION]
+> **The four bolded per-stream decode rows in this table are void.** They were measured
+> 2026-08-21 on degraded fabric and re-measured 2026-08-26 on healthy fabric with matched
+> arms. Both the values and the *pattern* changed:
+>
+> | context | this table (degraded) | measured healthy 2026-08-26 |
+> |---:|---:|---:|
+> | 2K | +14% | **+0.8%** |
+> | 8K | +8% | **+0.3%** |
+> | 32K | +17% | **−0.9%** |
+> | 131K | +13% | **+33.6%** |
+> | 262K | not measured on 2 nodes | **+17.9%** |
+>
+> The rows are kept as a **diagnostic signature**: a flat ~13% band across every depth is
+> what a shared bandwidth floor looks like when the real effect is depth-dependent.
+> Healthy numbers: [`../results/20260826-decode-depth-2v3/`](../results/20260826-decode-depth-2v3).
 
 Every figure measured on the same cluster, same day, same harness
 (`bench-miaai`), same prompt shape, `MTP=4` on both, warm-up discarded,
@@ -76,6 +99,11 @@ nodes may well serve a *single* 262K request; what they demonstrably cannot do i
 anywhere near the concurrent depth three nodes can. Treat the top four bolded rows as the
 proven case and these two as unverified.
 
+> **Updated 2026-08-26.** The inference was right: two nodes **do** serve a single 262K
+> request, at 71.5 tok/s. The 409K row is still unverified on two nodes. The four "proven"
+> rows this footnote points at are the ones that turned out **not** to be proven — see the
+> CAUTION above.
+
 **How to read this table.** The rows in bold at the top are what one person
 waiting on a response experiences. The aggregate rows are the sum across many
 simultaneous requests. If you are one user, the top rows are your reality and
@@ -83,35 +111,101 @@ the aggregate rows are not. If you are serving a team, invert that.
 
 ### The trade in one line each
 
-- **Buy the third Spark for:** faster responses on real coding contexts (+8-17%),
-  contexts beyond ~131K that two nodes simply cannot hold, and ~2x KV headroom.
-- **Keep two Sparks for:** 12-19% more total throughput under concurrency, and a
-  spare GB10 you can point at a second model.
+> **Rewritten 2026-08-26.** The old version said *"faster responses on real coding
+> contexts (+8-17%)"*. That is retracted — on healthy fabric there is **no per-stream
+> decode benefit below 32K**, which is where most coding contexts live. The honest guidance
+> is workload-dependent and does not compress into one percentage:
+
+- **Buy the third Spark for:** decode at depth — **+33.6% at 131K, +17.9% at 262K** — and
+  ~2.4x KV headroom. The win arrives somewhere between 32K and 131K and it is large.
+- **Keep two Sparks for:** short and mid-length prompts (**parity to 32K** — the third node
+  changes nothing you can feel), 12–19% more aggregate throughput under concurrency,
+  **first token 6–13% sooner on deep one-shot prompts**, and a spare GB10 for a second model.
+
+The dividing question is not context length alone but **how much you generate at that
+length**. A 200K prompt answered in twenty tokens is a two-node workload; a 200K prompt
+answered in two thousand is a three-node one.
 
 ---
 
 ## The five talking points
 
-### 1. It is faster where a user actually feels it — 8–17%
+### 1. The per-stream win is real — but only past 32K
 
 Per-stream decode is the rate one caller experiences. It is what makes an assistant feel
-responsive.
+responsive. **It is where the third node pays, and it pays only at depth.**
+
+Measured 2026-08-26 on healthy fabric, matched arms, node count the only variable, 7 reps
+per cell, median, prefill and queueing excluded:
 
 | Context | 2-node TP=2 | 3-node TP=3 | Gain |
 |---:|---:|---:|---:|
-| 2,048 | 69.2 | **79.2** | **+14%** |
-| 8,192 | 67.9 | **73.5** | **+8%** |
-| 32,768 | 70.8 | **82.5** | **+17%** |
-| 131,072 | 74.0 | **83.5** | **+13%** |
+| 2,036 | 75.8 | 76.3 | +0.8% |
+| 8,081 | 72.4 | 72.6 | +0.3% |
+| 32,268 | **70.8** | 70.2 | −0.9% |
+| 129,006 | 54.4 | **72.6** | **+33.6%** |
+| 257,993 | 71.5 | **84.4** | **+17.9%** |
 
-Consistent at every length from 2K up. Coding contexts live in exactly this range.
+**Below 32K there is no advantage.** Three cells sit inside run-to-run noise and one is
+negative. **The crossover is between 32K and 131K**, and past it the gain is more than
+double what this page used to claim.
+
+The mechanism is KV pressure, not compute. The 2-node pool is **1,844,001 tokens** against
+the 3-node **~4.5M**. Below 32K neither is under pressure and decode is bound by per-token
+compute, which a third rank does not improve — consistent with prefill measuring at parity
+([`PREFILL-MEASURED.md`](PREFILL-MEASURED.md)). Past ~100K the smaller pool costs real work
+per decode step.
+
+At 131K, the load-bearing cell, the distributions barely overlap and six of seven TP=3 reps
+beat the TP=2 median:
+
+```
+TP=2 @131K:  37.0  47.1  54.2 [54.4] 54.7  64.0  64.3
+TP=3 @131K:  53.8  64.7  72.3 [72.6] 74.0  76.0  79.3
+```
+
+> **Retracted from this section:** *"Consistent at every length from 2K up. Coding contexts
+> live in exactly this range."* Coding contexts do live in that range, and that is exactly
+> where the third node now measures at parity. The degraded-fabric table it rested on
+> (69.2 / 67.9 / 70.8 / 74.0 vs 79.2 / 73.5 / 82.5 / 83.5) is a diagnostic signature.
+
+Full methodology, including the three traps the harness is built to avoid:
+[`../results/20260826-decode-depth-2v3/`](../results/20260826-decode-depth-2v3).
+
+### 1a. Decode gets *faster* past 131K, and TTFT favours two nodes
+
+Two findings that arrived with the same run and complicate the simple story.
+
+**The depth curve is a U, not a decay.** On three nodes: 76.3 → 72.6 → 70.2 → 72.6 →
+**84.4**. At 262K this cluster decodes faster than at 8K. Every one of the seven 262K reps
+beat the *median* at 32K, so it is not a stall artifact. The likely mechanism is MTP
+speculative decoding — a longer context gives the draft model more signal, acceptance
+rises, and that offsets the growing attention cost. Two nodes show the same upturn
+(54.4 → 71.5), so it is **not node-count-specific**.
+
+**Time to first token favours two nodes at depth:**
+
+| Context | 2-node TTFT | 3-node TTFT | |
+|---:|---:|---:|---|
+| 129,006 | **72.4 s** | 77.1 s | 2-node 6% sooner |
+| 257,993 | **158.4 s** | 181.6 s | 2-node **13% sooner** |
+
+Consistent with prefill parity plus a third rank's added collective cost. So the two halves
+of a deep request pull in opposite directions: **two nodes start sooner, three nodes finish
+sooner** — and which wins depends on how many tokens you generate.
 
 ### 2. It is verified serving contexts up to 409,600 tokens
 
 | Context | 2-node | 3-node |
 |---:|---|---:|
-| 262,144 | not measured | **99.1 tok/s** |
+| 262,144 | not measured *(see below)* | **99.1 tok/s** |
 | 409,600 | not measured | **83.9 tok/s** |
+
+> **Partly answered 2026-08-26.** Two nodes **do** serve 262K: measured at
+> **71.5 tok/s** against three nodes' 84.4 on healthy fabric, 7 reps each
+> ([`../results/20260826-decode-depth-2v3/`](../results/20260826-decode-depth-2v3)). So 262K
+> is a **speed** difference (+17.9% for three nodes), not a two-node capability wall. 409,600
+> remains untested on two nodes.
 
 Decode stays **flat from 256 to 409,600 tokens** — no long-context collapse, which is
 itself worth noting: throughput does not degrade as the context grows, only
@@ -139,7 +233,7 @@ Three-node DeepSeek-V4 has three possible shardings. Only one keeps everything:
 
 | Sharding | B12X MoE kernel | MTP speculation | Result |
 |---|---|---|---|
-| **TP=3** | ✅ | ✅ | **works, 8–17% faster per stream** |
+| **TP=3** | ✅ | ✅ | **works; parity to 32K, +18–34% per stream past 100K** |
 | EP=3 | ❌ refuses EP | ✅ | 2.5x slower |
 | PP=3 | ✅ | ❌ no `SupportsPP` | blocked, never served a token |
 
@@ -258,21 +352,31 @@ winning aggregate.
 
 ## Decision guide
 
+Rewritten 2026-08-26 against the matched depth sweep. **Context depth is now the first
+question, not node count.**
+
 | Your situation | Recommendation |
 |---|---|
-| **One user, interactive coding, long contexts** | **3 nodes.** Points 1 and 2 are exactly your workload. |
-| Contexts beyond ~200K | **3 nodes** - verified to 409,600. Two nodes are untested above 131K. |
+| **One user, long context (>100K), generating substantial output** | **3 nodes.** This is the case the third node wins outright: +33.6% at 131K, +17.9% at 262K. |
+| One user, interactive coding under ~32K | **Either.** Measured **parity** (+0.8% / +0.3% / −0.9%). If you have a third Spark it costs nothing; if you do not, do not buy one for this. |
+| One-shot deep prompts with **short** answers (summarise, extract, classify) | **2 nodes** — first token 6–13% sooner, and there is not enough decode to recover it. |
+| Contexts beyond ~200K | **3 nodes** for decode. 2-node served 262K in this run at 71.5 tok/s, so it is no longer a capability wall — it is a **17.9% speed difference** plus KV headroom under concurrency. |
 | Several concurrent users / agent swarm | **2 nodes** — 12–19% more aggregate throughput, and it frees a whole GB10 for a second model. |
 | Batch jobs where total tokens/hour is the goal | **2 nodes**, same reason. |
-| You have a third Spark sitting idle anyway | **3 nodes.** The per-stream win is free; the aggregate cost only materialises under concurrency you are not generating. |
+| You have a third Spark sitting idle anyway | **3 nodes.** Free at every depth, and large past 100K. The aggregate cost only materialises under concurrency you are not generating. |
 
 ---
 
 ## How to argue this honestly
 
-**Lead with the limitation.** "It costs 12–19% aggregate throughput, and the extra KV
-didn't help at deep concurrency" earns the credibility to then say "and it makes every
-response 8–17% faster for the person waiting."
+**Lead with the limitation.** "It costs 12–19% aggregate throughput, it does nothing
+per-stream below 32K, and it reaches first token later on deep prompts" earns the
+credibility to then say "and past 100K it decodes 18–34% faster for the person waiting."
+
+**Never state the gain without the depth.** This is the specific mistake this page made
+for five days. "+8–17%" sounded like a property of the cluster; it is a property of a
+*context length*, and the number at 8K (+0.3%) and the number at 131K (+33.6%) are two
+orders of magnitude apart in what they justify.
 
 **Never quote a tok/s number without its prompt.** On this deployment the benchmark
 prompt alone moves single-stream decode **1.65x** (81.8 code-shaped vs 49.4 dense prose,
@@ -288,7 +392,10 @@ comparability.
 **Expect the "19.7% faster" claim — it is wrong.** An earlier version of this comparison
 circulated that figure. It compared a code-shaped prompt against a dense-prose one at
 different MTP depths: three confounds. The *direction* was right; the number was not.
-The measured per-stream advantage is **8–17%**.
+
+**Expect the "8–17% from 2K upward" claim too — it is also wrong**, and it came from this
+page. It was degraded-fabric data. On healthy fabric the per-stream advantage is **parity
+below 32K and +17.9–33.6% past 100K**.
 
 ---
 
@@ -315,8 +422,10 @@ depth matched. Both configurations passed correctness (`17x23 → 391`).
 
 - **Single-stream decode is noisy on this cluster.** 8 reps at c=1 spanned 66.6–88.5
   (median 80.4). Any single-stream difference under ~20% needs median-of-N with N ≥ 5.
-  The 8–17% gains hold because they are consistent across *four independent context
-  lengths*, not because any one reading is decisive.
+  The 8–17% gains were claimed to hold because they were consistent across *four
+  independent context lengths*. **That reasoning was wrong**: a consistent band across
+  depths was the signature of a shared bandwidth floor, not of a robust effect. The
+  2026-08-26 replacement takes median-of-**7** per depth and reports the spread.
 - **Deep concurrency is n=1 per configuration.** Both runs were unambiguous and cost
   ~15 minutes each, but it is one data point.
 - **Quality is unmeasured.** Everything here is speed. Long-context retrieval accuracy,

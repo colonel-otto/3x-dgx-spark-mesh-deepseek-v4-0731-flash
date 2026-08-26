@@ -27,6 +27,7 @@
 | Pairwise NCCL busbw near **~0.7 GB/s** where a healthy pair reads ~4.6 (2 HCA) / ~9.7 (4 HCA) | **D1** — one node's fabric has silently degraded | Run the pairwise collective on all three pairs. The bad node is the one present in every slow pair | **Reboot the degraded node.** A cable swap does not fix it — we tested the alternate cable and got the same 0.68 GB/s |
 | 3-rank collective reads **below** your worst pair (e.g. 0.49 vs 0.69) | **D1** — a collective is paced by its slowest member | Compare the 3-rank figure against each pair individually | Reboot the node common to the slow pairs |
 | Two configurations you expect to differ measure suspiciously **equal** | **D1** — both throttled to a common floor | Gate the fabric before benchmarking, then re-run both arms | Fix the fabric first; the comparison is void until then |
+| A gap between two arms is suspiciously **uniform across a swept variable** (e.g. a flat ~13% at 2K, 8K, 32K and 131K alike) | **D1** — a shared floor flattens a real curve into a constant | Re-run the sweep on gated fabric. Ours turned out to be **parity below 32K and +33.6% at 131K** | Fix the fabric. Note that consistency across levels reads as *robustness* and is the reason this went unquestioned for five days |
 | Benchmark is slow but **no counter anywhere is failing** | **D1 or D2** — this whole family is invisible to status checks | `make gate-full CONFIG=configs/3spark-live.env`, engine stopped | Follow whichever gate check fails |
 | Containers `running`, ranks completed NCCL init, engine never finishes loading | **Init success ≠ health** (see below) | Look for `IBV_WC_RETRY_EXC_ERR` with both GIDs `fe80::` in the engine log | The HCA pair you enabled has no IPv4. Address and route it, or roll back to the pair that has one |
 | A single stream is fast but wildly variable run to run | JIT compilation landing inside a request — not a fabric fault | `jit_monitor` warning in the log: `JIT compilation during inference` | Warm every shape you intend to measure, discard contaminated sweeps, take median of ≥7 |
@@ -109,7 +110,7 @@ lives instead. Read the banner before quoting anything from these pages.
 
 | Page | What its numbers are | Contaminated by |
 |---|---|---|
-| [`WHY-THREE-NODES.md`](WHY-THREE-NODES.md) | Degraded-fabric 2v3 decode table | D1 — and spark1 sat in the **3-node** arm |
+| [`WHY-THREE-NODES.md`](WHY-THREE-NODES.md) | Degraded-fabric 2v3 decode table. **Its "+8–17% from 2K upward" headline is retracted** — re-measured 2026-08-26 as parity below 32K and +33.6% at 131K | D1 — and spark1 sat in the **3-node** arm |
 | [`EP3-EXPERT-PARALLEL.md`](EP3-EXPERT-PARALLEL.md) | Degraded fabric **and** TCP fallback | D1 + D2 — the only transport that ran was `NCCL_NET=Socket` |
 | [`TP3-TUNING.md`](TP3-TUNING.md) | Degraded-fabric tuning sweep at the superseded profile | D1 |
 | [`SEQS32-AND-NCCL-FABRIC.md`](SEQS32-AND-NCCL-FABRIC.md) | Degraded-fabric collective budget (0.49 GB/s) | D1 |

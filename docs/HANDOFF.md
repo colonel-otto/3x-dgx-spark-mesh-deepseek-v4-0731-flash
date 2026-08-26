@@ -75,13 +75,34 @@ fresh seed so prefix caching cannot hit, client agreeing within 1%.
 > | KV capacity | 1,711,307 | **4,457,627** | 3-node 2.6x — never binds |
 >
 > The 3-node advantage decays monotonically with concurrency and crosses over near cc=16.
-> **This deployment is single-user interactive coding — per-stream-latency bound — so the
-> +17% at cc=1 is the number that matters.** A multi-user batch workload should run 2
-> nodes and free the third.
+> This deployment is single-user interactive coding — per-stream-latency bound — so cc=1 is
+> the operative column. A multi-user batch workload should run 2 nodes and free the third.
 >
-> This vindicates the old "+8–17% per-stream" claim, which had been degraded-fabric data
-> and therefore suspect under #14. Details and the bimodal-noise warning:
-> [`../results/20260825-decode-2v3/`](../results/20260825-decode-2v3).
+> **Qualified 2026-08-26:** that +17% was measured on an **18-token** prompt. On real
+> context depths the same cc=1 number is **parity below 32K** and **+33.6% at 131K**. So
+> the third node earns its place here on long-context work, not on ordinary short-prompt
+> coding turns — see the depth table below.
+>
+> This vindicates the **direction** of the old "+8–17% per-stream" claim, which had been
+> degraded-fabric data and therefore suspect under #14. Details and the bimodal-noise
+> warning: [`../results/20260825-decode-2v3/`](../results/20260825-decode-2v3).
+>
+> **It does not vindicate the magnitude or the depth range.** This run used an **18-token
+> prompt**, so it measured the concurrency axis, not the depth axis. The matched depth
+> sweep landed 2026-08-26 and the old claim fails there in both directions:
+>
+> | context (cc=1) | 2-node | 3-node | 3-node gain |
+> |---:|---:|---:|---:|
+> | 2,036 | 75.8 | 76.3 | +0.8% |
+> | 8,081 | 72.4 | 72.6 | +0.3% |
+> | 32,268 | **70.8** | 70.2 | −0.9% |
+> | 129,006 | 54.4 | **72.6** | **+33.6%** |
+> | 257,993 | 71.5 | **84.4** | **+17.9%** |
+>
+> **No per-stream benefit below 32K; the crossover is between 32K and 131K.** Two axes,
+> both true: three nodes win per-stream **at depth**, two nodes win aggregate **under
+> concurrency**. TTFT at depth also favours two nodes (158.4 s vs 181.6 s at 262K).
+> [`../results/20260826-decode-depth-2v3/`](../results/20260826-decode-depth-2v3).
 
 > **The third node does not buy prefill.** Measured 2026-08-25 on our own hardware, both
 > arms on this same production profile and the same unmodified harness:
@@ -99,10 +120,13 @@ fresh seed so prefix caching cannot hit, client agreeing within 1%.
 > prefills, cross-node"* ([#10118](https://github.com/vllm-project/vllm/discussions/10118)).
 >
 > **The case for the third node therefore does not rest on prefill**, and the
-> deep-concurrency re-run has 2-node reaching first token 1.35x sooner. What is still
-> untested is **decode**: the numbers below are TP=3 only, and the "+8–17% per-stream at
-> long context" claim that justifies three nodes remains a *degraded-fabric* measurement.
+> deep-concurrency re-run has 2-node reaching first token 1.35x sooner.
 > See [`../results/20260825-prefill-2v3/`](../results/20260825-prefill-2v3).
+>
+> **Long-context decode is now measured too** (2026-08-26, matched arms): parity to 32K,
+> **+33.6% at 131K**, +17.9% at 262K. The "+8–17% per-stream from 2K upward" claim is
+> retracted — the case for the third node rests on **decode past ~100K**, and nothing else.
+> [`../results/20260826-decode-depth-2v3/`](../results/20260826-decode-depth-2v3).
 
 **Decode** (warm, idle engine, 3 reps, `bench_tp3.py`):
 
@@ -139,8 +163,12 @@ Re-run these on the healthy fabric. Priority order:
 2. **`MAX_NUM_SEQS=32` rejection.** It died on an `_ALLGATHER_BASE` timeout with KV at
    **2.8%** — a degraded link is a plausible cause of exactly that crash. **seqs=32 may
    well be viable now.** See [`SEQS32-AND-NCCL-FABRIC.md`](SEQS32-AND-NCCL-FABRIC.md).
-3. **2-node vs 3-node comparison.** spark1 was in the 3-node arm, so the comparison was
-   unfair to three nodes.
+3. ~~**2-node vs 3-node comparison.**~~ **Done 2026-08-26.** Re-run on both axes:
+   concurrency (2026-08-25, 18-token prompt) and **depth** (2026-08-26, 2K–262K, 7 reps
+   per cell). The old "+8–17% from 2K upward" was wrong in both directions — parity below
+   32K, +33.6% at 131K. spark1 having sat in the 3-node arm had compressed a
+   depth-dependent effect into a flat band.
+   [`../results/20260826-decode-depth-2v3/`](../results/20260826-decode-depth-2v3).
 4. **EP=3 and PP=3.** Communication-heavy, disproportionately penalised.
 5. **`GPU_MEMORY_UTILIZATION` 0.80 vs 0.85.** The +14% was measured on the bad fabric.
 6. **MTP=4 vs 5 aggregate throughput.** Acceptance counters are fine; aggregates are not.

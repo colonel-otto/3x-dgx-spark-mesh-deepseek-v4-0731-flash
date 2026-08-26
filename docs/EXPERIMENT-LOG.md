@@ -39,12 +39,15 @@ Everything above this line was measured with one node at ~15% of its collective 
 | 13 | [#9](../../pull/9) | Fabric gate | ✅ `scripts/fabric_gate.sh` — 9 checks, each verified by **injecting the real fault** | [`POSTMORTEM-2026-08-25.md`](POSTMORTEM-2026-08-25.md) |
 | 14 | [#9](../../pull/9) | `roceP2p` HCAs | ❌ +56% bandwidth is **real but unusable** — no IPv4. Wedges the cluster while every container reports `running` | [`DECISIONS.md`](DECISIONS.md) |
 | 15 | [#9](../../pull/9) | `/30` normalization | ✅ All six fabric addresses consistent; netplan persistence gated | [`POSTMORTEM-2026-08-25.md`](POSTMORTEM-2026-08-25.md) |
-| 16 | [#9](../../pull/9) | **2v3 re-run, healthy** | ✅ **The answer.** 3 nodes +17% at cc=1, decaying to a **crossover near cc=16** | [`../README.md`](../README.md#is-the-third-node-worth-it) |
+| 16 | [#9](../../pull/9) | **2v3 re-run, healthy — concurrency axis** | ✅ 3 nodes +17% at cc=1 (18-token prompt), decaying to a **crossover near cc=16** | [`../README.md`](../README.md#is-the-third-node-worth-it) |
 | 17 | [#9](../../pull/9) | TTFT / warm-up | ✅ JIT is **per-shape, not per-idle**. Warm at startup; do **not** add a keep-alive ping | [`TTFT-AND-WARMUP.md`](TTFT-AND-WARMUP.md) |
+| 18 | — | **2v3 re-run, healthy — depth axis** | ✅ **The answer, and it is conditional.** Parity below 32K (+0.8/+0.3/−0.9%), **+33.6% at 131K**, +17.9% at 262K. TTFT at depth favours **two** nodes. Retracts "+8–17% from 2K upward" | [`../results/20260826-decode-depth-2v3/`](../results/20260826-decode-depth-2v3) |
 
-**Net effect of Phase 3:** the headline conclusion (three nodes are better) survived; its
-magnitudes and its boundary condition did not exist before. Every wrong number is
-itemized in [`DEGRADED-DATA-CATALOGUE.md`](DEGRADED-DATA-CATALOGUE.md).
+**Net effect of Phase 3:** the headline conclusion survived only as a *direction*. "Three
+nodes are better" turned out to be true **at depth and at low concurrency**, and false
+everywhere else — parity below 32K, and 2-node wins aggregate past cc≈16 and TTFT on deep
+one-shot prompts. Neither boundary existed before. Every wrong number is itemized in
+[`DEGRADED-DATA-CATALOGUE.md`](DEGRADED-DATA-CATALOGUE.md).
 
 ## Open questions
 

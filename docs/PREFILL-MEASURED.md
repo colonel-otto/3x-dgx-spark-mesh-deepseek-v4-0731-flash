@@ -283,9 +283,22 @@ uniform `heads_per_group` (vLLM closed non-divisible TP as not-planned,
 [#11797](https://github.com/vllm-project/vllm/issues/11797)).
 
 **This is a second, independent structural penalty for TP=3, alongside the documented
-B12X/EP finding.** It also explains the shape of the existing "+8-17% per-stream but only
-2 GPUs' worth of aggregate" result: the third node adds memory and KV headroom while its
-attention math runs 50% dead.
+B12X/EP finding.** It explains the shape of the 2-vs-3 result: **the third node adds memory
+and KV headroom while its attention math runs 50% dead.** So it buys capacity, not compute.
+
+> **Strengthened 2026-08-26.** This section was written against the old "+8-17% per-stream
+> but only 2 GPUs' worth of aggregate" claim. That claim has since been superseded by a
+> matched depth sweep — and the replacement fits this mechanism **better** than the old one
+> did. Per-stream decode measures at **parity to 32K** (+0.8% / +0.3% / −0.9%) and
+> **+33.6% at 131K**, +17.9% at 262K
+> ([`../results/20260826-decode-depth-2v3/`](../results/20260826-decode-depth-2v3)).
+>
+> That is exactly what "capacity, not compute" predicts. Where the workload is
+> compute-bound — short contexts, and prefill at every depth — the third node returns
+> nothing, because half its attention lanes are padding. Where the workload is bound by KV
+> pressure instead — past ~100K, 1,844,001 tokens against ~4.5M — it returns a great deal.
+> A uniform +8-17% across all depths never fitted this mechanism; the depth-dependent
+> result does.
 
 At 78K we now measure 1,472 against the reference's 2,639 — but their number is
 cache-assisted (§1) and their honest 8K figure is 1,513. **The 1.5x attention tax is

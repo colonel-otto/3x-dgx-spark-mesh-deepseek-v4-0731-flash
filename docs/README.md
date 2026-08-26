@@ -43,6 +43,7 @@ confirmation → fix.
 
 | Doc | Status | What it answers |
 |---|---|---|
+| [`../results/20260826-decode-depth-2v3/`](../results/20260826-decode-depth-2v3) | ✅ | **Is the third node worth it? Only past 32K.** Matched arms, healthy fabric, 2K–262K, 7 reps per depth. Parity below 32K, **+33.6% at 131K**, +17.9% at 262K — and TTFT favours *two* nodes at depth. Supersedes the "+8–17% from 2K upward" headline. |
 | [`TTFT-AND-WARMUP.md`](TTFT-AND-WARMUP.md) | ✅ | Why TTFT spikes on request 2, and why you should **not** add a keep-alive ping. |
 | [`FABRIC-FIX-PARITY.md`](FABRIC-FIX-PARITY.md) | ✅ | The 6.8x RDMA degradation, how it hid, and the parity re-run. |
 | [`../results/20260825-upper-mesh/`](../results/20260825-upper-mesh) | ✅ | **Four-HCA fabric measures 2.0x and is gate-clean.** **Adopted** — soak passed 2026-08-26: 408 requests, zero RDMA counter deltas, zero log events ([#17](../../issues/17)). Throughput benefit is separately unmeasured. |
@@ -61,7 +62,7 @@ survives, what is void, and where the healthy number lives.
 
 | Doc | Status | Note |
 |---|---|---|
-| [`WHY-THREE-NODES.md`](WHY-THREE-NODES.md) | ⚠️ | The 2-vs-3 case. **The README table supersedes its numbers** — the direction survived, the magnitudes moved and the cc=16 crossover was not visible. Long-context decode on healthy fabric is still unmatched. |
+| [`WHY-THREE-NODES.md`](WHY-THREE-NODES.md) | ⚠️ | The 2-vs-3 case. **Fully superseded 2026-08-26** — the depth sweep landed and its "+8–17% from 2K upward" headline is wrong in *both* directions: parity below 32K, **+33.6% at 131K**. Only the shape of the argument survives. Quote [`../README.md`](../README.md#is-the-third-node-worth-it) instead. |
 | [`TP3-TUNING.md`](TP3-TUNING.md) | ⚠️🧊 | The tuning sweep at the old `460800`/`seqs=8`/`MTP=4` profile. |
 | [`BASELINE-2SPARK.md`](BASELINE-2SPARK.md) | ⚠️🧊 | The frozen 2-node reference — **and it ran entirely across the degraded link.** KV accounting and correctness survive; every tok/s is void. |
 | [`results.md`](results.md) | 🧊 | Earliest TP=2/TP=3 comparison, pre-rewire cabling. Its 24.59 arm is a TCP-fallback signature. |

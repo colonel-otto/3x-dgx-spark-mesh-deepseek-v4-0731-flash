@@ -20,7 +20,7 @@ Directories are named `YYYYMMDD[THHMMSSZ]-<subject>`.
 |---|---|---|
 | [`20260825-fabric-fix/`](20260825-fabric-fix) | ⚪→🟢 | The fix itself: pre/post-reboot prefill and decode. **The before/after pair** |
 | [`20260825-prefill-2v3/`](20260825-prefill-2v3) | 🟢 | Prefill, 2 vs 3 nodes. Result: **parity (±2%)** |
-| [`20260825-decode-2v3/`](20260825-decode-2v3) | 🟢 | Decode, 2 vs 3 nodes at cc=1/4/8/16. **The headline result** |
+| [`20260825-decode-2v3/`](20260825-decode-2v3) | 🟢 | Decode, 2 vs 3 nodes at cc=1/4/8/16. **The headline result on the concurrency axis** — 18-token prompt, so it says nothing about context depth; for that see `20260826-decode-depth-2v3/` |
 | [`20260825-deep-concurrency/`](20260825-deep-concurrency) | 🟢 | 4×200K re-run for [#15](../../issues/15). Includes `deepconc.py` and the gate output |
 | [`20260825-upper-mesh/`](20260825-upper-mesh) | 🟢 | **Four-HCA fabric at 2.0x**, gate-clean, **soak PASSED** (408 req, 0 RDMA deltas) — [#17](../../issues/17) |
 
@@ -28,6 +28,7 @@ Directories are named `YYYYMMDD[THHMMSSZ]-<subject>`.
 
 | Directory | Fabric | What it holds |
 |---|---|---|
+| [`20260826-decode-depth-2v3/`](20260826-decode-depth-2v3) | 🟢 | **Long-context decode, 2 vs 3 nodes, 2K–262K at cc=1. The headline result on the depth axis.** Matched arms, 7 reps per depth, 70 measured runs. Parity below 32K, **+33.6% at 131K**, +17.9% at 262K — supersedes "+8–17% from 2K upward" ([#14](../../issues/14)). TTFT at depth favours **two** nodes |
 | [`20260826-nccl-controlled/`](20260826-nccl-controlled) | 🟢 | **The controlled NCCL reproduction — there was never a bandwidth gap.** 12 runs, official `all_gather_perf`, NCCL 2.30.7. **23.92 GB/s** vs 5.80 on our custom harness, same config. All four hypotheses falsified — [#18](../../issues/18) |
 
 ## 2026-08-24 — degraded fabric

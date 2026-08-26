@@ -36,6 +36,13 @@ cc=1, 491.0 cc=16) are **TP=3 only** — there is no matched TP=2 decode arm on 
 fabric. The "+8–17% per-stream at long context" claim that justifies three nodes is still
 a **degraded-fabric** measurement and remains open under issue #14.
 
+> **Closed 2026-08-26** (forward pointer only; nothing above is edited). The matched decode
+> arms landed: parity below 32K, **+33.6% at 131K**, +17.9% at 262K — so "+8–17% from 2K
+> upward" is retracted, and the case for the third node rests on **decode past ~100K**, not
+> on prefill and not on short contexts. That result also finds TTFT at depth favouring
+> **two** nodes, which is the same direction as the prefill parity measured here.
+> [`../20260826-decode-depth-2v3/`](../20260826-decode-depth-2v3)
+
 ## The prior fabric state changes the sign
 
 Same harness, same depths, on the degraded fabric (2026-08-24):
