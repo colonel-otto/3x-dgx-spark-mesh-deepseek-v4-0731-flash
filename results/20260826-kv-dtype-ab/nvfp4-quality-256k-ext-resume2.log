@@ -1,0 +1,5 @@
+[nvfp4] len~ 256000 t4 |  246259 ptok |   150.3s | early=Y mid=Y late=Y | garble none | PASS
+[nvfp4] len~ 256000 t5 |  246260 ptok |   150.9s | early=Y mid=Y late=Y | garble none | PASS
+[nvfp4] len~ 256000 t7 |  246262 ptok |   158.9s | early=Y mid=Y late=Y | garble none | PASS
+[nvfp4] len~ 256000 t8 |  246263 ptok |   148.1s | early=Y mid=Y late=Y | garble none | PASS
+[nvfp4] len~ 256000 t9 |  246260 ptok |   149.1s | early=Y mid=Y late=Y | garble none | PASS

@@ -158,8 +158,16 @@ computing the same token stream.
 
 | arm | trials | early | mid | late | needles | garble | median latency |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| `nvfp4_ds_mla` | 12 | _pending_ | _pending_ | _pending_ | _pending_ | _pending_ | _pending_ |
+| `nvfp4_ds_mla` | 12 | 12/12 | 12/12 | 12/12 | **36/36** | 0 | 158.5 s |
 | `fp8_ds_mla` | 12 | 12/12 | 12/12 | 12/12 | **36/36** | 0 | 159.4 s |
+
+**Both arms complete: 36/36 needles each, zero garbling.** And the decisive result —
+**all 12 matched pairs returned byte-identical replies.** Two different KV dtypes emitted
+the same token stream on every one of twelve uncached 246K-token prefills. A KV-precision
+defect cannot do that.
+
+Combined with the main sweep (11 of 12 identical; the 12th differed only in the *order*
+of three correctly-retrieved codes), that is **23 of 24 matched cells byte-identical**.
 
 ## Results 3 — Speed (median of 5 runs per cell, streaming, 512 max tokens)
 

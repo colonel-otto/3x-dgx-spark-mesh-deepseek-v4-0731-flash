@@ -46,3 +46,84 @@ dtype -- both arms served long prefills successfully.
 
 Harness change kept: request timeout 2400 s -> 600 s, so a genuinely stuck cell fails and
 is recorded rather than blocking a sweep. 600 s is ~3.5x the observed 170 s worst case.
+
+SECOND INCIDENT: the nvfp4 extended run's CLIENT died mid-sweep
+---------------------------------------------------------------
+After 6 of 12 trials (0,1,2,6,10,11 -- the ordering is an artifact of two
+partial attempts, not of the harness), the local python client vanished:
+no `py` process, GPU 0%, engine idle at 0 reqs, and no further rows written.
+
+The engine was NOT at fault -- it stayed healthy and answered immediately
+afterwards. The most likely cause is my own earlier
+`Get-Process py,python | Stop-Process -Force`, which is indiscriminate and
+would kill any later python client too, plus background-task teardown.
+
+Lessons:
+  - Do not use a blanket `Stop-Process -Name py` while other measured runs may
+    be in flight; resolve and kill the specific PID.
+  - A long sweep needs a completion check that notices a DEAD CLIENT, not just
+    an unfinished file. A monitor that only waits for "12 rows" cannot tell
+    "still running" from "client died an hour ago".
+
+Harness change: added `--only-trials`, so an interrupted sweep can be resumed
+for exactly the missing trial indices instead of re-running (and re-paying) the
+whole set. The salt makes each trial reproducible, so resumed trials are
+identical to what the original run would have produced.
+
+THIRD INCIDENT: WinError 10060 was MY BUG, not the network
+-----------------------------------------------------------
+Trials 3/4/5 of the nvfp4 extended run failed with
+"WinError 10060 ... connected host has failed to respond", while `curl` to the
+engine worked fine. I initially wrote this off as a transient LAN blip.
+
+It was not. An earlier in-place `py -c` edit to kvab.py had corrupted the
+endpoint constant:
+
+    BASE = "http://192.168.10.1:8100"     <- WRONG, does not exist
+    BASE = "http://192.168.10.1:8100"    <- correct
+
+curl kept working because I passed the correct URL on the command line every
+time; only the harness used the broken constant. "curl works but python does
+not" should have pointed at the client's own config immediately, instead of at
+the network.
+
+Data impact: NONE. The corruption was introduced after every completed
+measurement, and it caused loud connection failures rather than wrong numbers.
+The affected trials produced error rows, which were dropped and re-run.
+
+Lessons:
+  - Do not edit a live harness with regex/sed one-liners mid-experiment. The
+    edit that broke this was a `.replace()` on a timeout value that also
+    matched inside the IP address.
+  - When one client works and another does not against the same service,
+    suspect the differing client's configuration before the shared network.
+  - Retry logic was added while chasing this, and is kept: it is still correct
+    for genuine transient failures, but it is NOT what fixed this.
+
+FOURTH INCIDENT: I created a "wedge" by probing a busy engine
+--------------------------------------------------------------
+Symptoms that looked alarming:
+  - curl POST of "What is 2+2?" TIMED OUT after 60 s
+  - all THREE ranks' GPUs pinned at 96%
+  - /health returned 200 in 8 ms
+  - engine log's last line appeared stale
+
+I read that as a stuck collective across all three ranks and killed the client.
+
+It was none of those things. MAX_NUM_SEQS is 16 but a 246K-token chunked prefill
+saturates the scheduler, so my trivial side-request simply QUEUED BEHIND IT for
+longer than my 60 s curl timeout. The "stale" log line was just the 10 s logger
+interval; the very next lines showed 24,625 tok/s prompt throughput and live
+SpecDecoding metrics. Three GPUs at 96% is what a healthy TP=3 prefill looks
+like -- not a hung collective.
+
+Cost: I killed a client that was working, again, losing an in-flight trial.
+
+RULE: do not probe a busy engine with diagnostic requests to decide whether it is
+healthy. The probe competes with the work you are measuring and its timeout tells
+you about the queue, not about the engine. Read the engine's own recent log lines
+and per-rank GPU state instead, and give a probe a timeout longer than the
+longest in-flight request (>170 s here), or don't send one at all.
+
+This is the same lesson as the first incident, learned twice: an indicator that
+looks like a hang usually means "something long is legitimately running".
