@@ -1,0 +1,50 @@
+== fabric gate: 3 nodes from 3spark-live.env ==
+# NOTE: the ssh-liveness banner hostnames were replaced with node0/node1/node2.
+# Nothing else in this file was altered.
+-- ssh liveness
+  [32mPASS[0m  sparkmain -> node0
+  [32mPASS[0m  spark1 -> node1
+  [32mPASS[0m  spark2 -> node2
+-- fabric mesh (all directed pairs) + latency
+  [32mPASS[0m  sparkmain -> spark1 (192.168.100.2) rtt 0.704ms
+  [32mPASS[0m  sparkmain -> spark2 (192.168.101.2) rtt 0.939ms
+  [32mPASS[0m  spark1 -> sparkmain (192.168.200.1) rtt 0.958ms
+  [32mPASS[0m  spark1 -> spark2 (192.168.101.2) rtt 0.952ms
+  [32mPASS[0m  spark2 -> sparkmain (192.168.200.1) rtt 1.118ms
+  [32mPASS[0m  spark2 -> spark1 (192.168.100.2) rtt 0.699ms
+-- peer egress device (RDMA/model data must leave via the fabric)
+  [32mPASS[0m  sparkmain: all peer FABRIC routes egress the fabric
+  [32mPASS[0m  spark1: all peer FABRIC routes egress the fabric
+  [32mPASS[0m  spark2: all peer FABRIC routes egress the fabric
+-- fabric addressing (duplicate/overlapping subnets)
+  [32mPASS[0m  sparkmain fabric addressing clean: enp1s0f0np0=192.168.100.1/30 enp1s0f1np1=192.168.101.1/30 enP2p1s0f0np0=192.168.110.1/30 enP2p1s0f1np1=192.168.111.1/30 
+  [32mPASS[0m  spark1 fabric addressing clean: enp1s0f0np0=192.168.102.1/30 enp1s0f1np1=192.168.100.2/30 enP2p1s0f0np0=192.168.112.1/30 enP2p1s0f1np1=192.168.110.2/30 
+  [32mPASS[0m  spark2 fabric addressing clean: enp1s0f0np0=192.168.101.2/30 enp1s0f1np1=192.168.102.2/30 enP2p1s0f0np0=192.168.111.2/30 enP2p1s0f1np1=192.168.112.2/30 
+-- fabric arp (peer on correct port)
+  [32mPASS[0m  sparkmain: every fabric peer on its cabled port
+  [32mPASS[0m  spark1: every fabric peer on its cabled port
+  [32mPASS[0m  spark2: every fabric peer on its cabled port
+-- fabric config persistence (survives reboot?)
+  [32mPASS[0m  sparkmain: fabric addressing persisted and netplan generates
+  [32mPASS[0m  spark1: fabric addressing persisted and netplan generates
+  [32mPASS[0m  spark2: fabric addressing persisted and netplan generates
+-- engine rdma health (if running)
+  [33mSKIP[0m  sparkmain: no engine running (nothing to check)
+  [33mSKIP[0m  spark1: no engine running (nothing to check)
+  [33mSKIP[0m  spark2: no engine running (nothing to check)
+-- nccl collective bandwidth
+  [32mPASS[0m  gate-p01 transport: via NET/IB/4 via NET/IB/5 (ndevs=1 ndevs=2)
+  [32mPASS[0m  gate-p01 merged devices: roceP2p1s0f0 roceP2p1s0f0+roceP2p1s0f1 roceP2p1s0f1 rocep1s0f0 rocep1s0f0+rocep1s0f1 rocep1s0f1
+  [32mPASS[0m  gate-p01: 9.09 GB/s @64MiB
+  [32mPASS[0m  gate-p02 transport: via NET/IB/4 via NET/IB/5 (ndevs=1 ndevs=2)
+  [32mPASS[0m  gate-p02 merged devices: roceP2p1s0f0 roceP2p1s0f0+roceP2p1s0f1 roceP2p1s0f1 rocep1s0f0 rocep1s0f0+rocep1s0f1 rocep1s0f1
+  [32mPASS[0m  gate-p02: 9.01 GB/s @64MiB
+  [32mPASS[0m  gate-p12 transport: via NET/IB/4 via NET/IB/5 (ndevs=1 ndevs=2)
+  [32mPASS[0m  gate-p12 merged devices: roceP2p1s0f0 roceP2p1s0f0+roceP2p1s0f1 roceP2p1s0f1 rocep1s0f0 rocep1s0f0+rocep1s0f1 rocep1s0f1
+  [32mPASS[0m  gate-p12: 9.52 GB/s @64MiB
+  [32mPASS[0m  gate-all transport: via NET/IB/4 via NET/IB/5 (ndevs=1 ndevs=2)
+  [32mPASS[0m  gate-all merged devices: roceP2p1s0f0 roceP2p1s0f0+roceP2p1s0f1 roceP2p1s0f1 rocep1s0f0 rocep1s0f0+rocep1s0f1 rocep1s0f1
+  [32mPASS[0m  gate-all: 5.04 GB/s @64MiB
+
+== 33 passed, 0 failed, 3 skipped ==
+GATE PASSED (with skips). Bandwidth unverified -- see above.
