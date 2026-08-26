@@ -1,0 +1,67 @@
+
+=== depth 2048 (tp3) ===
+  warmup 1: 91.0 tok/s (ptok=2036, cached=0)
+  warmup 2: 88.9 tok/s (ptok=2036, cached=0)
+  rep 1: 76.5 tok/s ttft=0.9s ptok=2036
+  rep 2: 76.3 tok/s ttft=0.9s ptok=2036
+  rep 3: 75.9 tok/s ttft=0.9s ptok=2036
+  rep 4: 76.3 tok/s ttft=0.9s ptok=2036
+  rep 5: 90.6 tok/s ttft=0.9s ptok=2036
+  rep 6: 74.1 tok/s ttft=0.9s ptok=2036
+  rep 7: 90.2 tok/s ttft=0.9s ptok=2036
+  MEDIAN 76.3 tok/s  (n=7, spread 21.6%, cache_hits=0)
+
+=== depth 8192 (tp3) ===
+  warmup 1: 81.1 tok/s (ptok=8081, cached=0)
+  warmup 2: 62.8 tok/s (ptok=8081, cached=0)
+  rep 1: 72.6 tok/s ttft=3.3s ptok=8081
+  rep 2: 85.6 tok/s ttft=5.3s ptok=8081
+  rep 3: 85.6 tok/s ttft=3.3s ptok=8081
+  rep 4: 56.6 tok/s ttft=3.5s ptok=8081
+  rep 5: 68.8 tok/s ttft=3.7s ptok=8081
+  rep 6: 85.5 tok/s ttft=3.3s ptok=8081
+  rep 7: 62.6 tok/s ttft=3.3s ptok=8081
+  MEDIAN 72.6 tok/s  (n=7, spread 40.0%, cache_hits=0)
+
+=== depth 32768 (tp3) ===
+  warmup 1: 84.3 tok/s (ptok=32268, cached=0)
+  warmup 2: 59.9 tok/s (ptok=32268, cached=0)
+  rep 1: 55.3 tok/s ttft=13.6s ptok=32268
+  rep 2: 70.4 tok/s ttft=16.6s ptok=32268
+  rep 3: 70.6 tok/s ttft=13.7s ptok=32268
+  rep 4: 82.8 tok/s ttft=17.1s ptok=32268
+  rep 5: 70.2 tok/s ttft=13.7s ptok=32268
+  rep 6: 60.7 tok/s ttft=16.5s ptok=32268
+  rep 7: 70.2 tok/s ttft=14.6s ptok=32268
+  MEDIAN 70.2 tok/s  (n=7, spread 39.2%, cache_hits=0)
+
+=== depth 131072 (tp3) ===
+  warmup 1: 66.6 tok/s (ptok=129006, cached=0)
+  warmup 2: 63.8 tok/s (ptok=129006, cached=0)
+  rep 1: 72.6 tok/s ttft=71.1s ptok=129006
+  rep 2: 53.8 tok/s ttft=72.5s ptok=129006
+  rep 3: 72.3 tok/s ttft=77.3s ptok=129006
+  rep 4: 76.0 tok/s ttft=79.5s ptok=129006
+  rep 5: 79.3 tok/s ttft=77.1s ptok=129006
+  rep 6: 74.0 tok/s ttft=73.8s ptok=129006
+  rep 7: 64.7 tok/s ttft=81.2s ptok=129006
+  MEDIAN 72.6 tok/s  (n=7, spread 35.1%, cache_hits=0)
+
+=== depth 262144 (tp3) ===
+  warmup 1: 61.2 tok/s (ptok=257993, cached=0)
+  warmup 2: 69.5 tok/s (ptok=257993, cached=0)
+  rep 1: 69.5 tok/s ttft=197.2s ptok=257993
+  rep 2: 84.4 tok/s ttft=178.8s ptok=257993
+  rep 3: 71.2 tok/s ttft=181.6s ptok=257993
+  rep 4: 83.8 tok/s ttft=180.6s ptok=257993
+  rep 5: 89.9 tok/s ttft=181.2s ptok=257993
+  rep 6: 98.1 tok/s ttft=190.1s ptok=257993
+  rep 7: 85.1 tok/s ttft=204.6s ptok=257993
+  MEDIAN 84.4 tok/s  (n=7, spread 33.9%, cache_hits=0)
+
+=== SUMMARY tp3 ===
+     2036 tok ->   76.35 tok/s  (spread 21.6%, cache 0)
+     8081 tok ->   72.64 tok/s  (spread 40.0%, cache 0)
+    32268 tok ->   70.21 tok/s  (spread 39.2%, cache 0)
+   129006 tok ->   72.64 tok/s  (spread 35.1%, cache 0)
+   257993 tok ->   84.37 tok/s  (spread 33.9%, cache 0)
