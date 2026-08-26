@@ -65,6 +65,7 @@ speed knob only. Raising it cannot buy accuracy.
 | Tokens per word, filler prompt | **1.2056** | Measured against `/tokenize`, flat 150K–240K. **Do not estimate this** |
 | Idle TTFT penalty | **~22 ms** | Why a keep-alive ping is not worth it |
 | New-shape JIT spike | **5–8 s, on request 2** | Per-shape, not per-idle-period. Warm at startup |
+| `roceP2p` sysfs error counters | **192 / 64 / 32 / 128 / 96**, frozen | ⚠️ **Pre-existing residue, not a live fault.** Cumulative since boot, left by the earlier failed enable. Verified frozen under active load 2026-08-25. **Judge these by DELTA, never absolute value.** The lower `rocep1s0f*` pair reads zero |
 
 ---
 
