@@ -12,22 +12,22 @@ Chronological. Negative results stay because they explain why the next row exist
 
 | # | PR | Experiment | Outcome | Evidence |
 |---:|---:|---|---|---|
-| 1 | [#1](https://github.com/colonel-otto/3spark-dsv4/pull/1) | Benchmark harness | Repeatable environment, fabric, API, correctness and throughput collection | `scripts/`, `tests/` |
-| 2 | [#2](https://github.com/colonel-otto/3spark-dsv4/pull/2) | 2-Spark baseline | 48.23 tok/s reference | [`BASELINE-2SPARK.md`](BASELINE-2SPARK.md) |
-| 3 | [#3](https://github.com/colonel-otto/3spark-dsv4/pull/3) | 3-Spark **EP=3** | ❌ Sharding works; losing the B12X MoE path costs **2.5x** | [`EP3-EXPERT-PARALLEL.md`](EP3-EXPERT-PARALLEL.md) |
-| 4 | [#4](https://github.com/colonel-otto/3spark-dsv4/pull/4) | 3-Spark **PP=3** | ❌ Blocked by MTP + a DSA stride constraint. No PP tok/s exists | [`PP3-PIPELINE-PARALLEL.md`](PP3-PIPELINE-PARALLEL.md) |
-| 5 | [#6](https://github.com/colonel-otto/3spark-dsv4/pull/6) | 3-Spark **TP=3** | ✅ Padding patch passes correctness; TP=3 beats the reference and nearly doubles KV | [`TP3-TUNING.md`](TP3-TUNING.md) |
-| 6 | [#5](https://github.com/colonel-otto/3spark-dsv4/pull/5) | Reproducibility package | Publication report + artifact schema | [`reproduction-methodology.md`](reproduction-methodology.md) |
-| 7 | [#7](https://github.com/colonel-otto/3spark-dsv4/pull/7) | CSV reconciliation | Two benchmark CSVs reconciled by data grain | `benchmarks/` |
+| 1 | [#1](../../pull/1) | Benchmark harness | Repeatable environment, fabric, API, correctness and throughput collection | `scripts/`, `tests/` |
+| 2 | [#2](../../pull/2) | 2-Spark baseline | 48.23 tok/s reference | [`BASELINE-2SPARK.md`](BASELINE-2SPARK.md) |
+| 3 | [#3](../../pull/3) | 3-Spark **EP=3** | ❌ Sharding works; losing the B12X MoE path costs **2.5x** | [`EP3-EXPERT-PARALLEL.md`](EP3-EXPERT-PARALLEL.md) |
+| 4 | [#4](../../pull/4) | 3-Spark **PP=3** | ❌ Blocked by MTP + a DSA stride constraint. No PP tok/s exists | [`PP3-PIPELINE-PARALLEL.md`](PP3-PIPELINE-PARALLEL.md) |
+| 5 | [#6](../../pull/6) | 3-Spark **TP=3** | ✅ Padding patch passes correctness; TP=3 beats the reference and nearly doubles KV | [`TP3-TUNING.md`](TP3-TUNING.md) |
+| 6 | [#5](../../pull/5) | Reproducibility package | Publication report + artifact schema | [`reproduction-methodology.md`](reproduction-methodology.md) |
+| 7 | [#7](../../pull/7) | CSV reconciliation | Two benchmark CSVs reconciled by data grain | `benchmarks/` |
 
 ### Phase 2 — tune (2026-08-22 → 08-24)
 
 | # | PR | Experiment | Outcome | Evidence |
 |---:|---:|---|---|---|
-| 8 | [#8](https://github.com/colonel-otto/3spark-dsv4/pull/8) | Batched-tokens scope | `MAX_NUM_BATCHED_TOKENS=16384` is a **trap**: 43% of KV for zero gain. Prefill has **two rates, ~30x apart** | [`PREFILL-MEASURED.md`](PREFILL-MEASURED.md) |
-| 9 | [#9](https://github.com/colonel-otto/3spark-dsv4/pull/9) | MTP=5 + 1M context | ✅ 1M context is **free** (memory-bound, not comms-bound); MTP=5 beats MTP=4 | [`MTP5-1M-AND-UPSTREAM-COMPARISON.md`](MTP5-1M-AND-UPSTREAM-COMPARISON.md) |
-| 10 | [#9](https://github.com/colonel-otto/3spark-dsv4/pull/9) | `seqs=32` | ❌ Rejected — **but against a budget later found 6.6x too small**. Re-open: [#10](https://github.com/colonel-otto/3spark-dsv4/issues/10) | [`SEQS32-AND-NCCL-FABRIC.md`](SEQS32-AND-NCCL-FABRIC.md) |
-| 11 | [#9](https://github.com/colonel-otto/3spark-dsv4/pull/9) | NVFP4 KV quality | Clean to 464K — but **single-arm**. Re-open: [#16](https://github.com/colonel-otto/3spark-dsv4/issues/16) | [`KV-QUALITY-LONG-CONTEXT.md`](KV-QUALITY-LONG-CONTEXT.md) |
+| 8 | [#8](../../pull/8) | Batched-tokens scope | `MAX_NUM_BATCHED_TOKENS=16384` is a **trap**: 43% of KV for zero gain. Prefill has **two rates, ~30x apart** | [`PREFILL-MEASURED.md`](PREFILL-MEASURED.md) |
+| 9 | [#9](../../pull/9) | MTP=5 + 1M context | ✅ 1M context is **free** (memory-bound, not comms-bound); MTP=5 beats MTP=4 | [`MTP5-1M-AND-UPSTREAM-COMPARISON.md`](MTP5-1M-AND-UPSTREAM-COMPARISON.md) |
+| 10 | [#9](../../pull/9) | `seqs=32` | ❌ Rejected — **but against a budget later found 6.6x too small**. Re-open: [#10](../../issues/10) | [`SEQS32-AND-NCCL-FABRIC.md`](SEQS32-AND-NCCL-FABRIC.md) |
+| 11 | [#9](../../pull/9) | NVFP4 KV quality | Clean to 464K — but **single-arm**. Re-open: [#16](../../issues/16) | [`KV-QUALITY-LONG-CONTEXT.md`](KV-QUALITY-LONG-CONTEXT.md) |
 
 ### Phase 3 — the fabric was lying (2026-08-25)
 
@@ -35,12 +35,12 @@ Everything above this line was measured with one node at ~15% of its collective 
 
 | # | PR | Experiment | Outcome | Evidence |
 |---:|---:|---|---|---|
-| 12 | [#9](https://github.com/colonel-otto/3spark-dsv4/pull/9) | **Fabric degradation found** | ☠️ spark1 at 0.69 vs 4.6 GB/s — **6.8x**, with every error counter reading 0. A reboot fixed it | [`FABRIC-FIX-PARITY.md`](FABRIC-FIX-PARITY.md) |
-| 13 | [#9](https://github.com/colonel-otto/3spark-dsv4/pull/9) | Fabric gate | ✅ `scripts/fabric_gate.sh` — 9 checks, each verified by **injecting the real fault** | [`POSTMORTEM-2026-08-25.md`](POSTMORTEM-2026-08-25.md) |
-| 14 | [#9](https://github.com/colonel-otto/3spark-dsv4/pull/9) | `roceP2p` HCAs | ❌ +56% bandwidth is **real but unusable** — no IPv4. Wedges the cluster while every container reports `running` | [`DECISIONS.md`](DECISIONS.md) |
-| 15 | [#9](https://github.com/colonel-otto/3spark-dsv4/pull/9) | `/30` normalization | ✅ All six fabric addresses consistent; netplan persistence gated | [`POSTMORTEM-2026-08-25.md`](POSTMORTEM-2026-08-25.md) |
-| 16 | [#9](https://github.com/colonel-otto/3spark-dsv4/pull/9) | **2v3 re-run, healthy** | ✅ **The answer.** 3 nodes +17% at cc=1, decaying to a **crossover near cc=16** | [`../README.md`](../README.md#is-the-third-node-worth-it) |
-| 17 | [#9](https://github.com/colonel-otto/3spark-dsv4/pull/9) | TTFT / warm-up | ✅ JIT is **per-shape, not per-idle**. Warm at startup; do **not** add a keep-alive ping | [`TTFT-AND-WARMUP.md`](TTFT-AND-WARMUP.md) |
+| 12 | [#9](../../pull/9) | **Fabric degradation found** | ☠️ spark1 at 0.69 vs 4.6 GB/s — **6.8x**, with every error counter reading 0. A reboot fixed it | [`FABRIC-FIX-PARITY.md`](FABRIC-FIX-PARITY.md) |
+| 13 | [#9](../../pull/9) | Fabric gate | ✅ `scripts/fabric_gate.sh` — 9 checks, each verified by **injecting the real fault** | [`POSTMORTEM-2026-08-25.md`](POSTMORTEM-2026-08-25.md) |
+| 14 | [#9](../../pull/9) | `roceP2p` HCAs | ❌ +56% bandwidth is **real but unusable** — no IPv4. Wedges the cluster while every container reports `running` | [`DECISIONS.md`](DECISIONS.md) |
+| 15 | [#9](../../pull/9) | `/30` normalization | ✅ All six fabric addresses consistent; netplan persistence gated | [`POSTMORTEM-2026-08-25.md`](POSTMORTEM-2026-08-25.md) |
+| 16 | [#9](../../pull/9) | **2v3 re-run, healthy** | ✅ **The answer.** 3 nodes +17% at cc=1, decaying to a **crossover near cc=16** | [`../README.md`](../README.md#is-the-third-node-worth-it) |
+| 17 | [#9](../../pull/9) | TTFT / warm-up | ✅ JIT is **per-shape, not per-idle**. Warm at startup; do **not** add a keep-alive ping | [`TTFT-AND-WARMUP.md`](TTFT-AND-WARMUP.md) |
 
 **Net effect of Phase 3:** the headline conclusion (three nodes are better) survived; its
 magnitudes and its boundary condition did not exist before. Every wrong number is
@@ -50,11 +50,11 @@ itemized in [`DEGRADED-DATA-CATALOGUE.md`](DEGRADED-DATA-CATALOGUE.md).
 
 | Question | Tracked | Why it matters |
 |---|---|---|
-| 3-rank collective **5.80 GB/s** vs a published ring at **18.70 @32MB** | [#18](https://github.com/colonel-otto/3spark-dsv4/issues/18) | **~3.2x, open, and NOT yet controlled** — 4 variables differ. That result started at 2.86 (our number) and recovered via **bootstrap interface**. See [`BANDWIDTH-NEXT-TEST.md`](BANDWIDTH-NEXT-TEST.md) |
-| `seqs=32` decided against a 6.6x-too-small budget | [#10](https://github.com/colonel-otto/3spark-dsv4/issues/10) | May have been rejected for a reason that no longer exists |
-| `nvfp4_ds_mla` vs `fp8_ds_mla` quality | [#16](https://github.com/colonel-otto/3spark-dsv4/issues/16) | **Memory-identical**, so the choice is free — make it on evidence |
-| 13% of decode runs still stall after warming | [#16](https://github.com/colonel-otto/3spark-dsv4/issues/16) | Warm-up does not cover every shape |
-| Root cause of spark1's degradation | [#14](https://github.com/colonel-otto/3spark-dsv4/issues/14) | Never determined. If it recurs, a reboot cadence is warranted |
+| ~~3-rank collective **5.80 GB/s** vs a published ring at **18.70 @32MB**~~ | [#18](../../issues/18) | ✅ **CLOSED 2026-08-26 — there was never a gap.** The same unchanged config reads **23.92 GB/s** under official `all_gather_perf`, *above* the 20.84 reference. The only variable that mattered was the harness. Bootstrap was worth +0.1%, NIC-merge −0.3%. See [`BANDWIDTH-COMPARISON.md`](BANDWIDTH-COMPARISON.md) |
+| `seqs=32` decided against a 6.6x-too-small budget | [#10](../../issues/10) | May have been rejected for a reason that no longer exists |
+| `nvfp4_ds_mla` vs `fp8_ds_mla` quality | [#16](../../issues/16) | **Memory-identical**, so the choice is free — make it on evidence |
+| 13% of decode runs still stall after warming | [#16](../../issues/16) | Warm-up does not cover every shape |
+| Root cause of spark1's degradation | [#14](../../issues/14) | Never determined. If it recurs, a reboot cadence is warranted |
 
 ## Result labels
 

@@ -12,7 +12,7 @@ what to do next.
 >
 > **Every multi-node measurement recorded before 2026-08-25 was taken on that degraded
 > fabric.** They are provisional until re-run —
-> [issue #14](https://github.com/colonel-otto/3spark-dsv4/issues/14).
+> [issue #14](../../issues/14).
 >
 > Full detail: [`FABRIC-FIX-PARITY.md`](FABRIC-FIX-PARITY.md).
 
@@ -408,8 +408,8 @@ Each of these was learned by getting a wrong answer first.
 
 | what | where |
 |---|---|
-| Repo | `github.com/colonel-otto/3spark-dsv4` |
-| Open PR | [#9](https://github.com/colonel-otto/3spark-dsv4/pull/9) — open, not merged |
+| Repo | `github.com/colonel-otto/DeepSeek-V4-Flash-3x-DGX-Spark` |
+| Open PR | [#9](../../pull/9) — open, not merged |
 | Open issues | [#10](../../issues/10) seqs=32 · [#11](../../issues/11) prefill (**resolved, closed**) · [#18](../../issues/18) NCCL reproduction · [#12](../../issues/12) KV quality · [#13](../../issues/13) mesh persistence (done) · [#14](../../issues/14) **re-run suspect benchmarks** |
 | Parity writeup | [`FABRIC-FIX-PARITY.md`](FABRIC-FIX-PARITY.md) |
 | Prefill investigation | [`PREFILL-MEASURED.md`](PREFILL-MEASURED.md) — 5 addenda, several self-corrections |

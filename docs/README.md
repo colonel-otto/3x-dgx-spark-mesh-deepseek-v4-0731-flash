@@ -45,10 +45,10 @@ confirmation → fix.
 |---|---|---|
 | [`TTFT-AND-WARMUP.md`](TTFT-AND-WARMUP.md) | ✅ | Why TTFT spikes on request 2, and why you should **not** add a keep-alive ping. |
 | [`FABRIC-FIX-PARITY.md`](FABRIC-FIX-PARITY.md) | ✅ | The 6.8x RDMA degradation, how it hid, and the parity re-run. |
-| [`../results/20260825-upper-mesh/`](../results/20260825-upper-mesh) | ⚠️ | **Four-HCA fabric measures 2.0x and is gate-clean.** Not adopted until it survives an engine run. |
+| [`../results/20260825-upper-mesh/`](../results/20260825-upper-mesh) | ✅ | **Four-HCA fabric measures 2.0x and is gate-clean.** **Adopted** — soak passed 2026-08-26: 408 requests, zero RDMA counter deltas, zero log events ([#17](../../issues/17)). Throughput benefit is separately unmeasured. |
 | [`PREFILL-MEASURED.md`](PREFILL-MEASURED.md) | ✅ | Prefill has **two rates, ~30x apart**. The long one. |
 | [`NCCL-TESTS-BUILD.md`](NCCL-TESTS-BUILD.md) | ✅ | How to build a **version-matched** nccl-tests. The container ships two NCCL versions; the wrong one invalidates the comparison. |
-| [`BANDWIDTH-COMPARISON.md`](BANDWIDTH-COMPARISON.md) | ✅ | **The ~3.2x gap vs published 3-Spark rings, verified against primary sources.** What it is, and what it is not. |
+| [`BANDWIDTH-COMPARISON.md`](BANDWIDTH-COMPARISON.md) | ✅ | **RESOLVED — there was never a gap.** The same config reads 5.80 GB/s under our harness and **23.92** under official `nccl-tests`, above the 20.84 published reference. Four hypotheses falsified on the way. |
 | [`BANDWIDTH-NEXT-TEST.md`](BANDWIDTH-NEXT-TEST.md) | ⏳ | **The matched test that would settle it.** Four variables still differ; the public result started at our number and recovered via *bootstrap*. |
 | [`KV-QUALITY-LONG-CONTEXT.md`](KV-QUALITY-LONG-CONTEXT.md) | ⚠️ | NVFP4 KV quality, clean to 464K — but **single-arm**, no comparison. Open as [#16](../../issues/16). |
 | [`MTP5-1M-AND-UPSTREAM-COMPARISON.md`](MTP5-1M-AND-UPSTREAM-COMPARISON.md) | ✅ | Why MTP=5 and 1M context; the upstream gap is workload, not deficit. |
