@@ -1,0 +1,58 @@
+=== VARIANT C_mergeoff | world=3 | bootstrap=mgmt | size=32M | extra='NCCL_IB_MERGE_NICS=0' ===
+=== started 2026-08-25T21:08:07-04:00 ===
+mpirun hostlist (launcher only, always mgmt): 192.168.10.1:1,192.168.10.2:1,192.168.10.3:1
+--- env under test ---
+  NCCL_IB_MERGE_NICS=0
+  NCCL_NET_PLUGIN=none
+  NCCL_SOCKET_IFNAME=wlP9s9
+  NCCL_DEBUG_SUBSYS=INIT,NET,GRAPH,ENV,TUNING
+  NCCL_DEBUG=INFO
+  NCCL_IB_HCA==rocep1s0f0,roceP2p1s0f0,rocep1s0f1,roceP2p1s0f1
+  NCCL_DEBUG_FILE=/tmp/nccldbg.%h.%p.log
+  NCCL_IB_SUBNET_AWARE_ROUTING=1
+  LD_LIBRARY_PATH=/usr/local/lib/python3.12/dist-packages/nvidia/nccl/lib:/usr/local/cuda/lib64:/usr/lib/aarch64-linux-gnu/openmpi/lib
+  NCCL_IB_DISABLE=0
+----------------------
+--- mpirun command ---
+mpirun --allow-run-as-root -np 3 -H 192.168.10.1:1,192.168.10.2:1,192.168.10.3:1   --mca plm_rsh_args '-p 2299 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'   --mca btl_tcp_if_include wlP9s9   --mca oob_tcp_if_include wlP9s9   --bind-to none --map-by node   -x NCCL_IB_MERGE_NICS=0 -x NCCL_NET_PLUGIN=none -x NCCL_SOCKET_IFNAME=wlP9s9 -x NCCL_DEBUG_SUBSYS=INIT,NET,GRAPH,ENV,TUNING -x NCCL_DEBUG=INFO -x NCCL_IB_HCA==rocep1s0f0,roceP2p1s0f0,rocep1s0f1,roceP2p1s0f1 -x NCCL_DEBUG_FILE=/tmp/nccldbg.%h.%p.log -x NCCL_IB_SUBNET_AWARE_ROUTING=1 -x LD_LIBRARY_PATH=/usr/local/lib/python3.12/dist-packages/nvidia/nccl/lib:/usr/local/cuda/lib64:/usr/lib/aarch64-linux-gnu/openmpi/lib -x NCCL_IB_DISABLE=0   /src/build/all_gather_perf -b 32M -e 32M -f 2 -n 20 -w 5 -g 1 -c 1
+----------------------
+# nccl-tests version 2.19.7 nccl-headers=23007 nccl-library=23007
+# Collective test starting: all_gather_perf
+# nThread 1 nGpus 1 minBytes 33554432 maxBytes 33554432 step: 2(factor) warmup iters: 5 iters: 20 agg iters: 1 validation: 1 graph: 0 unalign: 0
+#
+# Using devices
+#  Rank  0 Group  0 Pid     60 on node0 device  0 [000f:01:00] NVIDIA GB10
+#  Rank  1 Group  0 Pid     65 on  node1 device  0 [000f:01:00] NVIDIA GB10
+#  Rank  2 Group  0 Pid     61 on  node2 device  0 [000f:01:00] NVIDIA GB10
+#
+#                                                              out-of-place                       in-place          
+#       size         count      type   redop    root     time   algbw   busbw  #wrong     time   algbw   busbw  #wrong 
+#        (B)    (elements)                               (us)  (GB/s)  (GB/s)             (us)  (GB/s)  (GB/s)         
+    33554400       2796200     float    none      -1  1249.01   26.86   17.91       0  1168.46   28.72   19.14       0
+# Out of bounds values : 0 OK
+# Avg bus bandwidth    : 18.5272 
+#
+# Collective test concluded: all_gather_perf
+#
+
+=== exit rc=0 at 2026-08-25T21:08:18-04:00 ===
+debug log: /tmp/ntresults/C_mergeoff_w3_32M.nccldebug.log (4109 lines)
+---- EXTRACT C_mergeoff w3 32M ----
+[nccl-version]
+  node0:60:60 [0] NCCL INFO NCCL version 2.30.7+cuda13.3
+  node1:65:65 [0] NCCL INFO NCCL version 2.30.7+cuda13.3
+  node2:61:61 [0] NCCL INFO NCCL version 2.30.7+cuda13.3
+[vdev]
+  Made virtual device [0] name=rocep1s0f0 speed=200000 ndevs=1 rail=-1 plane=-1
+  Made virtual device [1] name=rocep1s0f1 speed=200000 ndevs=1 rail=-1 plane=-1
+  Made virtual device [2] name=roceP2p1s0f0 speed=200000 ndevs=1 rail=-1 plane=-1
+  Made virtual device [3] name=roceP2p1s0f1 speed=200000 ndevs=1 rail=-1 plane=-1
+[transport]
+       96 via NET/IB/0
+       96 via NET/IB/1
+       96 via NET/IB/2
+       96 via NET/IB/3
+[result]
+      33554400       2796200     float    none      -1  1249.01   26.86   17.91       0  1168.46   28.72   19.14       0
+[avgbusbw]
+  # Avg bus bandwidth    : 18.5272 
