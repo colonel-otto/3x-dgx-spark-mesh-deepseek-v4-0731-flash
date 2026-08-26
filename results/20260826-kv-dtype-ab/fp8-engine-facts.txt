@@ -1,0 +1,15 @@
+ARM B: fp8_ds_mla  (2026-08-26, engine started 08-26 01:43 UTC)
+kv_cache_dtype (from non-default args): fp8_ds_mla        <-- VERIFIED from engine log
+kv_cache_dtype (from EngineCore config line): fp8_ds_mla  <-- VERIFIED from engine log
+Available KV cache memory: 31.62 GiB
+GPU KV cache size: 4,504,137 tokens
+Maximum concurrency for 1,048,576 tokens per request: 4.30x
+vLLM: 0.25.2.dev0+g752a3a504.d20260714
+image: ghcr.io/anemll/dspark-vllm-gx10:0.1.1
+All other engine-shaping flags byte-identical to arm A (verified by md5 across 3 ranks).
+
+JIT-during-inference: 3 absorbed by warmup; 1 more at 02:44:21 UTC
+(_compute_global_topk_indices_and_lens_kernel) which fell inside the EXTENDED
+256K quality window, not the speed window. Quality is pass/fail and that trial
+passed, so a latency spike does not affect its verdict. The speed sweep ran at
+~02:47+ on a fully warm engine with the counter static -- clean.

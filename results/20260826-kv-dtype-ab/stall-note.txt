@@ -1,0 +1,48 @@
+"STALL" DURING LONG 256K PREFILLS -- MOSTLY A MEASUREMENT ERROR ON MY PART
+
+What I first reported (and why it was wrong)
+--------------------------------------------
+During the extended 256K runs I sampled these and concluded the engine was wedged:
+
+  vllm:num_requests_running      = 1.0   (steady)
+  vllm:prompt_tokens_total       = FROZEN
+  vllm:generation_tokens_total   = FROZEN
+  Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 0.0 tokens/s
+
+That conclusion was WRONG. `prompt_tokens_total` and `generation_tokens_total` are
+COMPLETION-TIME counters -- they increment when a request finishes, not while it runs.
+During a single long chunked prefill (~150-170 s at 246K tokens) there is nothing to
+increment, so they are *expected* to sit still. The "Avg ... throughput: 0.0" logger line
+is a windowed average that reads 0.0 for the same reason.
+
+The request I killed on the FIRST occurrence was very likely progressing normally and
+would have completed. Killing it destroyed the evidence and cost a trial.
+
+Confirmed by: the very next salted 246,261-token request looked identically "frozen" by
+these metrics for minutes, then completed cleanly in 166.4 s, PASS, all three needles.
+
+What is actually true
+---------------------
+- Uncached 256K prefills take ~135-170 s. That is the normal cost, not a hang.
+- A long prefill is INDISTINGUISHABLE from a hang using request/token counters alone.
+
+How to tell a real hang from a long prefill next time
+-----------------------------------------------------
+Do NOT use prompt_tokens_total / generation_tokens_total / avg throughput. Use instead:
+  - GPU KV cache usage %  -- climbs steadily during a healthy chunked prefill
+  - vllm:iteration_tokens_total or the scheduler's per-step lines, which move per engine step
+  - nvidia-smi on any rank: a working prefill pins the GPU; a real hang leaves it idle
+  - elapsed time vs the known ~150 s/246K budget -- only suspect a hang well past it
+
+Standing lesson (extends "init success != health"): the inverse error is just as easy.
+Counters that look frozen are not proof of a wedge. Pick a counter that advances *within*
+a request before calling anything hung.
+
+Residual unknown
+----------------
+The first occurrence was never allowed to finish, so whether it would have completed is
+unproven. No confirmed hang was observed in this experiment. Not attributed to either
+dtype -- both arms served long prefills successfully.
+
+Harness change kept: request timeout 2400 s -> 600 s, so a genuinely stuck cell fails and
+is recorded rather than blocking a sweep. 600 s is ~3.5x the observed 170 s worst case.

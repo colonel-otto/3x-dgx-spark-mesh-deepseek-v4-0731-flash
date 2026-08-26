@@ -1,0 +1,11 @@
+ARM A REMATCH (nvfp4_ds_mla), engine restarted 08-26 02:53 UTC
+kv_cache_dtype: nvfp4_ds_mla   <-- VERIFIED from engine log
+Available KV cache memory: 30.96 GiB
+GPU KV cache size: 4,483,281 tokens
+Maximum concurrency for 1,048,576 tokens per request: 4.28x
+
+IMPORTANT CONTROL: the FIRST nvfp4 boot reported 4,451,877 tokens / 31.24 GiB.
+Same dtype, same config, different boot -> 31,404 tokens of difference.
+That within-dtype restart noise is comparable to the 52,260-token gap measured
+BETWEEN the dtypes, which confirms the KV pool difference is allocator noise
+and not a property of the dtype. Both dtypes use the 584 B/token envelope.

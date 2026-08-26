@@ -1,0 +1,9 @@
+ARM A: nvfp4_ds_mla  (2026-08-26, engine started 08-26 01:12 UTC)
+kv_cache_dtype (from non-default args): nvfp4_ds_mla
+kv_cache_dtype (from EngineCore config line): nvfp4_ds_mla
+Available KV cache memory: 31.24 GiB
+GPU KV cache size: 4,451,877 tokens
+Maximum concurrency for 1,048,576 tokens per request: 4.25x
+vLLM: 0.25.2.dev0+g752a3a504.d20260714
+image: ghcr.io/anemll/dspark-vllm-gx10:0.1.1
+JIT-during-inference events: 3, all absorbed during warmup (01:26-01:27), 0 during measurement
