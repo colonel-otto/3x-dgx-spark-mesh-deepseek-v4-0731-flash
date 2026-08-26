@@ -3,6 +3,12 @@
 One row per knob: the value, the measurement that settled it, and what happens if you
 change it. If a value is not here, it is not settled.
 
+> [!IMPORTANT]
+> **Not every row is closed.** Rows marked ⚠️ carry an open question — currently the
+> four-HCA soak ([#17](../../issues/17)), the KV dtype A/B ([#16](../../issues/16)), and
+> `MAX_NUM_SEQS=32` awaiting retest ([#10](../../issues/10)). The **value** in each is what
+> we run today; the **justification** is still being tested.
+
 **Authoritative config:** [`../config/tp3.env.example`](../config/tp3.env.example).
 This page is the *reasoning*; that file is the *artifact*.
 
@@ -45,7 +51,8 @@ speed knob only. Raising it cannot buy accuracy.
 | `NCCL_IB_SUBNET_AWARE_ROUTING` | `1` | Required on a switchless ring | Undocumented in NVIDIA's public env reference, but present in the NCCL 2.30.7 binary |
 | subnet masks | **`/30` on all six** | Consistency | Mixed masks on a fabric are a latent trap even when they cannot overlap |
 | MTU | **9000** | Persisted via netplan | ⚠️ netplan **owns** the config; NetworkManager is only a renderer |
-| **peer egress** | **fabric only** | Fabric RTT 0.47-0.93 ms vs Wi-Fi 3-135 ms | ☠️ **No Spark-to-Spark data over Wi-Fi, ever.** Wi-Fi is operator access + API responses only. A missing fabric route falls back to Wi-Fi silently — everything still pings. Gated as `egress:*` ([#13](../../issues/13)) |
+| **peer egress (RDMA/model data)** | **fabric only** | Fabric RTT 0.47-0.93 ms vs Wi-Fi 3-135 ms | ☠️ **No RDMA or model-data traffic over Wi-Fi, ever.** A missing fabric route falls back to Wi-Fi silently — everything still pings. Gated as `egress:*` ([#13](../../issues/13)) |
+| **bootstrap / control plane** | shared management interface **permitted** | NVIDIA's launcher uses one common non-fabric interface on every node, and **explicitly supports Wi-Fi** for it | Rendezvous is a few KB, once, at startup. It is not the data path — payload still moves over `NCCL_IB_HCA`. **Confirm `via NET/IB/*`, never `NET/Socket`,** or data has fallen onto TCP and the run is void |
 
 ## Measured constants
 
@@ -74,7 +81,11 @@ speed knob only. Raising it cannot buy accuracy.
 
 ---
 
-## A note on comparing bandwidth numbers
+## Bandwidth — measured, investigation OPEN
+
+> [!NOTE]
+> Unlike the rest of this page, **this section is not settled.** The numbers are measured
+> and reproducible; the comparison against published results is not yet controlled.
 
 Our figures are **`all_gather` busbw**: `nbytes * (world-1)/world / dt`, where `nbytes` is
 the per-rank input. That is the [nccl-tests](https://github.com/NVIDIA/nccl-tests/blob/master/doc/PERFORMANCE.md)
@@ -90,8 +101,16 @@ bandwidth number. Without those four, a figure cannot be compared to.
 | 2-rank busbw | 9.70 | 18.92 @64MiB (2 HCAs) |
 | 3-rank busbw | 5.80 | **18.70 @32MB** (3-rank ring) |
 
-**We are ~3.2x below a published ring at a smaller message size.** Open as
-[#11](../../issues/11); the live lead is HCA *pairing* — see
+**We are ~3.2x below a published ring at a smaller message size — but this is NOT yet a
+controlled comparison.** Four variables differ from the published run.
+
+**Strongest lead: OOB/bootstrap topology.** The one public 3-Spark result began at
+**2.86 GB/s** — almost exactly our original number — and recovered to 18.64 by changing
+how the job bootstraps, not the fabric. **NIC merging and HCA discovery remain open A/B
+variables**; HCA pairing is one hypothesis within the merge question, not the leading
+explanation.
+
+Plan: [`BANDWIDTH-NEXT-TEST.md`](BANDWIDTH-NEXT-TEST.md). Analysis:
 [`BANDWIDTH-COMPARISON.md`](BANDWIDTH-COMPARISON.md).
 
 **Ceiling:** PCIe Gen5 x4 is shared across both ports (~252 Gb/s), and measured raw RDMA

@@ -140,9 +140,14 @@ done
 # traffic over Wi-Fi (issue #13).
 #
 # RULE: NO Spark-to-Spark data may traverse Wi-Fi. The management network is for
-# operator access and API responses only. `ip route get` reports the device the
-# kernel would actually use, which is the thing to assert.
-echo "-- peer egress device (no Spark-to-Spark traffic over Wi-Fi/management)"
+# operator access, API responses, and NCCL/MPI BOOTSTRAP -- NVIDIA's own launcher
+# uses a common non-fabric interface for rendezvous and explicitly supports Wi-Fi.
+#
+# This check asserts routes to PEER FABRIC ADDRESSES only, so it does not (and must
+# not) forbid a management-network bootstrap. What it catches is a vanished fabric
+# route silently falling back to Wi-Fi, where everything still pings while inter-node
+# data crawls. `ip route get` reports the device the kernel would actually use.
+echo "-- peer egress device (RDMA/model data must leave via the fabric)"
 for s_ in "${NODES[@]}"; do
   offenders=""
   for d in "${NODES[@]}"; do
@@ -157,9 +162,9 @@ for s_ in "${NODES[@]}"; do
     fi
   done
   if [[ -n "$offenders" ]]; then
-    bad "$s_: peer traffic would leave via a NON-FABRIC device:${offenders} -- Spark-to-Spark data must never use Wi-Fi/management"         "egress:$s_" "${offenders# }"
+    bad "$s_: traffic to a PEER FABRIC ADDRESS would leave via a non-fabric device:${offenders} -- RDMA/model data must never use Wi-Fi/management"         "egress:$s_" "${offenders# }"
   else
-    ok "$s_: all peer routes egress the fabric" "egress:$s_" "fabric"
+    ok "$s_: all peer FABRIC routes egress the fabric" "egress:$s_" "fabric"
   fi
 done
 
