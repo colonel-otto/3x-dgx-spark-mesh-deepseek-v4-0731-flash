@@ -5,7 +5,7 @@ change it. If a value is not here, it is not settled.
 
 > [!IMPORTANT]
 > **Not every row is closed.** Rows marked ⚠️ carry an open question — currently the
-> four-HCA **throughput** benefit ([#17](../../issues/17) — its soak has passed), the KV dtype A/B ([#16](../../issues/16)), and
+> four-HCA **throughput** benefit ([#17](../../issues/17) — soak passed, fabric verified), the KV dtype A/B ([#16](../../issues/16)), and
 > `MAX_NUM_SEQS=32` awaiting retest ([#10](../../issues/10)). The **value** in each is what
 > we run today; the **justification** is still being tested.
 
@@ -59,8 +59,8 @@ speed knob only. Raising it cannot buy accuracy.
 | Quantity | Value | Note |
 |---|---|---|
 | Healthy pair busbw @64MiB | **~4.6 GB/s** (2 HCA) / **~9.7** (4 HCA) | ~0.7 means a degraded node — reboot it |
-| Healthy 3-rank busbw | **2.85–3.25 GB/s** | Two HCAs. Supersedes the 0.49 figure, which was 6.6x pessimistic |
-| 3-rank busbw, **four HCAs** | **5.80 GB/s** | Upper mesh addressed, live-gate clean. Still **~3.2x below** a published ring — see the note below |
+| 3-rank busbw, **official harness** | **23.92 GB/s** @16GiB | The real number. Exceeds the 20.84 published reference |
+| 3-rank busbw, custom harness | 5.80 GB/s | ⚠️ **Do not quote as fabric speed.** Workload-shaped harness at 67 MB; official binary reads 23.92 on the same config |
 | KV envelope, DeepSeek-V4 | **584 B/token** | 448 NoPE + 128 RoPE + 8 fp8 scale. **Identical for `fp8_ds_mla` and `nvfp4_ds_mla`** |
 | Tokens per word, filler prompt | **1.2056** | Measured against `/tokenize`, flat 150K–240K. **Do not estimate this** |
 | Idle TTFT penalty | **~22 ms** | Why a keep-alive ping is not worth it |
@@ -82,38 +82,28 @@ speed knob only. Raising it cannot buy accuracy.
 
 ---
 
-## Bandwidth — measured, investigation OPEN
+## Bandwidth — SETTLED 2026-08-26
 
-> [!NOTE]
-> Unlike the rest of this page, **this section is not settled.** The numbers are measured
-> and reproducible; the comparison against published results is not yet controlled.
+Our figures use the [nccl-tests](https://github.com/NVIDIA/nccl-tests/blob/master/doc/PERFORMANCE.md)
+AllGather definition, `busbw = algbw * (n-1)/n` — the same convention published DGX Spark
+figures use. Always state **collective, message size, rank count, and algbw-vs-busbw**
+when quoting a number.
 
-Our figures are **`all_gather` busbw**: `nbytes * (world-1)/world / dt`, where `nbytes` is
-the per-rank input. That is the [nccl-tests](https://github.com/NVIDIA/nccl-tests/blob/master/doc/PERFORMANCE.md)
-AllGather definition, and it is **the same convention published DGX Spark figures use** —
-so those comparisons are valid as stated. (The 2x factor applies to *all_reduce* busbw
-only; do not apply it here.)
+**There is no fabric deficit.** Measured with official `all_gather_perf`, NCCL 2.30.7,
+`-n 20`, engine stopped:
 
-Always state **collective, message size, rank count, and algbw-vs-busbw** when quoting a
-bandwidth number. Without those four, a figure cannot be compared to.
+| | 32 MiB | 16 GiB |
+|---|---:|---:|
+| **ours, 3-rank** | 16.85 | **23.92 GB/s** |
+| published reference | 18.70 | 20.84 |
 
-| our measurement | value | closest published |
-|---|---:|---|
-| 2-rank busbw | 9.70 | 18.92 @64MiB (2 HCAs) |
-| 3-rank busbw | 5.80 | **18.70 @32MB** (3-rank ring) |
+**We exceed the reference at 16 GiB.** The earlier 5.80 GB/s figure came from a
+workload-shaped custom harness used outside its purpose — not from the hardware.
 
-**We are ~3.2x below a published ring at a smaller message size — but this is NOT yet a
-controlled comparison.** Four variables differ from the published run.
-
-**Strongest lead: OOB/bootstrap topology.** The one public 3-Spark result began at
-**2.86 GB/s** — almost exactly our original number — and recovered to 18.64 by changing
-how the job bootstraps, not the fabric. **NIC merging and HCA discovery remain open A/B
-variables**; HCA pairing is one hypothesis within the merge question, not the leading
-explanation.
-
-Plan: [`BANDWIDTH-NEXT-TEST.md`](BANDWIDTH-NEXT-TEST.md). Analysis:
+Bootstrap topology, NIC merging and HCA discovery each moved the number by **<0.5%**;
+all three hypotheses are falsified. Full account:
 [`BANDWIDTH-COMPARISON.md`](BANDWIDTH-COMPARISON.md).
 
-**Ceiling:** PCIe Gen5 x4 is shared across both ports (~252 Gb/s), and measured raw RDMA
-tops out near 196 Gb/s ≈ **24.5 GB/s**. Line-rate arithmetic (400 Gb/s → 48.5 GB/s)
-**overstates it** and should not be used.
+**Ceiling: ~24 GB/s, confirmed.** Both 200G ports share two PCIe Gen5 x4 lanes
+(~252 Gb/s); every 3-rank variant pins to it. Line-rate arithmetic (400 Gb/s → 48.5 GB/s)
+**overstates it** and must not be used.

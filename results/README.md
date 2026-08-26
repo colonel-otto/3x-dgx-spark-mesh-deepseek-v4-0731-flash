@@ -22,7 +22,13 @@ Directories are named `YYYYMMDD[THHMMSSZ]-<subject>`.
 | [`20260825-prefill-2v3/`](20260825-prefill-2v3) | 🟢 | Prefill, 2 vs 3 nodes. Result: **parity (±2%)** |
 | [`20260825-decode-2v3/`](20260825-decode-2v3) | 🟢 | Decode, 2 vs 3 nodes at cc=1/4/8/16. **The headline result** |
 | [`20260825-deep-concurrency/`](20260825-deep-concurrency) | 🟢 | 4×200K re-run for [#15](../../issues/15). Includes `deepconc.py` and the gate output |
-| [`20260825-upper-mesh/`](20260825-upper-mesh) | 🟢 | **Four-HCA fabric at 2.0x**, 26/26 gate-clean. Engine-validation pending — [#18](../../issues/18) |
+| [`20260825-upper-mesh/`](20260825-upper-mesh) | 🟢 | **Four-HCA fabric at 2.0x**, gate-clean, **soak PASSED** (408 req, 0 RDMA deltas) — [#17](../../issues/17) |
+
+## 2026-08-26 — healthy fabric
+
+| Directory | Fabric | What it holds |
+|---|---|---|
+| [`20260826-nccl-controlled/`](20260826-nccl-controlled) | 🟢 | **The controlled NCCL reproduction — there was never a bandwidth gap.** 12 runs, official `all_gather_perf`, NCCL 2.30.7. **23.92 GB/s** vs 5.80 on our custom harness, same config. All four hypotheses falsified — [#18](../../issues/18) |
 
 ## 2026-08-24 — degraded fabric
 

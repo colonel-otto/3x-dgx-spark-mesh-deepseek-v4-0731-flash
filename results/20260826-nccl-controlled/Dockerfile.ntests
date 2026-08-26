@@ -1,0 +1,8 @@
+FROM ghcr.io/anemll/dspark-vllm-gx10:0.1.1
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends       libopenmpi-dev openmpi-bin openssh-client openssh-server git iproute2 iputils-ping     && rm -rf /var/lib/apt/lists/*
+RUN git clone --depth 1 https://github.com/NVIDIA/nccl-tests /src && cd /src/src &&     (make -j8 MPI=1 MPI_HOME=/usr/lib/aarch64-linux-gnu/openmpi       NCCL_HOME=/usr/local/lib/python3.12/dist-packages/nvidia/nccl       CUDA_HOME=/usr/local/cuda BUILDDIR=/src/build       NVCC_GENCODE='-gencode=arch=compute_121,code=sm_121' || true) &&     ls -la /src/build/all_gather_perf
+RUN mkdir -p /var/run/sshd /root/.ssh && chmod 700 /root/.ssh &&     ssh-keygen -A &&     printf 'Port 2299\nPermitRootLogin yes\nPubkeyAuthentication yes\nPasswordAuthentication no\nStrictModes no\nAcceptEnv *\n' > /etc/ssh/sshd_config.d/nt.conf
+ENV LD_LIBRARY_PATH=/usr/local/lib/python3.12/dist-packages/nvidia/nccl/lib:/usr/local/cuda/lib64:/usr/lib/aarch64-linux-gnu/openmpi/lib
+COPY ntkey /root/.ssh/id_ed25519
+COPY ntkey.pub /root/.ssh/authorized_keys
+RUN chmod 600 /root/.ssh/id_ed25519 /root/.ssh/authorized_keys &&     printf 'Host *\n  Port 2299\n  StrictHostKeyChecking no\n  UserKnownHostsFile /dev/null\n  LogLevel ERROR\n' > /root/.ssh/config

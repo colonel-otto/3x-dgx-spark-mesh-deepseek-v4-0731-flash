@@ -152,7 +152,29 @@ when the closest comparison was taken at a *smaller* size than ours.
 source before acting on it.** The convention discipline it recommended was still correct;
 the conclusion it reached was not.
 
-### 4.6 Stale pointers outliving the data they point at
+### 4.6 Four hypotheses before one control run
+
+We produced four successive explanations for a bandwidth deficit that did not exist:
+metric convention, a real ~3.2x hardware gap, cross-port NIC merging, and bootstrap
+topology. Each was plausible, mechanistically coherent, and consistent with the numbers in
+hand. **All four were wrong, and one matched run against the official binary settled it.**
+
+The merging hypothesis is the instructive one. The mechanism was **real** — NCCL genuinely
+merges `rocep1s0f0+rocep1s0f1`, two ports facing different neighbours on this ring — and it
+**predicted the observed pattern**, including a deficit that grew with rank count. It was
+still irrelevant: disabling merging moved the number 0.3%. A correct mechanism that
+predicts your data is not thereby the cause.
+
+What we never did was run the reference implementation. `agbench.py` was built to mirror
+the vLLM MTP allgather shape and was the right instrument for its purpose; we used its top
+point as a peak-bandwidth figure and compared it against someone else's peak-bandwidth
+number.
+
+**Fix: when your measurement disagrees with a published one, suspect the measurement
+first, and reach for the standard tool before the third hypothesis — let alone the
+fourth.**
+
+### 4.7 Stale pointers outliving the data they point at
 
 Three summaries were quietly lying while the underlying measurements were fine:
 - `generate_summary.py` matched `prompt_tokens == "200000"` exactly and hardcoded
@@ -188,24 +210,11 @@ fault** and confirming exit 1.
 
 ## 6. Open, and honestly unresolved
 
-1. **Our 3-rank collective is 5.80 GB/s where a published 3-Spark ring reports 18.70 at a
-   SMALLER message size.** Still open, and **still ~3.2x**.
-   - Four HCAs gave a real 2.0x (2.85 → 5.80), live-gate clean.
-   - An earlier draft claimed the residual was a metric-convention artifact. **Source
-     verification refuted that** — published figures are `all_gather` busbw, the same
-     collective and formula we use.
-   - **Not yet a controlled comparison.** Four variables still differ: bootstrap
-     interface, harness, NIC-merge setting, HCA discovery.
-   - **Strongest lead: the control plane.** The one public 3-Spark result began at
-     **2.86 GB/s** — almost exactly our original number — and recovered to 18.64 by
-     moving bootstrap onto a **common management interface**. We bootstrap over
-     rank-specific *fabric* addresses with the master on loopback.
-   - **Second lead: NIC merging.** Their working ring ran `MERGE_NICS=0`; we have never
-     set it, so NCCL merges by default. Our gate shows it built two virtual devices but
-     did not record *which* HCAs — same-port vs cross-port is the ring question. Gate
-     now captures it. See [`BANDWIDTH-NEXT-TEST.md`](BANDWIDTH-NEXT-TEST.md).
-   - Ceiling correction: PCIe Gen5 x4 shared across both ports caps this near **24 GB/s**,
-     not the 48.5 a line-rate estimate suggests.
+1. ~~**Our 3-rank collective is far below published 3-Spark rings.**~~ **RESOLVED
+   2026-08-26 — there was never a gap.** Official `all_gather_perf` reads **23.92 GB/s**
+   on the same config our custom harness read 5.80 on, *exceeding* the 20.84 published
+   reference. Bootstrap, NIC merging and HCA discovery each moved it <0.5%; all our
+   hypotheses were falsified. See [`BANDWIDTH-COMPARISON.md`](BANDWIDTH-COMPARISON.md).
 
 2. **The JIT stall tail** — 13% of runs still stall after warming. Warm-up does not cover
    every shape.

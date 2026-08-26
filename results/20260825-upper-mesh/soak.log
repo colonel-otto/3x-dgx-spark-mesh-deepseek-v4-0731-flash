@@ -1,0 +1,92 @@
+[2026-08-26T00:16:26Z] SOAK START budget=1200s concurrency=8 endpoint=http://192.168.1.223:8100/v1/chat/completions sizes=[1000, 4000, 16000] max_tokens=256
+[2026-08-26T00:16:56Z] progress t=    30s requests=11 failures=0
+[2026-08-26T00:17:26Z] progress t=    60s requests=17 failures=0
+[2026-08-26T00:17:56Z] progress t=    90s requests=26 failures=0
+[2026-08-26T00:18:26Z] progress t=   120s requests=38 failures=0
+[2026-08-26T00:18:56Z] progress t=   150s requests=51 failures=0
+[2026-08-26T00:19:26Z] progress t=   180s requests=59 failures=0
+[2026-08-26T00:19:56Z] progress t=   210s requests=65 failures=0
+[2026-08-26T00:20:26Z] progress t=   240s requests=79 failures=0
+[2026-08-26T00:20:56Z] progress t=   270s requests=87 failures=0
+[2026-08-26T00:21:26Z] progress t=   300s requests=97 failures=0
+[2026-08-26T00:21:56Z] progress t=   330s requests=101 failures=0
+[2026-08-26T00:22:26Z] progress t=   360s requests=115 failures=0
+[2026-08-26T00:22:56Z] progress t=   390s requests=123 failures=0
+[2026-08-26T00:23:26Z] progress t=   420s requests=135 failures=0
+[2026-08-26T00:23:56Z] progress t=   450s requests=145 failures=0
+[2026-08-26T00:24:26Z] progress t=   480s requests=156 failures=0
+[2026-08-26T00:24:56Z] progress t=   510s requests=167 failures=0
+[2026-08-26T00:25:26Z] progress t=   540s requests=173 failures=0
+[2026-08-26T00:25:56Z] progress t=   570s requests=188 failures=0
+[2026-08-26T00:26:26Z] progress t=   600s requests=197 failures=0
+[2026-08-26T00:26:56Z] progress t=   630s requests=207 failures=0
+[2026-08-26T00:27:26Z] progress t=   660s requests=218 failures=0
+[2026-08-26T00:27:56Z] progress t=   690s requests=229 failures=0
+[2026-08-26T00:28:26Z] progress t=   720s requests=238 failures=0
+[2026-08-26T00:28:56Z] progress t=   750s requests=246 failures=0
+[2026-08-26T00:29:26Z] progress t=   780s requests=260 failures=0
+[2026-08-26T00:29:56Z] progress t=   810s requests=268 failures=0
+[2026-08-26T00:30:26Z] progress t=   840s requests=277 failures=0
+[2026-08-26T00:30:56Z] progress t=   870s requests=286 failures=0
+[2026-08-26T00:31:26Z] progress t=   900s requests=298 failures=0
+[2026-08-26T00:31:56Z] progress t=   930s requests=306 failures=0
+[2026-08-26T00:32:26Z] progress t=   960s requests=317 failures=0
+[2026-08-26T00:32:56Z] progress t=   990s requests=329 failures=0
+[2026-08-26T00:33:26Z] progress t=  1020s requests=340 failures=0
+[2026-08-26T00:33:56Z] progress t=  1050s requests=346 failures=0
+[2026-08-26T00:34:26Z] progress t=  1080s requests=357 failures=0
+[2026-08-26T00:34:56Z] progress t=  1110s requests=368 failures=0
+[2026-08-26T00:35:26Z] progress t=  1140s requests=380 failures=0
+[2026-08-26T00:35:56Z] progress t=  1170s requests=385 failures=0
+[2026-08-26T00:36:26Z] progress t=  1200s requests=400 failures=0
+[2026-08-26T00:36:32Z] stream 6 finished after 49 requests
+[2026-08-26T00:36:32Z] stream 7 finished after 53 requests
+[2026-08-26T00:36:32Z] stream 0 finished after 51 requests
+[2026-08-26T00:36:32Z] stream 2 finished after 50 requests
+[2026-08-26T00:36:32Z] stream 4 finished after 53 requests
+[2026-08-26T00:36:33Z] stream 5 finished after 48 requests
+[2026-08-26T00:36:33Z] stream 3 finished after 53 requests
+[2026-08-26T00:36:34Z] stream 1 finished after 51 requests
+[2026-08-26T00:36:56Z] progress t=  1230s requests=408 failures=0
+[2026-08-26T00:36:56Z] SOAK COMPLETE
+{
+  "duration_s": 1230.4,
+  "concurrency": 8,
+  "total_requests": 408,
+  "successful": 408,
+  "failures": 0,
+  "failure_detail": [],
+  "latency_s": {
+    "p50": 21.859986901283264,
+    "p95": 45.72722001075744,
+    "p99": 58.62026932239535,
+    "min": 2.2597711086273193,
+    "max": 65.59253692626953,
+    "mean": 23.658450257544423
+  },
+  "by_size": {
+    "1000": {
+      "count": 138,
+      "p50": 20.291990518569946,
+      "p95": 41.78816921710968,
+      "p99": 45.61260263442993,
+      "actual_prompt_tokens_median": 864.5
+    },
+    "4000": {
+      "count": 137,
+      "p50": 19.798651456832886,
+      "p95": 44.44105019569395,
+      "p99": 50.6986944389343,
+      "actual_prompt_tokens_median": 3353
+    },
+    "16000": {
+      "count": 133,
+      "p50": 28.259014129638672,
+      "p95": 48.93116488456725,
+      "p99": 64.64551241874696,
+      "actual_prompt_tokens_median": 13298
+    }
+  },
+  "total_prompt_tokens": 2347035,
+  "total_completion_tokens": 16071
+}
