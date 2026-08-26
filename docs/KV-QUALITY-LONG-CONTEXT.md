@@ -1,11 +1,16 @@
-# NVFP4 KV-cache output quality under long context
-
-> [!NOTE]
-> **SINGLE-ARM RESULT.** Quality was measured clean to 464K on `nvfp4_ds_mla` — but with
-> **no comparison against `fp8_ds_mla`**, which is what both official recipes specify.
-> `nvfp4_ds_mla` has no published accuracy evaluation anywhere, and the two dtypes are
-> **memory-identical** on DeepSeek-V4 (both use the 584-byte sparse-MLA envelope), so the
-> choice is free and should be made on evidence. Tracked as [#16](../../issues/16).
+> [!IMPORTANT]
+> **A/B COMPLETED 2026-08-26 ([#16](../../issues/16)). The two dtypes are
+> indistinguishable.** `nvfp4_ds_mla` and `fp8_ds_mla` scored **35/36** each on the main
+> sweep and **12/12** each on an extended cache-busted 246K run.
+>
+> **The decisive evidence is not the pass counts.** 23 of 24 matched cells returned
+> **byte-identical replies**, including **12/12 at 246K tokens**. A KV-precision defect
+> cannot reproduce byte-for-byte across two different KV dtypes. The 24th cell differed
+> only in the *order* three correctly-retrieved codes were listed.
+>
+> Speed is a tie (deltas <3%, **sign flips** across concurrency). Memory is equal, as the
+> shared 584-byte envelope predicts. See
+> [`../results/20260826-kv-dtype-ab/`](../results/20260826-kv-dtype-ab).
 
 Experiment date: 2026-08-24 (UTC). Cluster: 3-node TP=3, `MAX_MODEL_LEN=1048576`,
 `MTP_NUM_TOKENS=5`, `MAX_NUM_SEQS=16`, `GPU_MEMORY_UTILIZATION=0.85`,

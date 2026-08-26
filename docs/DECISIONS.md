@@ -5,8 +5,8 @@ change it. If a value is not here, it is not settled.
 
 > [!IMPORTANT]
 > **Not every row is closed.** Rows marked ⚠️ carry an open question — currently the
-> four-HCA **throughput** benefit ([#17](../../issues/17) — soak passed, fabric verified), the KV dtype A/B ([#16](../../issues/16)), and
-> `MAX_NUM_SEQS=32` awaiting retest ([#10](../../issues/10)). The **value** in each is what
+> four-HCA **throughput** benefit ([#17](../../issues/17) — soak passed, fabric verified), and `MAX_NUM_SEQS=32` awaiting retest
+> ([#10](../../issues/10)). The **value** in each is what
 > we run today; the **justification** is still being tested.
 
 **Authoritative config:** [`../config/tp3.env.example`](../config/tp3.env.example).
@@ -36,7 +36,7 @@ aggregate. Single-user interactive coding is per-stream-bound → three nodes.
 | `GPU_MEMORY_UTILIZATION` | **0.80** | KV pool 4.46M tokens, **0 preemptions in every test ever run** | 0.85 leaves 2–4 GB free per node |
 | `MTP_NUM_TOKENS` | **5** | Matched control 2026-08-24, beats 4 | `0` is **invalid** (vLLM rejects it); `1` collapses decode to ~47 tok/s |
 | `MAX_NUM_BATCHED_TOKENS` | **8192** | A/B: 16384 cost **43% of the KV pool for zero gain** | ⚠️ vLLM's own log suggests 16384. That advice assumes intra-node NVLink. It is a trap here |
-| `--kv-cache-dtype` | `nvfp4_ds_mla` | Speed-identical to `fp8_ds_mla` | ⚠️ **Open** — memory-identical too (shared 584-byte envelope), quality unvalidated ([#16](../../issues/16)) |
+| `--kv-cache-dtype` | `nvfp4_ds_mla` (**`fp8_ds_mla` equally valid**) | A/B 2026-08-26: **23/24 matched cells byte-identical**, 35/36 quality both arms, speed tie | ✅ **Settled: no measurable difference.** `fp8_ds_mla` is what both official recipes specify, so it is the safer default for a new deployment. Now selectable via `KV_CACHE_DTYPE` ([#16](../../issues/16)) |
 | `JIT_MONITOR_MODE` | **warn** | Surfaces compiles landing inside requests — one measured at 5 s | Leave on. It is how you know a benchmark is contaminated |
 
 **MTP is quality-neutral.** Speculative decoding is lossless by construction; it is a

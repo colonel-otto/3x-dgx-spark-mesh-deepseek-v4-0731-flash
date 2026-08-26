@@ -8,9 +8,16 @@ the missing arm.
 
 ## Headline
 
-**The two dtypes produce the same output.** In the main sweep, **11 of 12 cells returned
-byte-identical replies** across the arms — including the single failing cell, where both
-arms emitted the *same wrong answer*. Speed and KV pool size are also equal within noise.
+**The two dtypes produce the same output.** Across 24 matched cells, **23 returned
+byte-identical replies** — including all 12 trials at 246K tokens, and including the one
+shared failure, where both arms emitted the *same wrong answer*. Needle scores tie exactly
+(35/36 main sweep, 36/36 extended, on both arms). Speed and KV pool size are equal within
+noise.
+
+**Recommendation: switch to `fp8_ds_mla`** — it is the officially sanctioned dtype, it is
+free (same memory, same speed, same measured quality), and `nvfp4_ds_mla` has no published
+accuracy evaluation anywhere. **The cluster has been left running on `nvfp4_ds_mla`;** the
+switch is a recommendation, not an applied change.
 
 ## Configuration (identical across arms except the dtype)
 
@@ -119,6 +126,25 @@ and only suspect a hang well past the known ~150 s/246K budget. Details in
 [`stall-note.txt`](stall-note.txt). No confirmed hang occurred in this experiment, on
 either dtype.
 
+### Trap: "curl works but Python doesn't" is a client bug, not a network blip
+
+Three trials of the final run died with `WinError 10060 ... host has failed to respond`
+while `curl` to the same engine was fine. Diagnosed as a LAN blip; it was not. An in-place
+regex edit to `kvab.py` (changing a timeout value) had also matched inside the endpoint
+constant and rewritten it:
+
+```
+BASE = "http://192.168.10.1:8100"    <- corrupted, host does not exist
+BASE = "http://192.168.10.1:8100"   <- correct
+```
+
+`curl` kept working only because the correct URL was typed on each command line. **When one
+client fails and another succeeds against the same service, suspect the failing client's
+own configuration first.** And do not edit a live harness with regex one-liners mid-run.
+
+**Data impact: none.** The corruption postdates every recorded measurement and produced
+loud connection failures, not silent wrong numbers. Affected trials were re-run.
+
 ## Results 1 — Quality, main sweep (n=3 trials per cell, 36 needles per arm)
 
 Exact pass counts, not percentages. Each cell is 3 trials; each trial retrieves 3 needles.
@@ -158,8 +184,26 @@ computing the same token stream.
 
 | arm | trials | early | mid | late | needles | garble | median latency |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| `nvfp4_ds_mla` | 12 | _pending_ | _pending_ | _pending_ | _pending_ | _pending_ | _pending_ |
+| `nvfp4_ds_mla` | 12 | 12/12 | 12/12 | 12/12 | **36/36** | 0 | 158.5 s |
 | `fp8_ds_mla` | 12 | 12/12 | 12/12 | 12/12 | **36/36** | 0 | 159.4 s |
+
+**Perfect and equal on both arms at ~246,260 prompt tokens** — including the early (10%)
+needle, the position where the main sweep's single miss occurred. Latency is also
+equivalent (158.5 s vs 159.4 s; ranges 148–166 s and 138–169 s overlap almost completely).
+
+### And every reply matched, byte for byte
+
+**12 of 12 replies were byte-identical between the two dtypes** at 246K tokens, on
+independently generated prompts (each trial salted to force a full uncached prefill).
+
+Combined with the main sweep, that is **23 of 24 cells byte-identical across the whole
+experiment**, with the single exception being a re-ordering of three correctly-retrieved
+codes. Two different KV quantization schemes are emitting the same token stream on
+quarter-million-token contexts.
+
+This is the finding the recommendation rests on. It is a far stronger statement than
+"both scored 36/36": identical outputs mean the KV dtype is not perturbing the computation
+enough to change a single sampled token at temperature 0, at the deepest context tested.
 
 ## Results 3 — Speed (median of 5 runs per cell, streaming, 512 max tokens)
 
@@ -194,9 +238,14 @@ Being explicit, because the honest limit matters more than the headline:
   experiment can rule out a **~11-point-or-worse** accuracy gap at 256K. **It cannot rule
   out a difference of a few percent.**
 - The result that actually carries the weight is not the pass-count at all — it is that
-  **11/12 replies were byte-identical**. That is a far tighter constraint than any
-  pass-rate comparison at this n, because it shows the two dtypes are producing the same
-  tokens, not merely scoring alike.
+  **23 of 24 replies were byte-identical**, including **12/12 at 246K**. That is a far
+  tighter constraint than any pass-rate comparison at this n: a pass-rate test only asks
+  whether both arms got the answer, while identical output shows the KV dtype did not
+  change a single sampled token. To be precise about what that does and does not mean —
+  it holds at temperature 0, where sampling takes the argmax, so it shows the logit
+  ordering was preserved, not that the logits were bitwise equal. Small numerical
+  differences could still exist below the threshold that would flip a token, and could in
+  principle surface at temperature > 0 or on a prompt closer to a decision boundary.
 - **Untested:** concurrency *combined with* long context (the specific pairing in the
   upstream warning), agentic/tool-call/JSON context structure, depths above ~246K, and
   temperature > 0. See the caveats in

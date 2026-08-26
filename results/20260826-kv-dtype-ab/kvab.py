@@ -15,7 +15,8 @@ trial counts, so the only variable is the dtype):
 
 Usage: kvab.py <arm-label> {gate|warm|quality|speed} [--trials N] [--runs N]
 """
-import argparse, concurrent.futures as cf, json, re, statistics, sys, time, urllib.request
+import argparse, concurrent.futures as cf, json, re, statistics, sys, time
+import urllib.request, urllib.error
 
 BASE = "http://192.168.10.1:8100"
 MODEL = "deepseek-v4-flash-0731"
@@ -112,7 +113,29 @@ def filler_prompt(approx_tokens):
     return "\n".join(lines)
 
 
-def post(prompt, max_tokens, temperature=0.0, stream=False, timeout=600):
+def post(prompt, max_tokens, temperature=0.0, stream=False, timeout=600, retries=3):
+    """Retries transient CLIENT-SIDE network failures (WinError 10060 etc).
+
+    The engine stayed healthy and curl-reachable while urllib intermittently
+    failed to connect from this Windows host, so a connect-level failure is a
+    property of the local network path, not of the measurement. A retry keeps
+    one blip from voiding a 160 s trial. Model-level failures are NOT retried:
+    the request either reaches the engine or it does not.
+    """
+    last = None
+    for attempt in range(retries):
+        try:
+            return _post_once(prompt, max_tokens, temperature, stream, timeout)
+        except (urllib.error.URLError, TimeoutError, ConnectionError, OSError) as e:
+            last = e
+            if attempt < retries - 1:
+                print("    [retry %d/%d after %s]" % (attempt + 1, retries - 1,
+                                                      str(e)[:60]), flush=True)
+                time.sleep(5 * (attempt + 1))
+    raise last
+
+
+def _post_once(prompt, max_tokens, temperature=0.0, stream=False, timeout=600):
     body = {"model": MODEL, "messages": [{"role": "user", "content": prompt}],
             "max_tokens": max_tokens, "temperature": temperature, "seed": 1234}
     if stream:
@@ -213,8 +236,11 @@ def cmd_warm(arm, args):
 
 
 def cmd_quality(arm, args):
+    only = set(args.only_trials) if args.only_trials else None
     for length in args.lengths:
         for trial in range(args.trials):
+            if only is not None and trial not in only:
+                continue
             # Salt varies per trial as well, so trials inside one run cannot
             # prefix-cache off each other either.
             cell_salt = None if args.salt is None else "%s-%04d" % (args.salt, trial)
@@ -301,6 +327,8 @@ if __name__ == "__main__":
     ap.add_argument("--lengths", type=int, nargs="*",
                     default=[4000, 32000, 128000, 256000])
     ap.add_argument("--out", default=None)
+    ap.add_argument("--only-trials", type=int, nargs="*", default=None,
+                    help="run only these trial indices (for resuming an interrupted run)")
     ap.add_argument("--salt", default=None,
                     help="prefix-cache buster; identical across arms so the A/B stays matched")
     a = ap.parse_args()

@@ -28,6 +28,7 @@ Directories are named `YYYYMMDD[THHMMSSZ]-<subject>`.
 
 | Directory | Fabric | What it holds |
 |---|---|---|
+| [`20260826-kv-dtype-ab/`](20260826-kv-dtype-ab) | 🟢 | **KV dtype A/B: the two dtypes are indistinguishable.** 23/24 matched cells byte-identical, 35/36 quality both arms, speed tie — [#16](../../issues/16) |
 | [`20260826-nccl-controlled/`](20260826-nccl-controlled) | 🟢 | **The controlled NCCL reproduction — there was never a bandwidth gap.** 12 runs, official `all_gather_perf`, NCCL 2.30.7. **23.92 GB/s** vs 5.80 on our custom harness, same config. All four hypotheses falsified — [#18](../../issues/18) |
 
 ## 2026-08-24 — degraded fabric
