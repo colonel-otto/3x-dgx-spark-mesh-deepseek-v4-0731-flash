@@ -1,0 +1,53 @@
+{
+  "sparkmain": {
+    "counters_compared": 44,
+    "nonzero_deltas": {},
+    "nonzero_absolute_baseline": {
+      "roceP2p1s0f0/local_ack_timeout_err": 192,
+      "roceP2p1s0f0/req_cqe_error": 64,
+      "roceP2p1s0f0/req_cqe_flush_error": 32,
+      "roceP2p1s0f0/resp_cqe_error": 128,
+      "roceP2p1s0f0/resp_cqe_flush_error": 96,
+      "roceP2p1s0f1/local_ack_timeout_err": 192,
+      "roceP2p1s0f1/req_cqe_error": 64,
+      "roceP2p1s0f1/req_cqe_flush_error": 32,
+      "roceP2p1s0f1/resp_cqe_error": 128,
+      "roceP2p1s0f1/resp_cqe_flush_error": 96
+    },
+    "max_delta": 0
+  },
+  "spark1": {
+    "counters_compared": 44,
+    "nonzero_deltas": {},
+    "nonzero_absolute_baseline": {
+      "roceP2p1s0f0/local_ack_timeout_err": 192,
+      "roceP2p1s0f0/req_cqe_error": 64,
+      "roceP2p1s0f0/req_cqe_flush_error": 32,
+      "roceP2p1s0f0/resp_cqe_error": 128,
+      "roceP2p1s0f0/resp_cqe_flush_error": 96,
+      "roceP2p1s0f1/local_ack_timeout_err": 192,
+      "roceP2p1s0f1/req_cqe_error": 64,
+      "roceP2p1s0f1/req_cqe_flush_error": 32,
+      "roceP2p1s0f1/resp_cqe_error": 128,
+      "roceP2p1s0f1/resp_cqe_flush_error": 96
+    },
+    "max_delta": 0
+  },
+  "spark2": {
+    "counters_compared": 44,
+    "nonzero_deltas": {},
+    "nonzero_absolute_baseline": {
+      "roceP2p1s0f0/local_ack_timeout_err": 192,
+      "roceP2p1s0f0/req_cqe_error": 64,
+      "roceP2p1s0f0/req_cqe_flush_error": 32,
+      "roceP2p1s0f0/resp_cqe_error": 128,
+      "roceP2p1s0f0/resp_cqe_flush_error": 96,
+      "roceP2p1s0f1/local_ack_timeout_err": 192,
+      "roceP2p1s0f1/req_cqe_error": 64,
+      "roceP2p1s0f1/req_cqe_flush_error": 32,
+      "roceP2p1s0f1/resp_cqe_error": 128,
+      "roceP2p1s0f1/resp_cqe_flush_error": 96
+    },
+    "max_delta": 0
+  }
+}
