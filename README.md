@@ -21,6 +21,52 @@ trail—including the unsuccessful EP and PP paths—is retained in
 >
 > Full map: **[`docs/README.md`](docs/README.md)**.
 
+## What this project found, in plain terms
+
+Three findings, in order of how much time they cost:
+
+**1. A machine was silently broken for days.** One Spark ran at ~15% of its network speed
+with **every status indicator reading healthy** — link up at 200 Gb/s, all error counters
+zero. A reboot fixed it. It had been distorting every prior measurement, and because it
+sat in the *3-node* arm, it made 2 and 3 nodes look equivalent when they are not.
+→ [`docs/DEGRADED-DATA-CATALOGUE.md`](docs/DEGRADED-DATA-CATALOGUE.md)
+
+**2. We chased a network deficit that never existed.** Our own tool measured 5.80 GB/s
+where published results showed ~20. We produced **four** plausible explanations. All four
+were wrong. The official NVIDIA benchmark, on the same unchanged machines, reads
+**23.92 GB/s** — *above* the 20.84 we were envying. Our harness was built to time our
+workload, not to measure peak bandwidth; we used it outside its purpose.
+→ [`docs/BANDWIDTH-COMPARISON.md`](docs/BANDWIDTH-COMPARISON.md)
+
+**3. Two settings we worried about turned out not to matter.** The KV cache dtype
+(`nvfp4_ds_mla` vs `fp8_ds_mla`) is identical on every axis — same memory, same speed, and
+**23 of 24 matched tests produced byte-identical output**. It was a free choice all along.
+→ [`docs/KV-QUALITY-LONG-CONTEXT.md`](docs/KV-QUALITY-LONG-CONTEXT.md)
+
+> **The through-line:** most of what we found was about **how we measure**, not what we
+> own. The hardware was largely fine; our instruments misled us in both directions — a
+> healthy-looking signal hid a broken machine, and later a broken-looking signal (a frozen
+> counter) hid a perfectly healthy one. Both classes are catalogued so the next person
+> recognises them.
+
+## Can the extra memory buy a better model? No.
+
+A reasonable expectation is that three nodes (~363 GiB) allow a higher-quality checkpoint
+than two (~242 GiB). **It does not**, and the reason is specific:
+
+| option | size | verdict |
+|---|---:|---|
+| what we run (FP4 experts) | **167 GB** | leaves ~195 GiB for KV → **1M context** |
+| FP8 "upcast" | 307 GB | **same numbers, bigger container** — a documented lossless cast |
+| BF16 | 1,137 GB | 3.1x over budget |
+
+The FP8 and BF16 files on Hugging Face are conversions *of the FP4 weights*, not
+higher-fidelity originals — the full-precision master was never released. Loading the
+307 GB version would cost you 1M context and the fast MoE kernel **for an identical
+model**.
+
+The third node buys **latency**, not quality or capacity.
+
 ## Is the third node worth it?
 
 **Yes for single-stream interactive work; no for batch throughput.** Measured
@@ -57,6 +103,23 @@ Evidence: [`results/20260825-decode-2v3/`](results/20260825-decode-2v3) ·
 > [`docs/DEGRADED-DATA-CATALOGUE.md`](docs/DEGRADED-DATA-CATALOGUE.md) — kept deliberately,
 > because knowing what bad data looked like is how you spot the next batch. See also
 > [issue #14](../../issues/14).
+
+## Status: what is settled, what is open
+
+| Question | Status | Where |
+|---|---|---|
+| Is the 3rd node worth it? | ✅ **Yes for single-stream** (+17% at cc=1), no for batch | table above |
+| Is our fabric slow vs published rings? | ✅ **No — 23.92 GB/s, above reference** | [#18](../../issues/18) |
+| Does the 4-HCA fabric survive load? | ✅ **Yes** — 408/408 requests, 0 RDMA errors | [#17](../../issues/17) |
+| Is `nvfp4_ds_mla` costing us quality? | ✅ **No** — 23/24 cells byte-identical vs `fp8` | [#16](../../issues/16) |
+| Can extra RAM buy a better model? | ✅ **No** — no higher-fidelity checkpoint exists | section above |
+| Was prefill behind the 2-node recipe? | ✅ **Resolved** — it was the degraded node | [#11](../../issues/11) |
+| Does 4-HCA improve *throughput*? | ⏳ **Unmeasured** — soak proved stability, not benefit | [#17](../../issues/17) |
+| Is `MAX_NUM_SEQS=32` viable? | ⏳ **Re-test needed** — rejected against a budget 6.6x too small | [#10](../../issues/10) |
+| Do pre-08-25 benchmarks need re-running? | ⏳ **Partly done** — decode/prefill/deep-concurrency redone | [#14](../../issues/14) |
+
+**Every ✅ above was measured on healthy fabric with matched arms.** Every ⏳ is named
+rather than quietly assumed.
 
 ## Pitfalls — read before you deploy
 
