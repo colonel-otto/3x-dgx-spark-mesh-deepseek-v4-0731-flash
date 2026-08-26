@@ -20,7 +20,7 @@ This page is the *reasoning*; that file is the *artifact*.
 |---|---|---|---|
 | `TP_SIZE` | **3** | Decode cc=1 76.2 → 89.1 tok/s vs 2 nodes (2026-08-25, healthy fabric, matched) | cc≥16 favours 2 nodes; see the crossover below |
 | `PP_SIZE` | **1** | [`PP3-PIPELINE-PARALLEL.md`](PP3-PIPELINE-PARALLEL.md) | ❌ Blocked by MTP + a DSA stride constraint. No PP tok/s exists |
-| expert parallel | **off** | [`EP3-EXPERT-PARALLEL.md`](EP3-EXPERT-PARALLEL.md) | ❌ 2.5x slower — the B12X kernel refuses EP. Also blocks EPLB, whose prerequisite is EP |
+| expert parallel | **off** | [`EP3-EXPERT-PARALLEL.md`](EP3-EXPERT-PARALLEL.md) | ❌ ~2.5x slower — the B12X kernel refuses EP by an explicit source-code check. Also blocks EPLB, whose prerequisite is EP. ⚠️ The **mechanism** is settled (source check + `ValueError`); the **2.5x** came from a degraded-fabric run over TCP fallback and has never been re-measured on RDMA |
 | TP=3 padding patch | **required** | Correctness 14/14; [`patch.md`](patch.md) | ☠️ **Silently serves fluent nonsense.** Stock vLLM computes `8 // 3 == 2` and drops 6 of 8 attention groups |
 
 **The node-count answer is conditional.** The 3-node advantage decays monotonically with

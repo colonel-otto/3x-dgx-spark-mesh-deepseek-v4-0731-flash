@@ -14,6 +14,20 @@ is marked **provisional** — not wrong, but not trustworthy without a re-run.
 | 🧊 **Frozen** | A dated record of one experiment. Never update it — supersede it |
 | ❌ **Falsified** | Kept deliberately so the dead end is not re-proposed |
 
+### The three tiers a number can be in
+
+Every page states which tier its figures belong to, in its top banner.
+
+| Tier | What it is | Quote it? |
+|---|---|---|
+| **Our results** | Healthy fabric, RDMA confirmed `via NET/IB/*`, matched arms | Yes — this is what we advertise |
+| **Diagnostic signature** | A number from a known-broken setup, kept so you can recognise the fault when reproducing | Only as a **symptom to match against** |
+| **Falsified claim** | Something we asserted that later proved wrong | Never — kept so it is not re-proposed |
+
+If your reproduction disagrees with our results, start at
+[`DEGRADED-DATA-CATALOGUE.md`](DEGRADED-DATA-CATALOGUE.md) — it maps symptom → cause →
+confirmation → fix.
+
 ---
 
 ## Start here
@@ -23,7 +37,7 @@ is marked **provisional** — not wrong, but not trustworthy without a re-run.
 | [`HANDOFF.md`](HANDOFF.md) | ✅ | **What is running, how to operate it, what is open.** Read first. |
 | [`POSTMORTEM-2026-08-25.md`](POSTMORTEM-2026-08-25.md) | ✅ | Four classes of silent failure that produced plausible-but-wrong numbers, and how each is now gated. **Read before adding a benchmark.** |
 | [`DECISIONS.md`](DECISIONS.md) | ✅ | Every settled config value and the measurement that settled it. |
-| [`DEGRADED-DATA-CATALOGUE.md`](DEGRADED-DATA-CATALOGUE.md) | ✅ | **What bad data looked like.** Every wrong number, how far off it was, and how to recognise the shape next time. |
+| [`DEGRADED-DATA-CATALOGUE.md`](DEGRADED-DATA-CATALOGUE.md) | ✅ | **Troubleshooting guide: your numbers don't match ours.** Symptom → cause → confirmation → fix, plus every degraded number itemized as a signature to match against. |
 
 ## The results that stand
 
@@ -39,24 +53,25 @@ is marked **provisional** — not wrong, but not trustworthy without a re-run.
 | [`KV-QUALITY-LONG-CONTEXT.md`](KV-QUALITY-LONG-CONTEXT.md) | ⚠️ | NVFP4 KV quality, clean to 464K — but **single-arm**, no comparison. Open as [#16](../../issues/16). |
 | [`MTP5-1M-AND-UPSTREAM-COMPARISON.md`](MTP5-1M-AND-UPSTREAM-COMPARISON.md) | ✅ | Why MTP=5 and 1M context; the upstream gap is workload, not deficit. |
 
-## The results that are provisional
+## Pages whose numbers are diagnostic signatures
 
-Measured before the 2026-08-25 fabric fix. Conclusions may hold; the numbers should not
-be quoted without a re-run.
+Measured before the 2026-08-25 fabric fix. **Their figures are symptoms to match against
+when a reproduction goes wrong, not results to beat.** Each page's banner states what
+survives, what is void, and where the healthy number lives.
 
 | Doc | Status | Note |
 |---|---|---|
-| [`WHY-THREE-NODES.md`](WHY-THREE-NODES.md) | ⚠️ | The 2-vs-3 case. **The README table supersedes its numbers** — the direction survived, the magnitudes moved and the cc=16 crossover was not visible. |
+| [`WHY-THREE-NODES.md`](WHY-THREE-NODES.md) | ⚠️ | The 2-vs-3 case. **The README table supersedes its numbers** — the direction survived, the magnitudes moved and the cc=16 crossover was not visible. Long-context decode on healthy fabric is still unmatched. |
 | [`TP3-TUNING.md`](TP3-TUNING.md) | ⚠️🧊 | The tuning sweep at the old `460800`/`seqs=8`/`MTP=4` profile. |
-| [`BASELINE-2SPARK.md`](BASELINE-2SPARK.md) | 🧊 | The frozen 2-node reference. |
-| [`results.md`](results.md) | 🧊 | Earliest TP=2/TP=3 comparison, pre-rewire cabling. |
+| [`BASELINE-2SPARK.md`](BASELINE-2SPARK.md) | ⚠️🧊 | The frozen 2-node reference — **and it ran entirely across the degraded link.** KV accounting and correctness survive; every tok/s is void. |
+| [`results.md`](results.md) | 🧊 | Earliest TP=2/TP=3 comparison, pre-rewire cabling. Its 24.59 arm is a TCP-fallback signature. |
 | [`SEQS32-AND-NCCL-FABRIC.md`](SEQS32-AND-NCCL-FABRIC.md) | ⚠️ | `seqs=32` rejected against a communication budget now known to be **6.6x too small**. Worth revisiting — [#10](../../issues/10). |
 
 ## Dead ends — kept so they are not re-proposed
 
 | Doc | Status | Why it failed |
 |---|---|---|
-| [`EP3-EXPERT-PARALLEL.md`](EP3-EXPERT-PARALLEL.md) | ❌ | EP=3 shards correctly but the B12X kernel refuses EP: **2.5x slower**. This also blocks EPLB/expert placement, whose prerequisite is EP. |
+| [`EP3-EXPERT-PARALLEL.md`](EP3-EXPERT-PARALLEL.md) | ❌⚠️ | EP=3 shards correctly but the B12X kernel refuses EP — a source-code check, which **survives**. This also blocks EPLB/expert placement, whose prerequisite is EP. **Worst provenance in the repo:** ran on degraded fabric *and* over TCP fallback, so no tok/s on it is usable, and its "3-node RoCE needs a switch" claim is **retracted** — we now run 3-node RDMA at 23.92 GB/s. |
 | [`PP3-PIPELINE-PARALLEL.md`](PP3-PIPELINE-PARALLEL.md) | ❌ | Blocked by MTP + a DSA stride constraint. No PP tok/s exists. |
 
 ## Method and setup

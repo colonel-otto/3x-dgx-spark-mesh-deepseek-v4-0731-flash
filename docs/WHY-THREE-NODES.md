@@ -1,16 +1,32 @@
 # Why three DGX Sparks instead of two
 
 > [!WARNING]
-> **PROVISIONAL — measured 2026-08-21 on degraded fabric.** One node was running at ~15%
-> of its collective bandwidth with zero error indicators ([#14](../../issues/14)), and it
-> sat in the 3-node arm, so the handicap fell disproportionately here.
+> **The numbers on this page are degraded-fabric signatures, not our results.** Measured
+> 2026-08-21, when one node was running at ~15% of its collective bandwidth with zero
+> error indicators ([#14](../../issues/14)) — and that node sat in the **3-node** arm, so
+> the handicap fell disproportionately on the configuration under test.
 >
-> **The direction survived a healthy-fabric re-run; the magnitudes moved.** The re-run also
-> found a **crossover near cc=16** that was invisible at the time: three nodes win
-> per-stream, two win batch aggregate. Quote the table in
-> [`../README.md`](../README.md#is-the-third-node-worth-it), not the numbers below.
-> 
-> Itemized with every other bad measurement in [`DEGRADED-DATA-CATALOGUE.md`](DEGRADED-DATA-CATALOGUE.md).
+> **If you are reproducing this and your 2-node and 3-node arms come out near-equal, that
+> is the symptom, not a finding.** Two configurations landing suspiciously level is what a
+> shared bandwidth floor looks like. Gate the fabric before believing either arm —
+> [`DEGRADED-DATA-CATALOGUE.md`](DEGRADED-DATA-CATALOGUE.md) maps the symptom to the fix.
+>
+> **What survives:** the direction and the rough range. A matched healthy-fabric re-run on
+> 2026-08-25 measured **+16.9% at cc=1** ([`../results/20260825-decode-2v3/`](../results/20260825-decode-2v3)),
+> landing inside the +8–17% band claimed here. The *shape* of the argument — three nodes
+> win per-stream, two win aggregate — survives too, and was strengthened.
+>
+> **What is void:** every absolute tok/s in the tables below. Also **incomplete**: the
+> healthy re-run found a **crossover near cc=16** that this page could not see, because
+> the degraded fabric compressed the arms together.
+>
+> **What has not been matched yet:** the healthy re-run used an **18-token prompt**, so it
+> confirms the direction at cc=1 but does **not** re-measure the 2K/8K/32K/131K
+> long-context decode table below. That gap is tracked and a matched long-context re-run is
+> in progress; until it lands, the per-context magnitudes here have no healthy-fabric
+> counterpart.
+>
+> **Quote instead:** the table in [`../README.md`](../README.md#is-the-third-node-worth-it).
 
 The case for the third node, with the measurements behind it — and the cases where it
 is **not** the right answer.
@@ -139,7 +155,13 @@ correctness verified.
 subnet reaches each peer instead of pairing by device index. Three point-to-point cables
 in a triangle, no switch, no rebuild.
 
-### Transport matters more than node count - and 24.59 tok/s was the *expected* fallback
+### Transport matters more than node count — and 24.59 tok/s is a diagnostic signature
+
+> [!IMPORTANT]
+> **This subsection is a troubleshooting reference for people reproducing our work, and
+> it is the most reusable thing on this page.** The 24.59 figure is not a result of ours
+> in any tier — it is the number you get when NCCL has silently fallen back to TCP. Match
+> against it; do not chase it.
 
 The same TP=3 configuration measures:
 

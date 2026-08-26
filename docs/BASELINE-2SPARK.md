@@ -1,5 +1,57 @@
 # 2-Spark Baseline — 2026-08-21
 
+> [!WARNING]
+> **The throughput numbers on this page are degraded-fabric signatures, not a clean
+> 2-node reference — and this page previously carried no warning at all.** It is a
+> **2-node** measurement, so the "spark1 was in the 3-node arm" reasoning that softens the
+> other degraded pages does **not** apply here. It is worse: **spark1 was the only worker**.
+>
+> **The evidence chain, each link from a file in this repo:**
+>
+> | Step | Evidence |
+> |---|---|
+> | This run used nodes `node0` ↔ `node1` over `192.168.100.1 ↔ .2` | [`../results/20260821T001024Z-2spark-baseline/environment/`](../results/20260821T001024Z-2spark-baseline/environment/) — `ip` sections; and the Fabric table below marks it the **active TP/NCCL path** |
+> | `node1` is `spark1` | [`HANDOFF.md`](HANDOFF.md) §1 node table: rank 1 = `spark1` (`node1`), "**the node that had degraded fabric**" |
+> | That exact link measured **0.69 GB/s** against 4.6 healthy | [`FABRIC-FIX-PARITY.md`](FABRIC-FIX-PARITY.md) §2 — `sparkmain <-> spark1`, both cables |
+> | The 2-node arm was measurably slowed, not just theoretically | TP=2 prefill **1,105–1,112 tok/s degraded** → **1,913–2,081 healthy**, same harness ([`../results/20260825-prefill-2v3/`](../results/20260825-prefill-2v3/)) |
+>
+> **So: yes, affected — 100% of this run's inter-node traffic crossed the degraded link.**
+> That last row is the load-bearing one: it is a matched before/after on the 2-node
+> configuration itself, so this is a measurement, not an inference.
+>
+> **The one thing we cannot establish: when the degradation began.** Root cause was never
+> determined and the node "had been up a long time"
+> ([`FABRIC-FIX-PARITY.md`](FABRIC-FIX-PARITY.md) §2,
+> [`POSTMORTEM-2026-08-25.md`](POSTMORTEM-2026-08-25.md) §6.3). There is no pre-08-21
+> fabric measurement in this repo, so **we cannot prove spark1 was already degraded on
+> 2026-08-21** — only that it was by 08-24, on the same link, with no intervening reboot
+> recorded. Treat these numbers as degraded; do not claim a specific onset date.
+>
+> **If your own 2-node reproduction lands near ~49–55 tok/s single-stream or ~1,100 tok/s
+> prefill, check your fabric before concluding anything** — those are the degraded
+> signatures. Diagnostic flow:
+> [`DEGRADED-DATA-CATALOGUE.md`](DEGRADED-DATA-CATALOGUE.md).
+>
+> **What survives:** everything that is not a timer.
+> - **KV accounting** — 19.52 GiB / 1,771,152 tokens / 11,834 B per token / "KV is
+>   partitioned across nodes, not replicated". Engine-reported capacity, transport-independent.
+> - **Correctness** — 0 request failures, 0 needle failures, 100% retrieval at every
+>   context and concurrency.
+> - **The V2 Model Runner / `VLLM_PP_LAYER_PARTITION` source findings** in "Interpreting"
+>   — code facts.
+> - **The environment notes** (`dash` vs `bash`, CRLF, `SSH_USER_MAP`) — reproduction
+>   mechanics.
+>
+> **What is void:** every tok/s and every latency in the two results tables — decode,
+> aggregate, TTFT and e2e alike, at all concurrencies.
+>
+> **Healthy 2-node numbers instead:** decode cc=1 **76.2 tok/s**, cc=16 **481.3**
+> ([`../results/20260825-decode-2v3/`](../results/20260825-decode-2v3/)); prefill
+> **1,913 / 2,081 / 2,066** at 1K/8K/32K
+> ([`../results/20260825-prefill-2v3/`](../results/20260825-prefill-2v3/)). Note those use
+> the settled 1M/seqs=16/MTP=5/0.80 profile, not this page's 460800/0.85 profile, so they
+> supersede rather than correct these figures.
+
 Frozen `2spark-baseline` measurement of the working 2-node DeepSeek-V4-Flash-0731
 deployment, captured with this repo's harness before any 3-node change.
 
@@ -39,7 +91,13 @@ All three CX-7 links verified **UP at 200000 Mb/s**, full triangle, RoCE devices
 
 The 3-node cabling is already in place; only software configuration is missing.
 
-## Harness results (90 requests, `MAX_TOKENS=256`)
+## Harness results (90 requests, `MAX_TOKENS=256`) — degraded-fabric signatures
+
+> [!CAUTION]
+> **Every timing column below is a degraded-fabric number.** TTFT, e2e, decode tok/s and
+> aggregate tok/s all crossed the 0.69 GB/s `sparkmain ↔ spark1` link. The **needle
+> column is not** — correctness is transport-independent, and 100% at every cell is a real
+> result.
 
 **0 request failures, 0 needle failures — 100% retrieval at every context and concurrency.**
 
@@ -83,7 +141,15 @@ the same endpoint with a short prompt and a full 256-token generation:
 **Single-stream ~49-55 tok/s. Aggregate saturates near 174 tok/s at the `max-num-seqs`
 16 ceiling** — 3.2x aggregate scaling for a 4.4x per-stream cost.
 
-## KV cache accounting (the actual constraint)
+> [!CAUTION]
+> **This whole table is a degraded-fabric signature.** The healthy 2-node figures at the
+> settled profile are **76.2 tok/s at cc=1** and **481.3 aggregate at cc=16**
+> ([`../results/20260825-decode-2v3/`](../results/20260825-decode-2v3/)). The *shape* the
+> table describes — aggregate scales sublinearly, per-stream falls with concurrency — is
+> still the right shape; the values are not. **`49-55 tok/s` must not be quoted as this
+> deployment's 2-node speed.**
+
+## KV cache accounting (the actual constraint) — SURVIVES
 
 From the engine startup log:
 

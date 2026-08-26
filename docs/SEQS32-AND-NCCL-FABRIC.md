@@ -1,14 +1,46 @@
 # `MAX_NUM_SEQS=32` and the NCCL fabric ceiling — 2026-08-24
 
 > [!WARNING]
-> **PROVISIONAL — the rejection rests on a bad number.** `MAX_NUM_SEQS=32` was rejected
-> against a measured 3-rank collective budget of 0.49 GB/s. That figure was taken on the
-> degraded fabric. True 3-rank bandwidth is **3.25 GB/s — 6.6x higher**.
+> **The fabric numbers on this page are degraded-fabric signatures; the rejection built on
+> them is provisional.** `MAX_NUM_SEQS=32` was rejected against a measured 3-rank
+> collective budget of **0.49 GB/s**, taken while one node ran at ~15% of its bandwidth
+> ([#14](../../issues/14)).
 >
-> The conclusion may still hold, but it has not been re-tested against the real budget.
-> Tracked as [#10](../../issues/10).
-> 
-> Itemized with every other bad measurement in [`DEGRADED-DATA-CATALOGUE.md`](DEGRADED-DATA-CATALOGUE.md).
+> Three figures, three different instruments — do not read them as one series:
+>
+> | 3-rank collective busbw | Harness | Fabric | Reading |
+> |---|---|---|---:|
+> | as measured on this page | `agbench.py` (custom, workload-shaped), 2 HCA | degraded | **0.49 GB/s** |
+> | same harness, after the reboot | `agbench.py`, 2 HCA | healthy | **3.25 GB/s** — 6.6x higher |
+> | same harness, four-HCA upper mesh | `agbench.py`, 4 HCA | healthy | 5.80 GB/s |
+> | reference instrument, same live config | official `all_gather_perf` @16 GiB | healthy | **23.92 GB/s** |
+>
+> The last row is not a further improvement — it is the same fabric measured properly.
+> `agbench.py` was built to mirror the vLLM MTP allgather shape and tops out at a 67 MB
+> input; it is evidence about our workload, not about the hardware
+> ([`BANDWIDTH-COMPARISON.md`](BANDWIDTH-COMPARISON.md)).
+>
+> **If your own fabric benchmark reads ~0.5 GB/s across three ranks, you are looking at the
+> symptom this page was written under, not a GB10 ceiling.** A 3-rank figure *below* your
+> worst pair means one node is pacing the collective — reboot it. Full flow in
+> [`DEGRADED-DATA-CATALOGUE.md`](DEGRADED-DATA-CATALOGUE.md); the healthy 3-rank number is
+> in [`BANDWIDTH-COMPARISON.md`](BANDWIDTH-COMPARISON.md).
+>
+> **What survives:** the crash itself and its mechanism. seqs=32 died on an
+> `_ALLGATHER_BASE` timeout with the same SeqNum on all three ranks, KV at 2.8% and zero
+> preemptions — an engine-log fact, not a bandwidth measurement. The arithmetic tying the
+> hung collective's size to `max_num_seqs × vocab_size` (8,282,112 / 129,280 = 64 = 2 × 32)
+> survives too. So does the KV-cost measurement (−1.1%, a non-issue).
+>
+> **What is void:** the "~0.5 GB/s is the GB10 ceiling" framing in §2 and §3, and the
+> `NCCL_IB_MERGE_NICS` falsification built on it — already re-opened in §2's own CAUTION
+> box. The *architectural* fact underneath §3 (GB10 has no GPUDirect RDMA, host-staged
+> transfers) is a driver/module observation and is unaffected; only the number attached to
+> it was wrong.
+>
+> **Still open.** seqs=32 has not been retested against the real budget — it may well be
+> viable now. Tracked as [#10](../../issues/10). The live value remains
+> `MAX_NUM_SEQS=16` ([`DECISIONS.md`](DECISIONS.md)).
 
 Answers issue #10 (seqs=32) and falsifies the leading hypothesis of issue #11
 (prefill gap). Both answers come from the same root cause.
@@ -148,7 +180,28 @@ already on. The upstream +64% claim targets a configuration where it was off.
 > See [`BANDWIDTH-COMPARISON.md`](BANDWIDTH-COMPARISON.md). Tracked in
 > [#18](../../issues/18).
 
-## 3. The real ceiling: no GPUDirect RDMA
+## 3. ~~The real ceiling:~~ no GPUDirect RDMA — mechanism survives, number retracted
+
+> [!CAUTION]
+> **The ~0.5 GB/s figure in this section is a degraded-fabric signature, and the "2% of
+> line rate" conclusion drawn from it is retracted.** The healthy 3-rank collective reads
+> **23.92 GB/s** under the official `all_gather_perf` — *above* the 20.84 GB/s published
+> NVIDIA reference ([`BANDWIDTH-COMPARISON.md`](BANDWIDTH-COMPARISON.md),
+> [`../results/20260826-nccl-controlled/`](../results/20260826-nccl-controlled)). The real
+> ceiling is **~24 GB/s**, set by two 200G ports sharing two PCIe Gen5 x4 lanes.
+>
+> **What survives:** the absence of GPUDirect RDMA on GB10. `nvidia_peermem` is genuinely
+> not loaded and not available, transfers genuinely are host-staged, and the log lines
+> below are real. That is architecture, not a measurement.
+>
+> **What is void:** the number, the "2% of line rate" framing, and the paragraph below
+> that dismisses published 13.5–22 GB/s figures as not-the-same-measurement. We now reach
+> that band ourselves, with the same collective and the same convention.
+>
+> **And the sub-claim "this explains the prefill gap" is retracted outright.** There was no
+> architectural prefill gap — it was the one degraded node. A reboot took prefill from
+> 1,034–1,075 to 2,022–2,095 tok/s, 95–99% of the upstream reference, with no config change
+> ([`FABRIC-FIX-PARITY.md`](FABRIC-FIX-PARITY.md)).
 
 ```
 NET/IB : GPU Direct RDMA Disabled for HCA 0 'rocep1s0f0'
