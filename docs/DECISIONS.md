@@ -5,9 +5,13 @@ change it. If a value is not here, it is not settled.
 
 > [!IMPORTANT]
 > **Not every row is closed.** Rows marked ⚠️ carry an open question — currently the
-> four-HCA **throughput** benefit ([#17](../../issues/17) — soak passed, fabric verified), the KV dtype A/B ([#16](../../issues/16)), and
-> `MAX_NUM_SEQS=32` awaiting retest ([#10](../../issues/10)). The **value** in each is what
-> we run today; the **justification** is still being tested.
+> four-HCA **throughput** benefit ([#17](../../issues/17) — soak passed, fabric verified).
+> The **value** in each is what we run today; the **justification** is still being tested.
+>
+> **`MAX_NUM_SEQS` moved 16 → 32 on 2026-08-26** ([#10](../../issues/10)) — the first
+> value in this table changed by a retest rather than a first measurement. The old
+> rejection is kept in [`SEQS32-AND-NCCL-FABRIC.md`](SEQS32-AND-NCCL-FABRIC.md) as a
+> degraded-fabric signature, not deleted.
 
 **Authoritative config:** [`../config/tp3.env.example`](../config/tp3.env.example).
 This page is the *reasoning*; that file is the *artifact*.
@@ -42,7 +46,7 @@ deep prompt with a short answer is a two-node workload.
 | Knob | Value | Settled by | If you change it |
 |---|---|---|---|
 | `MAX_MODEL_LEN` | **1048576** | 1M is free: memory-bound, not comms-bound | Nothing gained by lowering |
-| `MAX_NUM_SEQS` | **16** | Sweep; `32` rejected — but against a budget now known 6.6x too small ([#10](../../issues/10)) | Worth re-testing |
+| `MAX_NUM_SEQS` | **32** | Retest 2026-08-26 on healthy fabric: **+46.3% at cc=32** (685.9 vs 468.8), parity below it, 70/70 requests OK, zero crash signatures. Supersedes the 08-24 rejection, which died on an `_ALLGATHER_BASE` timeout at a 6.6x-too-small budget with a 600 s watchdog ([#10](../../issues/10)) | Costs 0.92 GiB more graph capture and 1.8% of KV. Nothing below cc=32 |
 | `GPU_MEMORY_UTILIZATION` | **0.80** | KV pool 4.46M tokens, **0 preemptions in every test ever run** | 0.85 leaves 2–4 GB free per node |
 | `MTP_NUM_TOKENS` | **5** | Matched control 2026-08-24, beats 4 | `0` is **invalid** (vLLM rejects it); `1` collapses decode to ~47 tok/s |
 | `MAX_NUM_BATCHED_TOKENS` | **8192** | A/B: 16384 cost **43% of the KV pool for zero gain** | ⚠️ vLLM's own log suggests 16384. That advice assumes intra-node NVLink. It is a trap here |

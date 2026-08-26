@@ -1,8 +1,35 @@
-# `MAX_NUM_SEQS=32` and the NCCL fabric ceiling — 2026-08-24
+# ~~`MAX_NUM_SEQS=32` and the NCCL fabric ceiling~~ — 2026-08-24, REJECTION OVERTURNED
+
+> [!CAUTION]
+> **The conclusion of this page — "`MAX_NUM_SEQS=32` crashes the cluster" — is FALSE on
+> healthy fabric, and `seqs=32` is now the production value.**
+>
+> Retested 2026-08-26 with matched arms ([#10](../../issues/10),
+> [`../results/20260826-seqs32-retest/`](../results/20260826-seqs32-retest)):
+> **+46.3% aggregate at cc=32** (685.9 vs 468.8 tok/s), parity below it, **70/70 requests
+> succeeded**, and **zero** `ALLGATHER_BASE` / Watchdog / OOM occurrences in the whole
+> container log. That figure also **exceeds the 618 tok/s external reference** this repo
+> could never match.
+>
+> **Why it crashed then and not now.** The death was an `_ALLGATHER_BASE` **timeout** —
+> precisely what a starved collective under a short watchdog produces. Both inputs
+> changed:
+>
+> | condition | at rejection | now |
+> |---|---:|---:|
+> | 3-rank collective budget | **0.49 GB/s** | **3.25+ GB/s** — 6.6x |
+> | `NCCL_TIMEOUT` | 600 s (default) | **3600 s** |
+> | `GPU_MEMORY_UTILIZATION` | 0.85 | **0.80** |
+>
+> **What survives:** the crash *mechanism* is real and correctly diagnosed — a collective
+> that cannot finish inside the watchdog window kills the cluster. It was the **budget**
+> that was wrong, not the reasoning. Kept as a diagnostic signature: if you raise
+> `seqs` and hit `_ALLGATHER_BASE` with matching SeqNums on every rank, your fabric is
+> slower than you think — check it before lowering `seqs`.
 
 > [!WARNING]
-> **The fabric numbers on this page are degraded-fabric signatures; the rejection built on
-> them is provisional.** `MAX_NUM_SEQS=32` was rejected against a measured 3-rank
+> **The fabric numbers on this page are degraded-fabric signatures.**
+> `MAX_NUM_SEQS=32` was rejected against a measured 3-rank
 > collective budget of **0.49 GB/s**, taken while one node ran at ~15% of its bandwidth
 > ([#14](../../issues/14)).
 >
