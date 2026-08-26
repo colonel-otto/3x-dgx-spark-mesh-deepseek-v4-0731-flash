@@ -8,6 +8,33 @@ for PY in python3 py python; do
     exec "$PY" "$ROOT/scripts/check_no_sensitive.py" --staged
   fi
 done
-echo "pre-commit: no working Python interpreter found; skipping leak scan" >&2
-echo "            run 'make check-sensitive' manually before pushing" >&2
+
+# NO PYTHON. Do not fail open -- that is how the management network reached a
+# public branch once already. Fall back to a coarse grep over staged content.
+echo "pre-commit: no Python interpreter; using the reduced grep fallback" >&2
+PAT='DGX_SERIAL_NUMBER="[^<][^"]*"|[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}|([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2}|-----BEGIN [A-Z ]*PRIVATE KEY-----|gh[pousr]_[A-Za-z0-9]{16,}'
+hits=0
+for f in $(git diff --cached --name-only --diff-filter=ACMR); do
+  case "$f" in
+    scripts/check_no_sensitive.py|SECURITY.md|.github/workflows/ci.yml) continue ;;
+  esac
+  [ -f "$f" ] || continue
+  if git show ":$f" 2>/dev/null | grep -qI . 2>/dev/null; then
+    out=$(git show ":$f" 2>/dev/null \
+          | grep -nEI "$PAT" \
+          | grep -vE '192\.168\.(10|99|100|101|102|110|200)\.|127\.0\.0\.1|0\.0\.0\.0|172\.17\.0\.1|<redacted>|<mac-|<link-local>' \
+          | head -3)
+    if [ -n "$out" ]; then
+      echo "pre-commit: possible sensitive data in $f" >&2
+      echo "$out" >&2
+      hits=1
+    fi
+  fi
+done
+if [ "$hits" -ne 0 ]; then
+  echo "" >&2
+  echo "Blocked. Install Python and run 'make check-sensitive' for the full scan," >&2
+  echo "or commit with --no-verify only if you have verified these are placeholders." >&2
+  exit 1
+fi
 exit 0
