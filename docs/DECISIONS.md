@@ -4,9 +4,14 @@ One row per knob: the value, the measurement that settled it, and what happens i
 change it. If a value is not here, it is not settled.
 
 > [!IMPORTANT]
-> **Not every row is closed.** Rows marked ⚠️ carry an open question — currently the
-> four-HCA **throughput** benefit ([#17](../../issues/17) — soak passed, fabric verified).
-> The **value** in each is what we run today; the **justification** is still being tested.
+> **Every row in this table is now closed by a measurement.** The last open question —
+> the four-HCA **throughput** benefit ([#17](../../issues/17)) — was settled 2026-08-26:
+> **there is none.** Decode is flat against a matched 2-HCA arm. Four-HCA is kept for
+> redundancy and headroom, which is a different justification than the one it was
+> originally adopted under.
+>
+> ⚠️ marks a row whose *value* is settled but which carries an operational trap — read
+> the "What breaks" column before changing it.
 >
 > **`MAX_NUM_SEQS` moved 16 → 32 on 2026-08-26** ([#10](../../issues/10)) — the first
 > value in this table changed by a retest rather than a first measurement. The old
@@ -60,7 +65,7 @@ speed knob only. Raising it cannot buy accuracy.
 
 | Knob | Value | Settled by | If you change it |
 |---|---|---|---|
-| `NCCL_IB_HCA` | **all four** (`rocep1s0f0,rocep1s0f1,roceP2p1s0f0,roceP2p1s0f1`) | Upper mesh addressed 2026-08-25: **2.0x** bandwidth, live gate 21/21 with `rdma:*` **0 errors** | ⚠️ Prerequisite is IPv4 + routing + persistence on the upper pair. Without it NCCL picks the pair anyway and wedges under load while every container stays `running`. **Soak PASSED** 2026-08-26 (408 req, 0 RDMA deltas, 0 log events) — [#17](../../issues/17). Throughput benefit still unmeasured |
+| `NCCL_IB_HCA` | **all four** (`rocep1s0f0,rocep1s0f1,roceP2p1s0f0,roceP2p1s0f1`) | Upper mesh addressed 2026-08-25: **2.0x** bandwidth, live gate 21/21 with `rdma:*` **0 errors** | ⚠️ Prerequisite is IPv4 + routing + persistence on the upper pair. Without it NCCL picks the pair anyway and wedges under load while every container stays `running`. **Soak PASSED** 2026-08-26 (408 req, 0 RDMA deltas, 0 log events) — [#17](../../issues/17). **Throughput benefit measured 2026-08-26: none.** Decode is flat cc=1–16 against a matched 2-HCA arm; every apparent gain sits inside the other arm's spread. Kept for redundancy and headroom, not speed — [`../results/20260826-four-hca-throughput/`](../results/20260826-four-hca-throughput) |
 | `NCCL_NET` | `IB` | — | ⚠️ A **request, not a guarantee.** On failure NCCL falls back to sockets and reports a plausible number. We measured `NET/Socket` at 0.44 GB/s and it looked real. Always confirm `via NET/IB/x` |
 | `NCCL_IB_SUBNET_AWARE_ROUTING` | `1` | Required on a switchless ring | Undocumented in NVIDIA's public env reference, but present in the NCCL 2.30.7 binary |
 | subnet masks | **`/30` on all six** | Consistency | Mixed masks on a fabric are a latent trap even when they cannot overlap |
