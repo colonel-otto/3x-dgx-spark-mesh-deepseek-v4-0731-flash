@@ -146,7 +146,7 @@ already on. The upstream +64% claim targets a configuration where it was off.
 > different neighbours.
 >
 > See [`BANDWIDTH-COMPARISON.md`](BANDWIDTH-COMPARISON.md). Tracked in
-> [#11](../../issues/11).
+> [#18](../../issues/18).
 
 ## 3. The real ceiling: no GPUDirect RDMA
 

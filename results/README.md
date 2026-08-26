@@ -22,7 +22,7 @@ Directories are named `YYYYMMDD[THHMMSSZ]-<subject>`.
 | [`20260825-prefill-2v3/`](20260825-prefill-2v3) | 🟢 | Prefill, 2 vs 3 nodes. Result: **parity (±2%)** |
 | [`20260825-decode-2v3/`](20260825-decode-2v3) | 🟢 | Decode, 2 vs 3 nodes at cc=1/4/8/16. **The headline result** |
 | [`20260825-deep-concurrency/`](20260825-deep-concurrency) | 🟢 | 4×200K re-run for [#15](../../issues/15). Includes `deepconc.py` and the gate output |
-| [`20260825-upper-mesh/`](20260825-upper-mesh) | 🟢 | **Four-HCA fabric at 2.0x**, 26/26 gate-clean. Engine-validation pending — [#11](../../issues/11) |
+| [`20260825-upper-mesh/`](20260825-upper-mesh) | 🟢 | **Four-HCA fabric at 2.0x**, 26/26 gate-clean. Engine-validation pending — [#18](../../issues/18) |
 
 ## 2026-08-24 — degraded fabric
 

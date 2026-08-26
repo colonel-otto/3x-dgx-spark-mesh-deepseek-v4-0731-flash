@@ -60,9 +60,14 @@ Measured 2026-08-25 on all three nodes:
 **No Spark is on Ethernet.** All three reach the LAN over Wi-Fi. The shared control
 network already exists -- no cabling required.
 
-### THE HARD RULE: no Spark-to-Spark data over Wi-Fi
+### THE HARD RULE: no RDMA or model data over Wi-Fi
 
-**Wi-Fi carries operator access and API responses only. Never inter-node data.**
+**Wi-Fi carries operator access, API responses, and NCCL/MPI bootstrap. Never RDMA or
+model data.**
+
+The distinction matters, because step 1 of the test below deliberately moves *bootstrap*
+onto the shared management network — which this rule permits and NVIDIA's launcher
+requires.
 
 This is not a preference -- it is a correctness constraint, and the numbers show why:
 
@@ -72,7 +77,11 @@ This is not a preference -- it is a correctness constraint, and the numbers show
 | Wi-Fi | 3-135 ms, highly variable |
 
 **Currently satisfied.** Verified on every directed pair: `ip route get` for every peer
-fabric address resolves to `enp1s0f*` / `enP2p1s0f*`. Zero peer routes touch `wlP9s9`.
+fabric address resolves to `enp1s0f*` / `enP2p1s0f*`. Zero peer *fabric* routes touch
+`wlP9s9`.
+
+The `egress:*` gate check asserts routes to **peer fabric addresses only**, so it does not
+forbid a management-network bootstrap — by design.
 
 **Now enforced.** The gate's `egress:*` check asserts it on every run. Reachability alone
 was never sufficient: if a fabric route disappears, the kernel silently falls back to
@@ -202,5 +211,5 @@ because it is uncontrolled but has no mechanism attached to it.
 Nothing here should be treated as settled until the matched run exists. Our own principle
 applies: **one variable, same day, same harness.**
 
-**Related:** [#11](../../issues/11) - [`BANDWIDTH-COMPARISON.md`](BANDWIDTH-COMPARISON.md) -
+**Related:** [#18](../../issues/18) - [`BANDWIDTH-COMPARISON.md`](BANDWIDTH-COMPARISON.md) -
 [`../scripts/bwsweep.py`](../scripts/bwsweep.py) - [`../results/20260825-upper-mesh/`](../results/20260825-upper-mesh)

@@ -391,8 +391,9 @@ Each of these was learned by getting a wrong answer first.
    `MAX_NUM_SEQS=32`, which is the most likely to have been wrongly rejected.
 2. **Issue #12** — NVFP4 KV quality under *concurrency*. The single-request half is done
    and clean to 464K; the concurrent half is untested and needs no restart.
-3. **Close #11** — the prefill gap is resolved by the fabric fix; the issue's original
-   leads (NIC merge, runtime version) were both falsified.
+3. ~~**Close #11**~~ — **done.** The prefill gap is resolved by the fabric fix; both original
+   leads (NIC merge, runtime version) were falsified for prefill. The NCCL bandwidth
+   question is now [#18](../../issues/18), which is a separate, still-open investigation.
 4. **Close #13** if it duplicates the persistence work already done (§5).
 5. **Investigate why spark1 degraded.** It had been up a long time. If this recurs, a
    periodic fabric check or a documented reboot cadence is warranted.
@@ -409,7 +410,7 @@ Each of these was learned by getting a wrong answer first.
 |---|---|
 | Repo | `github.com/colonel-otto/3spark-dsv4` |
 | Open PR | [#9](https://github.com/colonel-otto/3spark-dsv4/pull/9) — open, not merged |
-| Open issues | [#10](../../issues/10) seqs=32 · [#11](../../issues/11) prefill (resolved, close) · [#12](../../issues/12) KV quality · [#13](../../issues/13) mesh persistence (done) · [#14](../../issues/14) **re-run suspect benchmarks** |
+| Open issues | [#10](../../issues/10) seqs=32 · [#11](../../issues/11) prefill (**resolved, closed**) · [#18](../../issues/18) NCCL reproduction · [#12](../../issues/12) KV quality · [#13](../../issues/13) mesh persistence (done) · [#14](../../issues/14) **re-run suspect benchmarks** |
 | Parity writeup | [`FABRIC-FIX-PARITY.md`](FABRIC-FIX-PARITY.md) |
 | Prefill investigation | [`PREFILL-MEASURED.md`](PREFILL-MEASURED.md) — 5 addenda, several self-corrections |
 | seqs=32 / NCCL | [`SEQS32-AND-NCCL-FABRIC.md`](SEQS32-AND-NCCL-FABRIC.md) |

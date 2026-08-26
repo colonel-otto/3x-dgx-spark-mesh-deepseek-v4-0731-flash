@@ -71,7 +71,11 @@ exotic.
 is *worse* than our 2-rank gap (2.0x). A deficit that grows with rank count points at
 **ring topology handling**, not raw link speed.
 
-## The lead this surfaces: HCA *pairing*, not HCA *count*
+## One hypothesis within the merge question: HCA *pairing*, not *count*
+
+> Note this is **not** the leading explanation. The strongest lead is bootstrap topology
+> — see [`BANDWIDTH-NEXT-TEST.md`](BANDWIDTH-NEXT-TEST.md). Pairing is one candidate
+> mechanism inside the NIC-merge variable.
 
 Every working published config merges the **two PCIe domains of the same physical port**:
 
@@ -186,4 +190,4 @@ records it as `vdev:*`. Do not infer the grouping from the env var.
 clustering doc and the nccl playbook both contain none. Every 18–21 figure is
 community-measured. No published measurement uses all four HCAs.
 
-**Related:** [#11](../../issues/11) · [`SEQS32-AND-NCCL-FABRIC.md`](SEQS32-AND-NCCL-FABRIC.md) · [`../results/20260825-upper-mesh/`](../results/20260825-upper-mesh)
+**Related:** [#18](../../issues/18) · [`SEQS32-AND-NCCL-FABRIC.md`](SEQS32-AND-NCCL-FABRIC.md) · [`../results/20260825-upper-mesh/`](../results/20260825-upper-mesh)
