@@ -289,6 +289,12 @@ for n in "${NODES[@]}"; do
     skip "$n: no engine running (nothing to check)" "rdma:$n" ""
     continue
   fi
+  # NOTE: this reads the ENGINE LOG, not /sys/class/infiniband/*/hw_counters.
+  # That is deliberate. Those sysfs counters are CUMULATIVE SINCE BOOT and never
+  # reset, so a past incident leaves permanent residue -- the roceP2p pair here
+  # carries 192/64/32/128/96 from an earlier failed enable, frozen and harmless.
+  # Absolute values would false-positive forever; the log reports only live events.
+  # If you ever check sysfs directly, compare DELTAS across the window, not totals.
   errs=$(ssh_node "$n" "sudo docker logs --tail 2000 \$(sudo docker ps --format '{{.Names}}' | grep vllm-dspark | head -1) 2>&1 \
       | grep -cE 'IBV_WC_RETRY_EXC_ERR|IBV_WC_[A-Z_]*ERR|GID table changed'" </dev/null 2>/dev/null)
   errs=${errs:-0}
