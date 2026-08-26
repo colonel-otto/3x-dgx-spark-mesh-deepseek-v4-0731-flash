@@ -1,0 +1,12 @@
+[fp8] len~ 256000 t0 |  246261 ptok |   166.4s | early=Y mid=Y late=Y | garble none | PASS
+[fp8] len~ 256000 t1 |  246263 ptok |   161.4s | early=Y mid=Y late=Y | garble none | PASS
+[fp8] len~ 256000 t2 |  246261 ptok |   155.5s | early=Y mid=Y late=Y | garble none | PASS
+[fp8] len~ 256000 t3 |  246262 ptok |   162.2s | early=Y mid=Y late=Y | garble none | PASS
+[fp8] len~ 256000 t4 |  246259 ptok |   157.5s | early=Y mid=Y late=Y | garble none | PASS
+[fp8] len~ 256000 t5 |  246260 ptok |   167.7s | early=Y mid=Y late=Y | garble none | PASS
+[fp8] len~ 256000 t6 |  246262 ptok |   169.4s | early=Y mid=Y late=Y | garble none | PASS
+[fp8] len~ 256000 t7 |  246262 ptok |   145.7s | early=Y mid=Y late=Y | garble none | PASS
+[fp8] len~ 256000 t8 |  246263 ptok |   137.7s | early=Y mid=Y late=Y | garble none | PASS
+[fp8] len~ 256000 t9 |  246260 ptok |   138.9s | early=Y mid=Y late=Y | garble none | PASS
+[fp8] len~ 256000 t10 |  246260 ptok |   156.1s | early=Y mid=Y late=Y | garble none | PASS
+[fp8] len~ 256000 t11 |  246260 ptok |   166.9s | early=Y mid=Y late=Y | garble none | PASS

@@ -1,0 +1,14 @@
+[fp8] len~   4000 t0 |    3938 ptok |     2.1s | early=Y mid=Y late=Y | garble none | PASS
+[fp8] len~   4000 t1 |    3940 ptok |     2.0s | early=Y mid=Y late=Y | garble none | PASS
+[fp8] len~   4000 t2 |    3938 ptok |     2.0s | early=Y mid=Y late=Y | garble none | PASS
+[fp8] len~  32000 t0 |   30855 ptok |    12.5s | early=Y mid=Y late=Y | garble none | PASS
+[fp8] len~  32000 t1 |   30855 ptok |    12.5s | early=Y mid=Y late=Y | garble none | PASS
+[fp8] len~  32000 t2 |   30857 ptok |    12.5s | early=Y mid=Y late=Y | garble none | PASS
+[fp8] len~ 128000 t0 |  123169 ptok |    57.6s | early=Y mid=Y late=Y | garble none | PASS
+[fp8] len~ 128000 t1 |  123171 ptok |    55.3s | early=Y mid=Y late=Y | garble none | PASS
+[fp8] len~ 128000 t2 |  123173 ptok |    54.5s | early=Y mid=Y late=Y | garble none | PASS
+[fp8] len~ 256000 t0 |  246241 ptok |   135.4s | early=Y mid=Y late=Y | garble none | PASS
+[fp8] len~ 256000 t1 |  246243 ptok |   153.8s | early=Y mid=Y late=Y | garble none | PASS
+[fp8] len~ 256000 t2 |  246241 ptok |   140.7s | early=N mid=Y late=Y | garble none | FAIL
+    missing: ['early=SLATE-HARROW-4676']
+    reply[:300]: 'SLATE-HARROW-4677\nCOBALT-CANYON-4702\nSIENNA-MERIDIAN-4728'
