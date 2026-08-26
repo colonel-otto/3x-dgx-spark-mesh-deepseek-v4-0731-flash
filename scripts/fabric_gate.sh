@@ -131,6 +131,38 @@ for s in "${NODES[@]}"; do
   done
 done
 
+# ---- 3a. Peer traffic must EGRESS THE FABRIC, never Wi-Fi/management --------
+# Reachability is not enough: a peer address can be reachable over the WRONG
+# interface. If a fabric route is missing or a link drops, the kernel happily
+# falls back to the management/Wi-Fi path and everything still pings -- while
+# inter-node traffic crawls over Wi-Fi at a fraction of RDMA speed, with no
+# error anywhere. We have already been bitten by a reboot sending TCPStore
+# traffic over Wi-Fi (issue #13).
+#
+# RULE: NO Spark-to-Spark data may traverse Wi-Fi. The management network is for
+# operator access and API responses only. `ip route get` reports the device the
+# kernel would actually use, which is the thing to assert.
+echo "-- peer egress device (no Spark-to-Spark traffic over Wi-Fi/management)"
+for s_ in "${NODES[@]}"; do
+  offenders=""
+  for d in "${NODES[@]}"; do
+    [[ "$s_" == "$d" ]] && continue
+    dst=$(fabric_addr_for "$d")
+    dev=$(ssh_node "$s_" "ip route get $dst 2>/dev/null | grep -oE 'dev [a-zA-Z0-9]+' | head -1 | cut -d' ' -f2" 2>/dev/null)
+    # enp1s0f*/enP2p1s0f* are the ConnectX-7 fabric; lo is this node's own addr.
+    if [[ -z "$dev" ]]; then
+      offenders="$offenders $d=?"
+    elif [[ ! "$dev" =~ ^(enp1s0f|enP2p1s0f|lo$) ]]; then
+      offenders="$offenders $d=$dev"
+    fi
+  done
+  if [[ -n "$offenders" ]]; then
+    bad "$s_: peer traffic would leave via a NON-FABRIC device:${offenders} -- Spark-to-Spark data must never use Wi-Fi/management"         "egress:$s_" "${offenders# }"
+  else
+    ok "$s_: all peer routes egress the fabric" "egress:$s_" "fabric"
+  fi
+done
+
 # ---- 3b. Fabric addressing sanity -------------------------------------------
 # We once found 192.168.100.2/24 assigned to BOTH of spark1's NICs, advertising
 # sparkmain's subnet out the port physically cabled to spark2. rp_filter=2 hid

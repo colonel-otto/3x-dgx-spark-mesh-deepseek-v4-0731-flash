@@ -89,10 +89,16 @@ Each of these cost real time here, and none announced itself.
 8. **`MAX_NUM_BATCHED_TOKENS=16384` is a trap** despite vLLM's own log suggesting it.
    That advice assumes intra-node NVLink; here it cost 43% of the KV pool for zero gain.
 
+9. **No Spark-to-Spark data may cross Wi-Fi.** Wi-Fi is operator access and API responses
+   only. If a fabric route disappears the kernel falls back to the management path
+   silently — everything still pings while inter-node traffic crawls (fabric 0.47–0.93 ms
+   vs Wi-Fi 3–135 ms). Gated as `egress:*`; it bit us once already
+   ([issue #13](../../issues/13)).
+
 **Before any benchmark:** `scripts/fabric_gate.sh configs/<your>.env --nccl=full` with the
 engine stopped. It gates on liveness, mesh, latency, subnets, ARP-port correctness, config
-persistence, transport, RDMA errors, and collective bandwidth — and exits non-zero so a
-bad run cannot silently happen.
+persistence, **peer egress device**, transport, RDMA errors, and collective bandwidth —
+and exits non-zero so a bad run cannot silently happen.
 
 These are measurements from one cluster, not universal product specifications. See
 [`docs/results.md`](docs/results.md) and [`benchmarks/summary.csv`](benchmarks/summary.csv).
