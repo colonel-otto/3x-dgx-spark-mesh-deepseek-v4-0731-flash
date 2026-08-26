@@ -5,9 +5,9 @@
   "image": "ghcr.io/anemll/dspark-vllm-gx10:0.1.1",
   "vllm": "0.25.2.dev0+g752a3a504.d20260714",
   "nodes": [
-    {"name": "sparkmain", "host": "spark-5fa1", "gpu": "NVIDIA GB10", "mem_gib": 121},
-    {"name": "spark1", "host": "gx10-e146", "gpu": "NVIDIA GB10", "mem_gib": 121},
-    {"name": "spark-sep", "host": "gx10-6b41", "gpu": "NVIDIA GB10", "mem_gib": 121}
+    {"name": "sparkmain", "host": "node0", "gpu": "NVIDIA GB10", "mem_gib": 121},
+    {"name": "spark1", "host": "node1", "gpu": "NVIDIA GB10", "mem_gib": 121},
+    {"name": "spark-sep", "host": "node2", "gpu": "NVIDIA GB10", "mem_gib": 121}
   ],
   "model_facts": {
     "num_hidden_layers": 43,

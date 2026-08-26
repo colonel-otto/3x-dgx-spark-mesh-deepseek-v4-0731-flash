@@ -1,5 +1,5 @@
 ## hostname
-gx10-e146
+node1
 ## date
 2026-08-21T00:10:25Z
 ## dgx-release
@@ -28,7 +28,7 @@ PRIVACY_POLICY_URL="https://www.ubuntu.com/legal/terms-and-policies/privacy-poli
 UBUNTU_CODENAME=noble
 LOGO=ubuntu-logo
 ## uname
-Linux gx10-e146 6.17.0-1029-nvidia #29-Ubuntu SMP PREEMPT_DYNAMIC Wed Jul  1 00:13:52 UTC 2026 aarch64 aarch64 aarch64 GNU/Linux
+Linux node1 6.17.0-1029-nvidia #29-Ubuntu SMP PREEMPT_DYNAMIC Wed Jul  1 00:13:52 UTC 2026 aarch64 aarch64 aarch64 GNU/Linux
 ## nvidia-smi
 Thu Aug 20 20:10:25 2026       
 +-----------------------------------------------------------------------------------------+
@@ -62,11 +62,11 @@ roceP2p1s0f1 port 1 ==> enP2p1s0f1np1 (Up)
 ## ip
 lo               UNKNOWN        127.0.0.1/8 ::1/128 
 enP7s7           DOWN           
-enp1s0f0np0      UP             192.168.100.2/24 fe80::a31e:8b40:e607:df15/64 
-enp1s0f1np1      UP             192.168.102.1/30 fe80::37ac:a9ce:c00d:f8e6/64 
-enP2p1s0f0np0    UP             fe80::1577:1d2:4194:c320/64 
-enP2p1s0f1np1    UP             fe80::e7ad:1278:f7f4:6047/64 
-wlP9s9           UP             192.168.1.50/24 fe80::e4c6:43d4:504e:1365/64 
+enp1s0f0np0      UP             192.168.100.2/24 <link-local> 
+enp1s0f1np1      UP             192.168.102.1/30 <link-local> 
+enP2p1s0f0np0    UP             <link-local> 
+enP2p1s0f1np1    UP             <link-local> 
+wlP9s9           UP             192.168.10.2/24 <link-local> 
 docker0          DOWN           172.17.0.1/16 
 ## docker
 Docker version 29.2.1, build a5c7197

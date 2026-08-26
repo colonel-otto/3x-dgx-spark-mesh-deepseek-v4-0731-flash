@@ -20,19 +20,19 @@ M=192.168.200.1
 targets=()
 
 case "$(hostname)" in
-  spark-5fa1)   # head: owns the master identity, directly on both cables
+  node0)   # head: owns the master identity, directly on both cables
     sudo ip addr replace ${M}/32 dev lo
     sudo ip route replace 192.168.102.1/32 via 192.168.100.2 dev enp1s0f0np0
     sudo ip route replace 192.168.102.2/32 via 192.168.101.2 dev enp1s0f1np1
     targets=(192.168.100.2 192.168.101.2 192.168.102.1 192.168.102.2)
     ;;
-  gx10-e146)    # spark1: head on f1 (.100), spark-sep on f0 (.102)
+  node1)    # spark1: head on f1 (.100), spark-sep on f0 (.102)
     sudo ip route replace ${M}/32          via 192.168.100.1 dev enp1s0f1np1
     sudo ip route replace 192.168.101.1/32 via 192.168.100.1 dev enp1s0f1np1
     sudo ip route replace 192.168.101.2/32 via 192.168.102.2 dev enp1s0f0np0
     targets=(${M} 192.168.100.1 192.168.101.1 192.168.101.2 192.168.102.2)
     ;;
-  gx10-6b41)    # spark-sep: head on f0 (.101), spark1 on f1 (.102)
+  node2)    # spark-sep: head on f0 (.101), spark1 on f1 (.102)
     sudo ip route replace ${M}/32          via 192.168.101.1 dev enp1s0f0np0
     sudo ip route replace 192.168.100.1/32 via 192.168.101.1 dev enp1s0f0np0
     sudo ip route replace 192.168.100.2/32 via 192.168.102.1 dev enp1s0f1np1

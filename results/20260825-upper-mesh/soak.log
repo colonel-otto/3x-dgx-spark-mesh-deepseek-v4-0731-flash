@@ -1,4 +1,4 @@
-[2026-08-26T00:16:26Z] SOAK START budget=1200s concurrency=8 endpoint=http://192.168.1.223:8100/v1/chat/completions sizes=[1000, 4000, 16000] max_tokens=256
+[2026-08-26T00:16:26Z] SOAK START budget=1200s concurrency=8 endpoint=http://192.168.10.1:8100/v1/chat/completions sizes=[1000, 4000, 16000] max_tokens=256
 [2026-08-26T00:16:56Z] progress t=    30s requests=11 failures=0
 [2026-08-26T00:17:26Z] progress t=    60s requests=17 failures=0
 [2026-08-26T00:17:56Z] progress t=    90s requests=26 failures=0

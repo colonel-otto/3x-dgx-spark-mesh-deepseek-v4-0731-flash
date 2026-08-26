@@ -1,7 +1,7 @@
 # MTP=5 isolation, 1M context, and comparison against two upstream repositories
 
 Experiment date: 2026-08-24 (UTC). Cluster: sparkmain (rank 0) + spark1 (rank 1) +
-gx10-6b41 (rank 2, reachable as both `spark2` and `spark-sep`). Image
+node2 (rank 2, reachable as both `spark2` and `spark-sep`). Image
 `ghcr.io/anemll/dspark-vllm-gx10:0.1.1`, vLLM `0.25.2.dev0+g752a3a504.d20260714`,
 model `/models/dsv4-abliterated` (DeepSeek-V4-Flash-0731 abliterated), TP=3 with the
 `o_groups` padding patch applied at launch.

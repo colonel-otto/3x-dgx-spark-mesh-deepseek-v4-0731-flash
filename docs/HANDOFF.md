@@ -24,7 +24,7 @@ what to do next.
 
 | | value |
 |---|---|
-| Endpoint | `http://192.168.1.223:8100` (LAN), `http://localhost:8100` on the head |
+| Endpoint | `http://192.168.10.1:8100` (LAN), `http://localhost:8100` on the head |
 | Model id | `deepseek-v4-flash-0731` |
 | Weights | `/models/dsv4-abliterated` — DeepSeek-V4-Flash-0731, abliterated, 156 GiB / 48 FP8 shards |
 | Image | `ghcr.io/anemll/dspark-vllm-gx10:0.1.1` |
@@ -43,8 +43,8 @@ what to do next.
 | rank | host | note |
 |---:|---|---|
 | 0 | `sparkmain` | head — **the only node that serves**; workers emit nothing |
-| 1 | `spark1` (`gx10-e146`) | worker. **This is the node that had degraded fabric.** Rebooted 2026-08-25. |
-| 2 | `spark2` (`gx10-6b41`) | worker. **`spark2` and `spark-sep` are the same machine** — two aliases, one host. Not four nodes. |
+| 1 | `spark1` (`node1`) | worker. **This is the node that had degraded fabric.** Rebooted 2026-08-25. |
+| 2 | `spark2` (`node2`) | worker. **`spark2` and `spark-sep` are the same machine** — two aliases, one host. Not four nodes. |
 
 ## 2. Current performance
 
@@ -168,7 +168,7 @@ then fail live traffic:
 
 ```
 NCCL WARN NET/IB: Got completion from peer 192.168.101.2 with status=IBV_WC_RETRY_EXC_ERR(12)
-  localGid fe80::4ebb:47ff:fe2e:5fa6  remoteGids fe80::32c5:99ff:febe:6b46  hca roceP2p1s0f0
+  localGid <link-local>  remoteGids <link-local>  hca roceP2p1s0f0
 ```
 
 Both GIDs are `fe80::` link-local — RDMA over an unaddressed, unrouted path. Failures hit

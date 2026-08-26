@@ -1,6 +1,6 @@
 === VARIANT A_baseline_rep2 | world=3 | bootstrap=fabric | size=32M | extra='' ===
 === started 2026-08-25T21:11:14-04:00 ===
-mpirun hostlist (launcher only, always mgmt): 192.168.1.223:1,192.168.1.50:1,192.168.1.27:1
+mpirun hostlist (launcher only, always mgmt): 192.168.10.1:1,192.168.10.2:1,192.168.10.3:1
 --- env under test ---
   NCCL_NET_PLUGIN=none
   NCCL_SOCKET_IFNAME=enp1s0f0np0,enp1s0f1np1,enP2p1s0f0np0,enP2p1s0f1np1
@@ -13,16 +13,16 @@ mpirun hostlist (launcher only, always mgmt): 192.168.1.223:1,192.168.1.50:1,192
   NCCL_IB_DISABLE=0
 ----------------------
 --- mpirun command ---
-mpirun --allow-run-as-root -np 3 -H 192.168.1.223:1,192.168.1.50:1,192.168.1.27:1   --mca plm_rsh_args '-p 2299 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'   --mca btl_tcp_if_include wlP9s9   --mca oob_tcp_if_include wlP9s9   --bind-to none --map-by node   -x NCCL_NET_PLUGIN=none -x NCCL_SOCKET_IFNAME=enp1s0f0np0,enp1s0f1np1,enP2p1s0f0np0,enP2p1s0f1np1 -x NCCL_DEBUG_SUBSYS=INIT,NET,GRAPH,ENV,TUNING -x NCCL_DEBUG=INFO -x NCCL_IB_HCA==rocep1s0f0,roceP2p1s0f0,rocep1s0f1,roceP2p1s0f1 -x NCCL_DEBUG_FILE=/tmp/nccldbg.%h.%p.log -x NCCL_IB_SUBNET_AWARE_ROUTING=1 -x LD_LIBRARY_PATH=/usr/local/lib/python3.12/dist-packages/nvidia/nccl/lib:/usr/local/cuda/lib64:/usr/lib/aarch64-linux-gnu/openmpi/lib -x NCCL_IB_DISABLE=0   /src/build/all_gather_perf -b 32M -e 32M -f 2 -n 20 -w 5 -g 1 -c 1
+mpirun --allow-run-as-root -np 3 -H 192.168.10.1:1,192.168.10.2:1,192.168.10.3:1   --mca plm_rsh_args '-p 2299 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'   --mca btl_tcp_if_include wlP9s9   --mca oob_tcp_if_include wlP9s9   --bind-to none --map-by node   -x NCCL_NET_PLUGIN=none -x NCCL_SOCKET_IFNAME=enp1s0f0np0,enp1s0f1np1,enP2p1s0f0np0,enP2p1s0f1np1 -x NCCL_DEBUG_SUBSYS=INIT,NET,GRAPH,ENV,TUNING -x NCCL_DEBUG=INFO -x NCCL_IB_HCA==rocep1s0f0,roceP2p1s0f0,rocep1s0f1,roceP2p1s0f1 -x NCCL_DEBUG_FILE=/tmp/nccldbg.%h.%p.log -x NCCL_IB_SUBNET_AWARE_ROUTING=1 -x LD_LIBRARY_PATH=/usr/local/lib/python3.12/dist-packages/nvidia/nccl/lib:/usr/local/cuda/lib64:/usr/lib/aarch64-linux-gnu/openmpi/lib -x NCCL_IB_DISABLE=0   /src/build/all_gather_perf -b 32M -e 32M -f 2 -n 20 -w 5 -g 1 -c 1
 ----------------------
 # nccl-tests version 2.19.7 nccl-headers=23007 nccl-library=23007
 # Collective test starting: all_gather_perf
 # nThread 1 nGpus 1 minBytes 33554432 maxBytes 33554432 step: 2(factor) warmup iters: 5 iters: 20 agg iters: 1 validation: 1 graph: 0 unalign: 0
 #
 # Using devices
-#  Rank  0 Group  0 Pid     64 on spark-5fa1 device  0 [000f:01:00] NVIDIA GB10
-#  Rank  1 Group  0 Pid     64 on  gx10-e146 device  0 [000f:01:00] NVIDIA GB10
-#  Rank  2 Group  0 Pid     67 on  gx10-6b41 device  0 [000f:01:00] NVIDIA GB10
+#  Rank  0 Group  0 Pid     64 on node0 device  0 [000f:01:00] NVIDIA GB10
+#  Rank  1 Group  0 Pid     64 on  node1 device  0 [000f:01:00] NVIDIA GB10
+#  Rank  2 Group  0 Pid     67 on  node2 device  0 [000f:01:00] NVIDIA GB10
 #
 #                                                              out-of-place                       in-place          
 #       size         count      type   redop    root     time   algbw   busbw  #wrong     time   algbw   busbw  #wrong 
@@ -38,9 +38,9 @@ mpirun --allow-run-as-root -np 3 -H 192.168.1.223:1,192.168.1.50:1,192.168.1.27:
 debug log: /tmp/ntresults/A_baseline_rep2_w3_32M.nccldebug.log (6113 lines)
 ---- EXTRACT A_baseline_rep2 w3 32M ----
 [nccl-version]
-  spark-5fa1:64:64 [0] NCCL INFO NCCL version 2.30.7+cuda13.3
-  gx10-e146:64:64 [0] NCCL INFO NCCL version 2.30.7+cuda13.3
-  gx10-6b41:67:67 [0] NCCL INFO NCCL version 2.30.7+cuda13.3
+  node0:64:64 [0] NCCL INFO NCCL version 2.30.7+cuda13.3
+  node1:64:64 [0] NCCL INFO NCCL version 2.30.7+cuda13.3
+  node2:67:67 [0] NCCL INFO NCCL version 2.30.7+cuda13.3
 [vdev]
   Made virtual device [0] name=rocep1s0f0 speed=200000 ndevs=1 rail=-1 plane=-1
   Made virtual device [1] name=rocep1s0f1 speed=200000 ndevs=1 rail=-1 plane=-1

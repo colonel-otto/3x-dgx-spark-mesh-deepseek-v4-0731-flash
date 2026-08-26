@@ -23,7 +23,7 @@ ALLNODES=(sparkmain spark1 spark2)
 NODES=("${ALLNODES[@]:0:$WORLD}")
 
 # bootstrap addresses
-mgmt_of() { case "$1" in sparkmain) echo 192.168.1.223;; spark1) echo 192.168.1.50;; spark2) echo 192.168.1.27;; esac; }
+mgmt_of() { case "$1" in sparkmain) echo 192.168.10.1;; spark1) echo 192.168.10.2;; spark2) echo 192.168.10.3;; esac; }
 fab_of()  { case "$1" in sparkmain) echo 192.168.200.1;; spark1) echo 192.168.100.2;; spark2) echo 192.168.101.2;; esac; }
 # the fabric interface each node's advertised fabric address lives on
 fabif_of(){ case "$1" in sparkmain) echo lo;; spark1) echo enp1s0f1np1;; spark2) echo enp1s0f0np0;; esac; }

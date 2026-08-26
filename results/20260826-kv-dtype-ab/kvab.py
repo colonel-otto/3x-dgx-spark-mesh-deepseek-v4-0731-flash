@@ -17,7 +17,7 @@ Usage: kvab.py <arm-label> {gate|warm|quality|speed} [--trials N] [--runs N]
 """
 import argparse, concurrent.futures as cf, json, re, statistics, sys, time, urllib.request
 
-BASE = "http://192.168.1.223:8100"
+BASE = "http://192.168.10.1:8100"
 MODEL = "deepseek-v4-flash-0731"
 
 # ---------------------------------------------------------------- filler text

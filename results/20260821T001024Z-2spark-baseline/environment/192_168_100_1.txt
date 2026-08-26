@@ -1,5 +1,5 @@
 ## hostname
-spark-5fa1
+node0
 ## date
 2026-08-21T00:10:24Z
 ## dgx-release
@@ -28,7 +28,7 @@ PRIVACY_POLICY_URL="https://www.ubuntu.com/legal/terms-and-policies/privacy-poli
 UBUNTU_CODENAME=noble
 LOGO=ubuntu-logo
 ## uname
-Linux spark-5fa1 6.17.0-1029-nvidia #29-Ubuntu SMP PREEMPT_DYNAMIC Wed Jul  1 00:13:52 UTC 2026 aarch64 aarch64 aarch64 GNU/Linux
+Linux node0 6.17.0-1029-nvidia #29-Ubuntu SMP PREEMPT_DYNAMIC Wed Jul  1 00:13:52 UTC 2026 aarch64 aarch64 aarch64 GNU/Linux
 ## nvidia-smi
 Thu Aug 20 20:10:24 2026       
 +-----------------------------------------------------------------------------------------+
@@ -62,16 +62,15 @@ roceP2p1s0f1 port 1 ==> enP2p1s0f1np1 (Up)
 ## ip
 lo               UNKNOWN        127.0.0.1/8 ::1/128 
 enP7s7           DOWN           
-enp1s0f0np0      UP             192.168.100.1/24 fe80::5dc7:8d4f:a4c8:1b0b/64 
-enp1s0f1np1      UP             192.168.101.1/30 fe80::785:509b:67e3:2e16/64 
-enP2p1s0f0np0    UP             fe80::2ca8:ce31:f0f1:a40d/64 
-enP2p1s0f1np1    UP             fe80::2292:5c0b:8a89:bd77/64 
-wlP9s9           UP             192.168.1.223/24 fe80::4374:c7e3:4956:18ca/64 
+enp1s0f0np0      UP             192.168.100.1/24 <link-local> 
+enp1s0f1np1      UP             192.168.101.1/30 <link-local> 
+enP2p1s0f0np0    UP             <link-local> 
+enP2p1s0f1np1    UP             <link-local> 
+wlP9s9           UP             192.168.10.1/24 <link-local> 
 docker0          DOWN           172.17.0.1/16 
 ## docker
 Docker version 29.2.1, build a5c7197
 ## docker-images
-ghcr.io/open-webui/open-webui main sha256:6a773e5c3a246b65cbe74ce942b294292c0e5f81c138f703d111bc162f7d7c3d 6d8efb3fc96c
 ghcr.io/anemll/dspark-vllm-gx10 0.1.1 sha256:a83948492cf13df455170fb42885f5ef4db54fefe0feff0f841ecbff464ac9d8 3430d6614a8e
 nvcr.io/nvidia/vllm 25.11-py3 sha256:c94cef75a33ff40dd34d45429809d840b64f416f957fbe73af11944213b6b994 d33d4cadbe0f
 ## python

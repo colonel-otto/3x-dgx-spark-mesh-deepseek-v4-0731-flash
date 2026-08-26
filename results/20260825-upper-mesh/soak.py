@@ -16,7 +16,7 @@ import time
 import urllib.error
 import urllib.request
 
-ENDPOINT = "http://192.168.1.223:8100/v1/chat/completions"
+ENDPOINT = "http://192.168.10.1:8100/v1/chat/completions"
 MODEL = "deepseek-v4-flash-0731"
 CONCURRENCY = 8
 BUDGET_S = float(os.environ.get("SOAK_BUDGET_S", 1200))  # ~20 min

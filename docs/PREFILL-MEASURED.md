@@ -756,8 +756,8 @@ two are used, so an alternate path could be tested by configuration alone. It wa
 unused. Link-layer discovery (tcpdump + LLDP) mapped them:
 
 ```
-sparkmain enP2p1s0f0np0 (4c:bb:47:2e:5f:a6) <-> spark1 enP2p1s0f1np1
-sparkmain enP2p1s0f1np1 (4c:bb:47:2e:5f:a7) <-> spark2 enP2p1s0f0np0 (LLDP: gx10-6b41)
+sparkmain enP2p1s0f0np0 (<mac-node0-p0>) <-> spark1 enP2p1s0f1np1
+sparkmain enP2p1s0f1np1 (<mac-node0-p1>) <-> spark2 enP2p1s0f0np0 (LLDP: node2)
 ```
 
 So a second, entirely separate sparkmain<->spark1 cable exists. Addressed it

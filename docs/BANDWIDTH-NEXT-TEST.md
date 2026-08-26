@@ -64,9 +64,9 @@ Measured 2026-08-25 on all three nodes:
 
 | node | `enP7s7` (Ethernet) | `wlP9s9` (Wi-Fi) |
 |---|---|---|
-| sparkmain | **down** | 192.168.1.223 |
-| spark1 | **down** | 192.168.1.50 |
-| spark2 | **down** | 192.168.1.27 |
+| sparkmain | **down** | 192.168.10.1 |
+| spark1 | **down** | 192.168.10.2 |
+| spark2 | **down** | 192.168.10.3 |
 
 **No Spark is on Ethernet.** All three reach the LAN over Wi-Fi. The shared control
 network already exists -- no cabling required.
