@@ -1,0 +1,1472 @@
+# Provenance index for results/
+#
+# One entry per directory under results/. Every published number should be
+# traceable through this file to a committed raw-data file.
+#
+# Generated 2026-08-26 by auditing each directory's committed artifacts.
+# Adversarially re-verified 2026-08-26 (second pass): every row's node count,
+# TP size, rep count and completion-token distribution was independently
+# re-derived from the raw files rather than accepted from the first pass.
+# Fields marked "from-raw" were read out of the raw data, NOT from the README.
+#
+# STATUS VALUES
+#   VOID-degraded-fabric   measured before 2026-08-25; one node ran at ~15% of
+#                          its collective bandwidth with every indicator green
+#                          (issue #14). Conclusions may survive; magnitudes do not.
+#   VOID-25-token-window   decode measured over a ~25-token completion window
+#                          instead of the requested 256 (issue #26). Verified by
+#                          grepping completion_tokens in the raw data per directory.
+#   SUPERSEDED-BY-<dir>    a later run replaced it.
+#   CURRENT                healthy fabric AND sound methodology.
+#
+# A directory may qualify on several grounds; `void_reasons` lists all of them
+# and `status` carries the most severe.
+#
+# VOID IS NOT DELETE
+#   VOID rows are retained deliberately, as diagnostic baselines. Every VOID row
+#   carries a `baseline_value` field answering one question: "if someone
+#   reproducing this work gets numbers like these, what does it tell them?"
+#   A voided number is still a fingerprint of a specific failure, and matching
+#   that fingerprint is often the fastest way to identify the failure.
+#
+# FABRIC GATE PROVENANCE  (`fabric_gate`)
+#   This repo lost multiple benchmark rounds to a fabric fault that no indicator
+#   caught: a node ran at ~15% of its collective bandwidth with every counter
+#   green (issue #14). scripts/fabric_gate.sh exists to catch that, and
+#   scripts/run_experiment.sh calls it and refuses to benchmark on failure.
+#   A result with no committed gate artifact is NOT automatically void, but its
+#   fabric state is an assumption rather than a measurement, and it is marked so.
+#
+#   PRESENT-PASS     a gate artifact is committed in this directory and it passed
+#   PRESENT-FAIL     a gate artifact is committed and it failed
+#   ABSENT           no gate artifact committed; fabric state is unverified here
+#   PRE-DATES-GATE   run predates scripts/fabric_gate.sh; no gate could exist
+#
+#   `fabric_gate_evidence` records what the artifact actually says, and
+#   `fabric_gate_note` records why a row is ABSENT when it claims to be gated.
+
+meta:
+  generated: 2026-08-26
+  verified: 2026-08-26           # adversarial second pass, all 22 rows
+  fabric_fix_date: 2026-08-25
+  gate_tool: scripts/fabric_gate.sh
+  gate_enforced_by: scripts/run_experiment.sh
+  issues:
+    degraded_fabric: 14
+    token_window: 26
+  severity_order:
+    - VOID-degraded-fabric
+    - VOID-25-token-window
+    - SUPERSEDED-BY
+    - CURRENT
+  fabric_gate_values:
+    - PRESENT-PASS
+    - PRESENT-FAIL
+    - ABSENT
+    - PRE-DATES-GATE
+  fabric_gate_tally:
+    PRESENT-PASS: 5
+    PRESENT-FAIL: 0
+    ABSENT: 12
+    PRE-DATES-GATE: 5
+    total: 22
+  fabric_gate_tally_detail:
+    PRESENT-PASS:
+      - 20260825-deep-concurrency        # fabric-gate-full.json 13/13, nccl=full
+      - 20260825-prefill-2v3             # fabric-gate.json 12/12, nccl=pairs
+      - 20260825-upper-mesh              # 4 gate files, 26/26 x2 + 21/0 + 24/0
+      - 20260826-decode-depth-2v3        # fabric-gate-pre-tp2.txt 33/0
+      - 20260826-nccl-controlled         # IS the fabric measurement, exceeds the gate
+    PRESENT-FAIL: []
+    ABSENT:
+      - 20260824-kv-quality
+      - 20260824-mtp5-1m
+      - 20260824-prefill
+      - 20260824-seqs32-nccl
+      - 20260825-decode-2v3              # gate CLAIMED in README, no artifact
+      - 20260825-fabric-fix              # pairwise-agbench/ is stronger, but not a gate
+      - 20260826-four-hca-throughput     # cross-referenced to another dir's gate
+      - 20260826-harness-window-calibration
+      - 20260826-kv-dtype-ab
+      - 20260826-seqs32-retest
+      - 20260827-decode-3node-fixed
+    PRE-DATES-GATE:
+      - 20260821T001024Z-2spark-baseline
+      - 20260821T031300Z-3spark-ep3
+      - 20260821T133000Z-3spark-pp3
+      - 20260821T133000Z-3spark-tp3
+      - 20260821T142000Z-3spark-tp3-upstream-harness
+  fabric_gate_tally_note: >
+    Only 5 of 22 directories commit their own passing gate, and one of those
+    (20260826-decode-depth-2v3) is void for an unrelated reason. The ABSENT
+    list is 12 because every 2026-08-24 directory predates the discipline
+    without predating the tool, and three healthy-fabric 08-25/08-26 rows
+    never committed one. PRE-DATES-GATE is exactly the five 2026-08-21
+    directories, all of which are also VOID-degraded-fabric.
+  baseline_value_coverage: >
+    10 rows carry a baseline_value: the 7 VOID-degraded-fabric rows, the 1
+    VOID-25-token-window row, and both SUPERSEDED rows. That is every non-CURRENT,
+    non-IN-PROGRESS row in the index. CURRENT rows do not need one (their numbers
+    stand on their own); IN-PROGRESS has no numbers yet.
+  notes: >
+    output_tokens_actual is the measured distribution from the committed raw
+    data. Where a directory records only a requested max_tokens and no
+    per-request completion count, that is stated explicitly rather than
+    assumed to have been honoured.
+  token_field_semantics: >
+    IMPORTANT for anyone re-running the grep. The bench_tp3.py / benchmark_tp3.py
+    family writes `output_tokens` as an AGGREGATE per concurrency record
+    (max_tokens x concurrency), not a per-request count. So `output_tokens: 4096`
+    at concurrency 16 means 16 requests x 256 tokens, NOT one 4096-token request.
+    The jsonl harnesses (decode_depth_sweep.py, deepconc.py, soak.py, kvab.py)
+    write `completion_tokens` (or `ctok`) as a genuine PER-REQUEST count. Only
+    the per-request fields can detect the issue #26 short-window defect; reading
+    an aggregate `output_tokens` as if it were per-request will hide it.
+
+directories:
+
+  - dir: 20260821T001024Z-2spark-baseline
+    date: 2026-08-21
+    description: >
+      Frozen 2-node TP=2 reference bundle (manifest, environment capture,
+      ray-status, 90-request benchmark.jsonl).
+    readme_h1: null
+    has_readme: false
+    nodes: 2
+    nodes_evidence: manifest.env node_count=2, tp_size=2, pp_size=1   # verified
+    tp_size: 2
+    kv_pool_tokens: 1771152        # from benchmarks/measurements.csv, not from this dir
+    kv_pool_source: external-csv
+    harness: ours-bench.py (not committed in this directory)
+    harness_committed: false
+    output_tokens_requested: unrecorded
+    output_tokens_actual: {10: 90}   # from-raw: ALL 90 reps returned exactly 10 tokens
+    output_tokens_field: output_tokens (per-request in this jsonl schema)
+    output_tokens_note: >
+      Every one of the 90 requests completed at 10 output tokens. This is a
+      more extreme instance of the issue #26 short-window defect than the
+      25-token case: a 10-token window cannot average MTP speculative-decode
+      acceptance at all. The needle-retrieval prompt shape explains it
+      (output_preview is a single needle code).
+    reps: 90 requests (9 at concurrency 1, 27 at cc=3, 54 at cc=6)
+    reps_verified: true            # wc -l benchmark.jsonl == 90
+    statistic: unrecorded in-dir; the published 48.23 is labelled
+      "single-observation" in benchmarks/measurements.csv
+    fabric_gate: PRE-DATES-GATE
+    fabric_gate_artifact: null
+    fabric_gate_evidence: null
+    fabric_gate_note: >
+      2026-08-21, four days before the gate script and the fabric fix existed.
+      No gate could have been taken. Fabric was in fact degraded (issue #14).
+    fabric_gated: false
+    fabric_state: degraded
+    raw_data_committed: true
+    raw_files: [benchmark.jsonl]
+    status: VOID-degraded-fabric
+    void_reasons:
+      - VOID-degraded-fabric
+      - VOID-25-token-window   # 10-token window, worse than 25
+    superseded_by: null
+    baseline_value: >
+      KEPT AS A DIAGNOSTIC BASELINE. This row fingerprints TWO failures at once.
+      (1) If your TP=2 single-stream decode sits around 44-52 tok/s where a
+      healthy 2-node arm measures ~76 tok/s aggregate at cc=1, suspect a
+      degraded fabric link and run scripts/fabric_gate.sh with the engine
+      STOPPED -- bandwidth is only measurable when nothing else holds the NICs.
+      (2) If your per-request completion_tokens come back as a small constant
+      (10 here, 25-26 in the depth sweep) regardless of the max_tokens you
+      asked for, your prompt is letting the model stop early and your decode
+      rate is measuring startup overhead, not steady-state decode. Assert
+      completion_tokens == max_tokens per request, set min_tokens == max_tokens
+      and ignore_eos, and re-run. A 10-token window also cannot average MTP
+      speculative-decode acceptance at all, so any tok/s from it is noise even
+      before the fabric is considered.
+    traceability_warning: >
+      The published headline 48.23 tok/s does NOT appear in benchmark.jsonl.
+      The nine cc=1 decode_tps values are 44.31, 50.69, 50.86, 51.24, 51.48,
+      53.61, 56.53, 65.33, 66.32 (median 51.48). See INDEX.md step-4 list.
+
+  - dir: 20260821T031300Z-3spark-ep3
+    date: 2026-08-21
+    description: >
+      EP=3 expert-parallel attempt: per-rank LIVE env files, compose file,
+      route setup, and a results.json carrying the sweep.
+    readme_h1: null
+    has_readme: false
+    nodes: 3
+    nodes_evidence: >
+      Three LIVE-rank*.env files (DP rank 0 sparkmain / rank 1 spark1 /
+      rank 2 spark-sep) and results.json configurations[] carrying nodes: 2
+      and nodes: 3 shapes. Verified.
+    tp_size: 1        # TP=1 / DP=3 / EP=3
+    parallelism: EP=3 (TP=1, DP=3)
+    kv_pool_tokens: [1632510, 1771152, 4065871]   # from-raw, three configs in results.json
+    kv_pool_source: results.json
+    harness: unnamed sweep recorded in results.json
+    harness_committed: false        # ep3-routes.sh is network setup, not the benchmark
+    output_tokens_requested: unrecorded
+    output_tokens_actual: none-recorded    # from-raw: no completion_tokens/output_tokens keys
+    output_tokens_note: >
+      results.json records aggregate_tok_s and per_stream_tok_s only. No
+      per-request token counts are committed, so the decode window cannot be
+      verified either way from this directory.
+    reps: unrecorded
+    statistic: unrecorded
+    fabric_gate: PRE-DATES-GATE
+    fabric_gate_artifact: null
+    fabric_gate_evidence: null
+    fabric_gate_note: 2026-08-21, before scripts/fabric_gate.sh existed.
+    fabric_gated: false
+    fabric_state: degraded
+    raw_data_committed: summary-only
+    raw_files: [results.json]
+    status: VOID-degraded-fabric
+    void_reasons:
+      - VOID-degraded-fabric
+    superseded_by: null
+    baseline_value: >
+      KEPT AS A DIAGNOSTIC BASELINE for anyone attempting expert parallelism on
+      this stack. If you configure EP=3 (TP=1/DP=3) on a B12X MoE backend and
+      your per-stream decode collapses to roughly a third of your TP baseline
+      -- committed here as per_stream_tok_s 17.23 / 12.34 / 11.95 / 8.65 across
+      cc=1/4/8/16 -- you are not looking at a misconfiguration you can tune out
+      and you are not looking at a node-count penalty. The B12X MoE kernel does
+      not take the EP path. The 256 experts DO shard 86/85/85 and KV pool does
+      grow ~2.3x, so the config "works" and will mislead you. Stop tuning and
+      change parallelism strategy. The MAGNITUDES here were measured on the
+      degraded fabric and must not be quoted; the ~2.5x-slower DIRECTION is a
+      kernel behaviour and is not fabric-sensitive.
+    conclusion_survives: >
+      The qualitative finding (B12X MoE kernel refuses EP; ~2.5x slower) is a
+      hard behavioural result, not a magnitude, and is not disturbed by fabric.
+
+  - dir: 20260821T133000Z-3spark-pp3
+    date: 2026-08-21
+    description: >
+      PP=3 pipeline-parallel attempt across several shapes (pp3, pp3-nomtp,
+      pp2-tp1, pp2-tp2, tp1-solo); per-rank LIVE env files plus results.json.
+    readme_h1: null
+    has_readme: false
+    nodes: [1, 2, 3]      # from-raw: several shapes
+    nodes_evidence: >
+      results.json runs[] carry explicit tp/pp/nodes triples per shape
+      (pp3: tp1/pp3/nodes3, pp2-tp1: tp1/pp2/nodes2, tp1-solo: nodes1).
+      Verified against the six LIVE-rank*.env files.
+    tp_size: [1, 2]
+    parallelism: PP=3 / PP=2 variants
+    kv_pool_tokens: null
+    kv_pool_source: null
+    harness: none — this is a blocking/feasibility record, not a perf run
+    harness_committed: false
+    output_tokens_requested: n/a
+    output_tokens_actual: none-recorded
+    output_tokens_note: >
+      No tok/s was ever produced: PP=3 is blocked by MTP plus a DSA stride
+      constraint. There is no decode number here to void.
+    reps: n/a
+    statistic: n/a
+    fabric_gate: PRE-DATES-GATE
+    fabric_gate_artifact: null
+    fabric_gate_evidence: null
+    fabric_gate_note: >
+      2026-08-21, before the gate existed. Moot in any case: every shape here
+      failed at engine_config or warmup, before any collective ran at scale.
+    fabric_gated: false
+    fabric_state: degraded
+    raw_data_committed: summary-only
+    raw_files: [results.json]
+    status: VOID-degraded-fabric
+    void_reasons:
+      - VOID-degraded-fabric   # applies by date, but see conclusion_survives
+    superseded_by: null
+    baseline_value: >
+      KEPT AS A DIAGNOSTIC BASELINE, and this one is a hard block rather than a
+      slow number, so it reproduces exactly regardless of your fabric. If you
+      try PP=3 on this model and image you will hit one of two errors, both
+      committed verbatim in results.json:
+      (a) with MTP on -- "NotImplementedError: Pipeline parallelism is not
+      supported for this model", raised because DeepSeekMTP
+      (deepseek_mtp.py:223) does not implement SupportsPP, via
+      create_speculative_config -> draft model verify_with_parallel_config
+      (config/model.py:1223);
+      (b) with MTP off -- "ValueError: Invalid state_cache.strides[0] ...
+      expected to be divisible by 16" at warmup, a DSA stride constraint.
+      Neither is a fabric problem, neither is fixed by retrying, and there is
+      no PP tok/s number anywhere in this repo because none was ever produced.
+      Note this scopes the EP finding: B12X DOES survive pipeline parallelism,
+      so "the kernel refuses everything but TP" is the wrong lesson.
+    conclusion_survives: >
+      A hard block is not a performance number. The finding survives the
+      fabric issue entirely; the VOID tag is date-mechanical only.
+
+  - dir: 20260821T133000Z-3spark-tp3
+    date: 2026-08-21
+    description: >
+      TP=3 rank configuration and mesh setup script. Configuration record.
+    readme_h1: null
+    has_readme: false
+    nodes: 3
+    nodes_evidence: LIVE-rank0-tp3.env — TP_SIZE=3, PP_SIZE=1, NNODES=3. Verified.
+    tp_size: 3
+    kv_pool_tokens: null
+    kv_pool_source: null
+    harness: none (mesh-master.sh is fabric setup)
+    harness_committed: false
+    output_tokens_requested: n/a
+    output_tokens_actual: none-recorded
+    output_tokens_note: No benchmark output is committed in this directory.
+    reps: n/a
+    statistic: n/a
+    fabric_gate: PRE-DATES-GATE
+    fabric_gate_artifact: null
+    fabric_gate_evidence: >
+      mesh-master.sh is fabric SETUP, not verification. It configures the mesh;
+      it does not measure whether the mesh performs. Do not mistake one for
+      the other -- that conflation is precisely how issue #14 survived.
+    fabric_gate_note: 2026-08-21, before the gate existed.
+    fabric_gated: false
+    fabric_state: degraded
+    raw_data_committed: false
+    raw_files: []
+    status: VOID-degraded-fabric
+    void_reasons:
+      - VOID-degraded-fabric
+    superseded_by: null
+    baseline_value: >
+      KEPT AS A CONFIGURATION BASELINE, not a performance one -- there is no
+      benchmark output in this directory at all. Its value is the TP=3 rank env
+      itself, which documents the o_groups padding patch that TP=3 requires on
+      this image: stock vLLM rejects 64 heads / TP=3, and if you bypass only
+      that validation then n_local_groups = 8 // 3 == 2, which represents 6
+      global groups and silently LOSES 2 -- the server starts, serves, and
+      returns fluent nonsense with no error. If you are running TP=3 and your
+      outputs are grammatical but wrong, check this before you check anything
+      else, and verify the patch pads the GROUP count while holding
+      heads_per_group at 8 so the o_proj BMM r dim stays 4096 to match
+      wo_a=[8192,4096]. Also note the two published TP=3 figures from this era
+      (53.95-57.73 tok/s) trace to NO file under results/ -- do not treat them
+      as a target to reproduce.
+
+  - dir: 20260821T142000Z-3spark-tp3-upstream-harness
+    date: 2026-08-21
+    description: >
+      Upstream's benchmark_tp3 harness run unmodified against TP=3; two sweeps
+      plus the discarded warm-up sweep.
+    readme_h1: null
+    has_readme: false
+    nodes: 3
+    nodes_evidence: >
+      Config is TP=3 per the sweep target and benchmarks/measurements.csv row;
+      no in-dir engine capture. Node count is inferred from the config label,
+      not read back from an engine log in this directory.
+    tp_size: 3
+    kv_pool_tokens: 3591962      # from benchmarks/measurements.csv for this config
+    kv_pool_source: external-csv
+    harness: benchmark_tp3.py (upstream, unmodified)
+    harness_committed: false
+    output_tokens_requested: 256
+    output_tokens_actual: {256: 7, 512: 7, 1024: 7, 2048: 7}   # from-raw, AGGREGATE, all 3 files
+    output_tokens_field: output_tokens (AGGREGATE = max_tokens x concurrency)
+    output_tokens_note: >
+      from-raw, re-verified. Across sweep1.json + sweep2.json +
+      warmup-discarded.json the aggregate output_tokens values are 256 (x7),
+      512 (x7), 1024 (x7), 2048 (x7) — i.e. 256 x concurrency at cc=1/2/4/8.
+      The window was pinned by the harness and honoured. NOT an issue #26 case.
+      CAVEAT: this is an aggregate field, so it proves the TOTAL is right; it
+      cannot by itself prove no individual request stopped short while another
+      overran. Per-request counts are not committed here.
+    reps: 3 per concurrency level per sweep; 2 sweeps + 1 discarded warm-up
+    statistic: median (per-level median printed by the harness)
+    fabric_gate: PRE-DATES-GATE
+    fabric_gate_artifact: null
+    fabric_gate_evidence: null
+    fabric_gate_note: 2026-08-21, before the gate existed. Fabric was degraded.
+    fabric_gated: false
+    fabric_state: degraded
+    raw_data_committed: true
+    raw_files: [sweep1.json, sweep2.json, warmup-discarded.json]
+    status: VOID-degraded-fabric
+    void_reasons:
+      - VOID-degraded-fabric
+    superseded_by: null
+    baseline_value: >
+      KEPT AS A DIAGNOSTIC BASELINE, and it is the cleanest degraded-fabric
+      fingerprint in the repo because the methodology is sound -- upstream's own
+      unmodified harness, pinned 256-token window, honoured. Everything here is
+      right except the fabric, which is exactly what makes it useful. If you run
+      the upstream TP=3 harness on 3 nodes and see cc=1 around 78-80 tok/s while
+      a healthy 3-node arm measures ~88-90, that ~12% shortfall with no error,
+      no NCCL warning and every counter green is the signature of issue #14.
+      Do not tune the engine. Stop the engine and run scripts/fabric_gate.sh
+      with --nccl=full: a healthy 3-Spark ring gates at 4.6+ GB/s per pair on
+      2 HCAs (9.0-9.5 GB/s on 4), and the degraded state showed a 3-rank
+      collective budget of 0.49 GB/s. If a pair is an order of magnitude low,
+      reboot the node -- the fault survives everything short of that, and no
+      counter reports it.
+
+  - dir: 20260824-kv-quality
+    date: 2026-08-24
+    description: >
+      NVFP4 KV-cache quality probe (needle retrieval) to 464K actual prompt
+      tokens. Single-arm, no comparison dtype.
+    readme_h1: null
+    has_readme: false
+    nodes: 3
+    nodes_evidence: results.txt header states TP=3 explicitly. Verified.
+    tp_size: 3
+    kv_pool_tokens: 5444869      # from-raw: stated in results.txt header
+    kv_pool_source: results.txt
+    harness: kvquality.py
+    harness_committed: true
+    output_tokens_requested: n/a (retrieval task, short answers)
+    output_tokens_actual: none-recorded
+    output_tokens_note: >
+      A quality probe, not a throughput measurement. No tok/s is published
+      from this directory, so the 25-token window does not apply.
+    reps: 1 per depth (single request, idle engine, temperature 0)
+    reps_verified: true    # 8 depth rows in results.txt, one line each
+    statistic: single-observation
+    fabric_gate: ABSENT
+    fabric_gate_artifact: null
+    fabric_gate_evidence: null
+    fabric_gate_note: >
+      2026-08-24. The gate tool existed in concept but no artifact is committed
+      here, and the fabric was in fact degraded. Quality results are largely
+      fabric-insensitive (a slow link makes a correct answer late, not wrong),
+      so the PASS record is not in doubt -- but the fabric state of this run is
+      an inference, not a measurement.
+    fabric_gated: false
+    fabric_state: degraded
+    raw_data_committed: summary-only
+    raw_files: [results.txt]
+    status: SUPERSEDED-BY-20260826-kv-dtype-ab
+    void_reasons:
+      - VOID-degraded-fabric
+    superseded_by: 20260826-kv-dtype-ab
+    baseline_value: >
+      KEPT AS A DIAGNOSTIC BASELINE for long-context KV quality. If you are
+      probing NVFP4 KV-cache quality with needle retrieval and you get 3/3
+      needles at every depth out to ~464K actual prompt tokens with no CJK, no
+      special-token leakage and no pathological repetition, you have matched
+      this record and your KV dtype is not your problem. Conversely, if needles
+      start dropping at depth, or garble flags fire, suspect the KV dtype or a
+      context-length misconfiguration rather than the fabric -- a degraded link
+      makes retrieval SLOW, not WRONG, which is why this row's quality PASS
+      survives its own VOID tag. The methodological lesson is the reason it was
+      superseded: this was a SINGLE-ARM probe with no comparison dtype, so it
+      could show nvfp4 passes but could not show nvfp4 is no worse than fp8.
+      A quality claim needs both arms; see 20260826-kv-dtype-ab, which supplies
+      the missing one and finds 23 of 24 matched cells byte-identical.
+    superseded_note: >
+      The 2026-08-26 A/B supplies the comparison arm this run lacked (issue
+      #16) and re-measures on healthy fabric at n=12 with cache-busting.
+      Quality results are largely fabric-insensitive, so the PASS record is
+      not itself in doubt — it is superseded for being single-arm.
+
+  - dir: 20260824-mtp5-1m
+    date: 2026-08-24
+    description: >
+      MTP=5 vs MTP=4 at 1M context, plus acceptance-rate reps. Matched arms.
+    readme_h1: null
+    has_readme: false
+    nodes: 3
+    nodes_evidence: >
+      acceptance-reps.txt header states TP=3, MAX_MODEL_LEN=1048576,
+      MAX_NUM_SEQS=16, GPU_MEMORY_UTILIZATION=0.85 for both sides. Verified.
+    tp_size: 3
+    kv_pool_tokens: [5412285, 5433516]   # from-raw: acceptance-reps.txt
+    kv_pool_source: acceptance-reps.txt
+    harness: benchmark_tp3-style sweep + accept.py
+    harness_committed: partial       # accept.py only; the sweep harness is absent
+    output_tokens_requested: 256 (sweep) / 400 (accept.py)
+    output_tokens_actual: {256: 12, 512: 12, 1024: 12, 2048: 12, 3072: 12, 4096: 12, 6144: 12}
+    output_tokens_field: output_tokens (AGGREGATE = max_tokens x concurrency)
+    output_tokens_note: >
+      from-raw, re-verified across all four committed arm files. Aggregate
+      output_tokens are 256/512/1024/2048/3072/4096/6144, twelve records each
+      (4 arm files x 3 reps per level), i.e. 256 x concurrency at
+      cc=1/2/4/8/12/16/24. Pinned window, honoured. Not an issue #26 case.
+      Same aggregate-field caveat as the upstream-harness row.
+    reps: 3 per concurrency level
+    statistic: median
+    fabric_gate: ABSENT
+    fabric_gate_artifact: null
+    fabric_gate_evidence: null
+    fabric_gate_note: >
+      2026-08-24, no gate artifact committed. Fabric was degraded (issue #14).
+      This is the row where the absence cost the most: matched arms preserved
+      the DIRECTION but every magnitude here carried the handicap.
+    fabric_gated: false
+    fabric_state: degraded
+    raw_data_committed: true
+    raw_files:
+      - ours_tp3.json
+      - ours_tp3_1m_mtp4.json
+      - ours_tp3_1m_mtp4_matched.json
+      - ours_tp3_1m_mtp5.json
+      - acceptance-reps.txt
+    status: VOID-degraded-fabric
+    void_reasons:
+      - VOID-degraded-fabric
+    superseded_by: null
+    baseline_value: >
+      KEPT AS A DIAGNOSTIC BASELINE, and as the worked example of why matched
+      arms are worth the extra hour. Both MTP=5 and MTP=4 arms ran on the same
+      degraded fabric, so the comparison between them is still valid and MTP=5
+      still wins -- but no absolute tok/s here is quotable. If you are tuning
+      MTP: the acceptance data committed in acceptance-reps.txt is the more
+      durable artifact, because acceptance rate is a property of the model and
+      the prompt, not of the link. It shows accept-len clustering near the k
+      ceiling for structured content (json ~4.93/5, count 5.00/5, code
+      ~4.28/5) and collapsing for prose (~1.05-1.35/5). That spread is the
+      thing to reproduce. If your own tok/s swings 1.65x between prompts and
+      you have not changed a flag, you are seeing MTP acceptance vary by
+      content, not a regression -- always state the workload alongside a tok/s
+      number. If instead your accept-len matches these values but your tok/s
+      does not, the gap is transport, and you should gate the fabric.
+    conclusion_survives: >
+      Matched arms carried the same handicap, so the MTP=5 > MTP=4 direction
+      survives. The absolute tok/s do not.
+
+  - dir: 20260824-prefill
+    date: 2026-08-24
+    description: >
+      The long prefill investigation — 45 files chasing a ~2x prefill "gap"
+      that was in fact one degraded node.
+    readme_h1: null
+    has_readme: false
+    nodes: [2, 3]
+    nodes_evidence: >
+      Both shapes present as separate files: decode_TP2.json / anemll_ours_tp2.json
+      / prefill_TP2.txt are the 2-node arm, the rest are 3-node. Verified.
+    tp_size: [2, 3]
+    kv_pool_tokens: null
+    kv_pool_source: null
+    harness: anemll benchmark_prefill.py + ad-hoc pf3..pf8.py, gflops.py, membw.py, tcpbw.sh
+    harness_committed: partial      # the ad-hoc probes are committed; benchmark_prefill.py is not
+    output_tokens_requested: [1 (prefill arms), 256 (decode arms)]
+    output_tokens_actual:
+      prefill_arms_completion_tokens: {1: 111}   # from-raw: per-request, ALL 111 == 1, by design
+      decode_arms_output_tokens: {256: 22, 2048: 5, 4096: 22}   # from-raw: AGGREGATE per level
+    output_tokens_field: >
+      completion_tokens (PER-REQUEST, prefill arms) and output_tokens
+      (AGGREGATE, decode arms) — both fields appear in this directory.
+    output_tokens_note: >
+      from-raw, re-verified file by file. Prefill arms: completion_tokens == 1
+      on all 111 requests across the seven anemll_*.json files (18/18/18/12/18/
+      18/9), which is max_tokens=1 by design for a TTFT/prefill-rate metric.
+      Decode arms: aggregate output_tokens of 256 / 2048 / 4096 across eight
+      decode_*.json files, i.e. the pinned 256-token window at cc=1/8/16.
+      Not an issue #26 case in either arm.
+    reps: 2-3 per shape
+    statistic: median
+    fabric_gate: ABSENT
+    fabric_gate_artifact: null
+    fabric_gate_evidence: >
+      tcpbw.sh is committed and is a bandwidth probe, but it measures TCP
+      throughput, not the NCCL collective the engine actually uses. It is not
+      a gate artifact and it did not catch the fault.
+    fabric_gate_note: >
+      2026-08-24, no gate artifact. THIS IS THE ROW THAT MOTIVATED THE GATE.
+      Forty-five files were spent chasing a "gap" that a two-minute gate run
+      would have identified as one degraded node.
+    fabric_gated: false
+    fabric_state: degraded
+    raw_data_committed: true
+    raw_files: [anemll_*.json, decode_*.json, prefill_*.txt]
+    status: VOID-degraded-fabric
+    void_reasons:
+      - VOID-degraded-fabric
+    superseded_by: 20260825-fabric-fix
+    baseline_value: >
+      KEPT AS THE CANONICAL DEGRADED-FABRIC BASELINE. This is the single most
+      useful VOID directory in the repo, because it is 45 files of someone
+      correctly measuring the wrong thing. If you measure ~1,034 tok/s prefill
+      at 32K on 3 nodes and cannot explain why it is roughly half what the
+      hardware should do, STOP INVESTIGATING THE ENGINE -- that exact number
+      became 2,095 tok/s after a reboot with zero config changes, and the
+      before/after pair is committed in 20260825-fabric-fix. The failure mode
+      to recognise: a ~2x prefill deficit, no errors, no NCCL warnings, all
+      counters green, and every plausible engine-side explanation (GFLOPs,
+      memory bandwidth, chunked prefill sizing, logits width, prefix caching,
+      TP degree) tests clean one after another. That pattern IS the fingerprint
+      -- when every component measures healthy but the system does not, the
+      fault is in the link. Run scripts/fabric_gate.sh with the engine stopped
+      before spending a day on gflops.py and membw.py as this directory did.
+      Note also that tcpbw.sh passing did NOT clear the fabric: TCP throughput
+      and NCCL collective bandwidth are different measurements, and only the
+      latter caught it.
+    superseded_note: >
+      The 2026-08-25 fabric-fix bundle re-measures the same shapes with the
+      same harness before and after the reboot; the "gap" chased here
+      dissolved (1,034 -> 2,095 tok/s at 32K).
+
+  - dir: 20260824-seqs32-nccl
+    date: 2026-08-24
+    description: >
+      MAX_NUM_SEQS=32 trial plus NCCL all-gather sweeps; includes the crash
+      logs from the _ALLGATHER_BASE timeout that caused the rejection.
+    readme_h1: null
+    has_readme: false
+    nodes: 3
+    nodes_evidence: >
+      crash/ holds three per-node logs (head-filtered.txt, spark1.txt,
+      spark2.txt) and the agbench sweeps are 3-rank. Verified.
+    tp_size: 3
+    kv_pool_tokens: 5382503      # from-raw: crash/head-filtered.txt
+    kv_pool_source: crash/head-filtered.txt
+    harness: benchmark_tp3-style sweep + agbench.py
+    harness_committed: partial      # agbench.py only
+    output_tokens_requested: 256
+    output_tokens_actual: {256: 5, 2048: 5, 4096: 7, 6144: 3, 8192: 4}
+    output_tokens_field: output_tokens (AGGREGATE = max_tokens x concurrency)
+    output_tokens_note: >
+      from-raw, re-verified across seqs32.json + warmup5/6.json + postrollback.json.
+      Aggregate output_tokens of 256/2048/4096/6144/8192 = 256 x concurrency at
+      cc=1/8/16/24/32. Pinned window, honoured. Not an issue #26 case. The
+      uneven counts reflect the crashed run, which terminated mid-sweep.
+    reps: 3 per level (2 at the top level)
+    statistic: median
+    fabric_gate: ABSENT
+    fabric_gate_artifact: null
+    fabric_gate_evidence: >
+      The agbench.py all-gather sweeps committed here (ag_merge*.json,
+      ag_rdma_merge*.json) ARE bandwidth measurements and are the closest thing
+      to gate evidence in this directory -- but they are a custom harness, not
+      scripts/fabric_gate.sh, and crucially they were read as an engine result
+      rather than as a fabric verdict. They recorded a 3-rank collective budget
+      of 0.49 GB/s and that number was used to justify REJECTING seqs=32
+      instead of to condemn the fabric.
+    fabric_gate_note: >
+      The most instructive ABSENT in the index. Bandwidth data existed and was
+      misread. A gate is not just a measurement -- it is a measurement with a
+      PASS/FAIL threshold attached, taken before the benchmark, that refuses to
+      proceed. scripts/run_experiment.sh now enforces exactly that.
+    fabric_gated: false
+    fabric_state: degraded
+    raw_data_committed: true
+    raw_files: [seqs32.json, warmup5.json, warmup6.json, postrollback.json, crash/]
+    status: SUPERSEDED-BY-20260826-seqs32-retest
+    void_reasons:
+      - VOID-degraded-fabric
+    superseded_by: 20260826-seqs32-retest
+    baseline_value: >
+      KEPT AS A DIAGNOSTIC BASELINE, and specifically as the repo's worked
+      example of a FALSE NEGATIVE -- a good config rejected because the fabric
+      was bad. If you raise MAX_NUM_SEQS to 32 and the engine dies with an
+      _ALLGATHER_BASE watchdog timeout (full crash logs from all three nodes
+      are committed under crash/), do NOT conclude that seqs=32 is unstable on
+      this hardware. That is the conclusion recorded here and it is FALSIFIED:
+      the same change on healthy fabric is stable and gives +46.3% aggregate at
+      cc=32 (see 20260826-seqs32-retest). The real signal is in the bandwidth
+      numbers alongside the crash -- a 3-rank collective budget of 0.49 GB/s
+      against 3.25+ GB/s healthy, a 6.6x shortfall. Raising concurrency raises
+      collective traffic; a degraded link that merely slows a light workload
+      will TIME OUT a heavy one. So: an allgather timeout that appears only
+      when you increase concurrency is a fabric symptom presenting as a config
+      failure. Gate the fabric before you roll back the config, and beware that
+      having bandwidth data is not the same as having a threshold that stops
+      the run.
+    superseded_note: >
+      The rejection recorded here is falsified. It was made against a 3-rank
+      collective budget of 0.49 GB/s (degraded); the retest on healthy fabric
+      shows seqs=32 stable and +46.3% at cc=32 (issue #10).
+
+  - dir: 20260825-decode-2v3
+    date: 2026-08-25
+    description: >
+      Decode: 2 nodes vs 3 nodes on healthy fabric — the headline result on
+      the concurrency axis (cc=1/4/8/16, 18-token prompt).
+    readme_h1: "Decode: 2 nodes vs 3 nodes on healthy fabric — 2026-08-25"
+    has_readme: true
+    nodes: [2, 3]
+    nodes_evidence: >
+      README states both arms with identical config (MAX_MODEL_LEN=1048576,
+      MAX_NUM_SEQS=16, MTP_NUM_TOKENS=5, GPU_MEMORY_UTILIZATION=0.80) and node
+      count as the only variable. NO engine-config.txt is committed here, so
+      node count rests on README prose, not an engine readback. Contrast
+      20260826-decode-depth-2v3, which commits the readback.
+    tp_size: [2, 3]
+    kv_pool_tokens: {tp2: 1711307, tp3: 4457627}
+    kv_pool_source: README (not read back into a committed raw file)
+    harness: bench_tp3.py
+    harness_committed: false        # lives in ../20260825-fabric-fix/harness/
+    output_tokens_requested: 256
+    output_tokens_actual: {256: 14, 1024: 14, 2048: 14, 4096: 14}
+    output_tokens_field: output_tokens (AGGREGATE = max_tokens x concurrency)
+    output_tokens_note: >
+      from-raw, re-verified. Across tp2_final.json + tp3_final.json the
+      aggregate output_tokens are 256/1024/2048/4096, fourteen records each
+      (2 arms x 7 reps) = 256 x concurrency at cc=1/4/8/16. Record counts
+      confirmed: 28 per arm, exactly 7 at each of cc=1/4/8/16. The window was
+      honoured; this directory is NOT an issue #26 case.
+    reps: 7 per concurrency level, after 3 warm-up sweeps
+    reps_verified: true    # grep -c '"concurrency"' == 28 per arm, 7 per level
+    statistic: median
+    fabric_gate: ABSENT
+    fabric_gate_artifact: null      # gated per README, but no gate JSON committed here
+    fabric_gate_evidence: >
+      README line 32 claims "fabric gated at 4.6+ GB/s per pair beforehand" but
+      NO gate artifact is committed in this directory. The 4.6+ GB/s figure is
+      consistent with the gates committed the same day in
+      20260825-prefill-2v3/fabric-gate.json (12/12 pass, 4.60-4.67 GB/s) and
+      20260825-deep-concurrency/fabric-gate-full.json (13/13 pass, 4.59-4.65),
+      so the claim is plausible and probably true -- but it is UNVERIFIED here.
+    fabric_gate_note: >
+      A same-day gate elsewhere in the tree is corroboration, not provenance.
+      This is the repo's headline concurrency result and it should carry its
+      own gate file. Marked ABSENT deliberately rather than upgraded on the
+      strength of a neighbouring directory.
+    fabric_gated: claimed-in-readme-unverified
+    fabric_state: healthy
+    raw_data_committed: true
+    raw_files: [tp2_final.json, tp2_final.txt, tp3_final.json, tp3_final.txt]
+    status: CURRENT
+    void_reasons: []
+    superseded_by: null
+    traceability_warning: >
+      The published TP=3 cc=1 median of 89.1 tok/s is NOT in the committed
+      raw data. tp3_final.txt reports median=81.7 (spread 28%) at cc=1; the
+      seven values are 88.6, 90.2, 89.3, 81.7, 67.5, 67.9, 73.0. The other
+      three TP=3 levels (208.8 / 322.7 / 474.8) and all four TP=2 levels
+      (76.2 / 192.8 / 302.7 / 481.3) match the committed files exactly. The
+      89.1 figure is quoted in README.md, docs/HANDOFF.md,
+      docs/POSTMORTEM-2026-08-25.md, docs/TTFT-AND-WARMUP.md,
+      benchmarks/measurements.csv and results/20260826-four-hca-throughput/.
+
+  - dir: 20260825-deep-concurrency
+    date: 2026-08-25
+    description: >
+      4 x 200,000-token deep-concurrency re-run on healthy fabric, answering
+      issue #15's challenge to the 2026-08-21 result.
+    readme_h1: "Deep-concurrency re-run on healthy fabric — 2026-08-25"
+    has_readme: true
+    nodes: [2, 3]
+    nodes_evidence: >
+      Separate tp2_200k.json / tp3_200k.json arms plus per-arm warm files;
+      README records the KV pool read back from the engine per arm. Verified.
+    tp_size: [2, 3]
+    kv_pool_tokens: {tp2: 1815356, tp3: 3588422}
+    kv_pool_source: README (read back per arm from the engine)
+    harness: deepconc.py
+    harness_committed: true
+    output_tokens_requested: 128
+    output_tokens_actual: {128: 20, 0: 1}   # from-raw: PER-REQUEST completion_tokens
+    output_tokens_field: completion_tokens (PER-REQUEST — the field that can detect #26)
+    output_tokens_note: >
+      from-raw, re-verified. Twenty records at completion_tokens == 128 across
+      the measured and warm files, plus one record at 0 (a warm-up/probe entry,
+      not a measured stream). The 128-token window was honoured on every
+      measured stream. This run is TTFT-dominated (prefill of 200K tokens);
+      the decode figure it publishes is ~1 tok/s and is not a decode-rate claim.
+    reps: 1 measured run per arm, plus warm-up runs and 2 off-depth runs
+    statistic: single-observation per arm (median over 4 concurrent streams)
+    fabric_gate: PRESENT-PASS
+    fabric_gate_artifact: fabric-gate-full.json
+    fabric_gate_evidence: >
+      VERIFIED by direct read. fabric-gate-full.json: timestamp 20260825T174414Z,
+      nccl_mode "full", pass 13 / fail 0 / skip 0. Checks cover ssh liveness on
+      all three nodes, all six directed mesh pairs, and NCCL collective
+      bandwidth at gate-p01 4.65 / gate-p02 4.64 / gate-p12 4.59 GB/s plus a
+      gate-all 3-rank check. Taken BETWEEN the two arms, engine stopped.
+    fabric_gate_note: >
+      Best-practice example. The gate was taken between arms with the engine
+      stopped, which is the only moment NCCL bandwidth is actually measurable.
+    fabric_gated: true
+    fabric_state: healthy
+    raw_data_committed: true
+    raw_files:
+      - tp2_200k.json
+      - tp3_200k.json
+      - tp3_run1.json
+      - warm_tp2.json
+      - warm_tp3.json
+      - fabric-gate-full.json
+    status: CURRENT
+    void_reasons: []
+    superseded_by: null
+
+  - dir: 20260825-fabric-fix
+    date: 2026-08-25
+    description: >
+      The fabric fix itself: matched prefill and decode before and after the
+      reboot that restored the degraded node. The before/after pair.
+    readme_h1: null
+    has_readme: false
+    nodes: [2, 3]
+    nodes_evidence: >
+      Both shapes present (decode_final_parity / decode_parity3 for the
+      pairwise arms; anemll_fresh / anemll_postreboot / anemll_confirm span the
+      reboot). pairwise-agbench/ holds nine per-pair bandwidth captures.
+    tp_size: [2, 3]
+    kv_pool_tokens: null
+    kv_pool_source: null
+    harness: benchmark_prefill.py, bench_tp3.py, bench_full.py, compare_prefill.py
+    harness_committed: true         # all four under harness/
+    output_tokens_requested: [1 (prefill), 256 (decode)]
+    output_tokens_actual:
+      prefill_completion_tokens: {1: 36, 0: 1}   # from-raw: PER-REQUEST, by design
+      decode_output_tokens: {256: 6, 4096: 6}    # from-raw: AGGREGATE per level
+    output_tokens_field: completion_tokens (per-request, prefill) + output_tokens (aggregate, decode)
+    output_tokens_note: >
+      from-raw, re-verified. Prefill arms: completion_tokens == 1 on 36
+      requests (18/9/9 across anemll_fresh / anemll_postreboot / anemll_confirm),
+      plus one 0 record. max_tokens=1 by design for a prefill-rate metric.
+      Decode arms: aggregate output_tokens 256 and 4096 = 256 x cc at cc=1
+      and cc=16. Honoured window. Not an issue #26 case.
+    reps: 3 per shape
+    statistic: median
+    fabric_gate: ABSENT
+    fabric_gate_artifact: null
+    fabric_gate_evidence: >
+      No scripts/fabric_gate.sh artifact is committed. The pairwise-agbench/
+      set (nine all-gather captures: ag_base2, ag_fix, ag_gdr2, ag_postboot,
+      ag_alt, ag_recheck, ag_p_s1b, ag_p_s2, ag_w2) IS direct pairwise
+      bandwidth evidence and is the strongest fabric documentation in the repo
+      -- but it is a custom harness output, not a gate verdict, and it
+      deliberately includes FAILING pre-reboot states because documenting the
+      failure is this directory's purpose.
+    fabric_gate_note: >
+      Marked ABSENT on the letter of the definition (no gate artifact), but
+      this is the one row where ABSENT understates the evidence. This directory
+      is where the fabric was characterised. Read pairwise-agbench/README.md.
+    fabric_gated: partial
+    fabric_state: transition (pre-fix and post-fix arms both present)
+    raw_data_committed: true
+    raw_files:
+      - anemll_fresh.json
+      - anemll_postreboot.json
+      - anemll_confirm.json
+      - decode_final_parity.json
+      - decode_parity3.json
+      - pairwise-agbench/
+    status: CURRENT
+    void_reasons: []
+    superseded_by: null
+    note: >
+      Deliberately spans the fabric boundary — the pre-reboot arms are the
+      evidence FOR the degradation, not data damaged by it. This directory
+      also holds the canonical copies of bench_tp3.py and benchmark_prefill.py
+      that several other directories reference but do not carry.
+
+  - dir: 20260825-prefill-2v3
+    date: 2026-08-25
+    description: >
+      Prefill, 2 nodes vs 3 nodes on healthy fabric. Result: parity within
+      +/-2% at 1K / 8K / 32K.
+    readme_h1: "Prefill: 2 nodes vs 3 nodes on healthy fabric — 2026-08-25"
+    has_readme: true
+    nodes: [2, 3]
+    nodes_evidence: >
+      tp2_prefill.json carries label "tp2-healthy-fabric", schema_version 1,
+      sizes [1024, 8192, 32768], trials_per_size 3, seed 4104 and a
+      token_pool_sha256. The TP=3 arm is NOT in this directory (see warning).
+    tp_size: [2, 3]
+    kv_pool_tokens: null
+    kv_pool_source: null
+    harness: benchmark_prefill.py (upstream anemll, md5 f5c3269d..., seed 4104)
+    harness_committed: false        # lives in ../20260825-fabric-fix/harness/
+    output_tokens_requested: 1
+    output_tokens_actual: {1: 9}    # from-raw: PER-REQUEST completion_tokens on all 9 trials
+    output_tokens_field: completion_tokens (PER-REQUEST)
+    output_tokens_note: >
+      from-raw, re-verified: completion_tokens == 1 on all 9 trials
+      (3 sizes x 3 trials). max_tokens=1 is correct for a prefill-rate
+      measurement — the metric is server_prefill_tps over the prompt, not
+      decode. Not an issue #26 case.
+    reps: 3 per depth
+    reps_verified: true    # trials_per_size: 3 in the file, 9 completion records
+    statistic: median
+    fabric_gate: PRESENT-PASS
+    fabric_gate_artifact: fabric-gate.json
+    fabric_gate_evidence: >
+      VERIFIED by direct read. fabric-gate.json: timestamp 20260825T182818Z,
+      nccl_mode "pairs", pass 12 / fail 0 / skip 0. ssh liveness on all three
+      nodes, all six directed mesh pairs with sub-1.2ms rtt, and NCCL
+      bandwidth at gate-p01 4.67 / gate-p02 4.60 / gate-p12 4.60 GB/s. Taken
+      immediately before the run with the engine stopped.
+    fabric_gate_note: >
+      Note nccl_mode is "pairs", not "full" -- the 3-rank gate-all collective
+      was not run here. Pairwise health does not by itself prove 3-rank
+      collective health (the P2P triangle can bite); compare
+      20260825-deep-concurrency, which used --nccl=full the same day.
+    fabric_gated: true
+    fabric_state: healthy
+    raw_data_committed: partial
+    raw_files: [tp2_prefill.json, tp2_prefill.txt, fabric-gate.json]
+    status: CURRENT
+    void_reasons: []
+    superseded_by: null
+    traceability_warning: >
+      Only the TP=2 arm's raw data lives here. The TP=3 arm is
+      ../20260825-fabric-fix/anemll_fresh.json (verified: 2022.6 / 2069.5 /
+      2094.9 tok/s all present). Both halves of the comparison are committed,
+      but not in the same directory — a reader auditing this directory alone
+      cannot check the TP=3 column.
+
+  - dir: 20260825-upper-mesh
+    date: 2026-08-25
+    description: >
+      Four-HCA upper mesh addressed and re-tested — 2.0x pairwise bandwidth,
+      gate-clean, 408-request soak passed with zero RDMA counter deltas.
+    readme_h1: "Upper mesh addressed: the four-HCA path, re-tested"
+    has_readme: true
+    nodes: 3
+    nodes_evidence: >
+      Per-node RDMA counter captures pre and post for all three nodes
+      (rdma-{pre,post}-{sparkmain,spark1,spark2}.txt) plus four 3-node gate
+      files. Verified.
+    tp_size: 3
+    kv_pool_tokens: 4502448        # from-raw: read back after restart, stated in README
+    kv_pool_source: README / live-gate
+    harness: scripts/fabric_gate.sh (bandwidth) + soak.py (sustained load)
+    harness_committed: true         # soak.py
+    output_tokens_requested: 1000 (soak target_tokens)
+    output_tokens_actual:
+      distribution_summary: "22-87 tokens across 408 requests; only 34 of 408 fell in 25-26"
+      total_completion_tokens: 16071
+      verified_mode: 28    # from-raw: most common value is 28 (x44), a broad spread not a cluster
+    output_tokens_field: completion_tokens (PER-REQUEST)
+    output_tokens_note: >
+      from-raw (soak-results.jsonl, 408 lines, re-verified). Requests asked for
+      1000 tokens and returned 22-87 — the model stopped early, exactly the
+      class of defect issue #26 describes. Crucially the distribution is BROAD
+      and smooth (modal value 28 with 44 hits, tapering to single hits at 60+),
+      not clustered on one or two repeated values as in
+      20260826-decode-depth-2v3 (43x25 + 27x26 and nothing else). This does NOT
+      void the directory because the soak publishes NO tok/s: its metrics are
+      request success (408/408), latency percentiles, and RDMA counter deltas
+      (0/132), none of which depend on completion length. The bandwidth figures
+      come from all_gather, not from generation.
+    reps: 408 requests over 20.5 min, 8 concurrent streams
+    reps_verified: true    # wc -l soak-results.jsonl == 408; soak-summary.json total_requests 408
+    statistic: p50 / p95 / p99 latency; counter deltas
+    fabric_gate: PRESENT-PASS
+    fabric_gate_artifact: [gate.json, gate-four-hca.json, live-gate.json, post-soak-gate.json]
+    fabric_gate_evidence: >
+      VERIFIED by direct read, all four. gate.json 20260825T231255Z nccl_mode
+      "full" pass 26 / fail 0 (2-HCA arm). gate-four-hca.json 20260825T231507Z
+      nccl_mode "full" pass 26 / fail 0 (4-HCA arm, taken 2 minutes later --
+      the only variable is NCCL_IB_HCA). live-gate.json 20260825T232230Z
+      nccl_mode "skip" pass 21 / fail 0 (engine running, so bandwidth skipped).
+      post-soak-gate.json 20260826T003817Z nccl_mode "skip" pass 24 / fail 0.
+      Four gates spanning the run is the most thorough gating in the index.
+    fabric_gate_note: >
+      The two "skip" gates have nccl_mode skip because the engine was RUNNING;
+      NCCL bandwidth cannot be measured while the engine holds the NICs. That
+      is correct behaviour, not a gap -- the two "full" gates bracket it.
+    fabric_gated: true
+    fabric_state: healthy
+    raw_data_committed: true
+    raw_files:
+      - soak-results.jsonl
+      - soak-summary.json
+      - rdma-pre-*.txt
+      - rdma-post-*.txt
+      - rdma-delta.json
+      - correctness.json
+    status: CURRENT
+    void_reasons: []
+    superseded_by: null
+    note: >
+      The 5.80 GB/s 3-rank figure published here is superseded as a *fabric
+      capability* claim by 20260826-nccl-controlled (23.92 GB/s with the
+      official tool) — the custom harness, not the fabric, produced the low
+      number. The 2.0x RATIO measured here between 2 and 4 HCAs is a
+      same-harness comparison and stands.
+
+  - dir: 20260826-decode-depth-2v3
+    date: 2026-08-26
+    description: >
+      Long-context decode, 2 vs 3 nodes, 2K-262K at cc=1. The headline result
+      on the depth axis; 70 measured reps, matched arms.
+    readme_h1: "Long-context decode: 2 nodes vs 3 nodes on healthy fabric — 2026-08-26"
+    has_readme: true
+    nodes: [2, 3]
+    nodes_evidence: >
+      engine-config.txt committed and read back from the live engine: TP=3 arm
+      "--tensor-parallel-size 3 --pipeline-parallel-size 1 --max-num-seqs 16
+      MTP_NUM_TOKENS=5" and TP=2 arm "--tensor-parallel-size 2
+      --pipeline-parallel-size 1 --max-num-seqs 16 MTP_NUM_TOKENS=5", with
+      node2 confirmed containerless for the 2-node arm. Best node-count
+      evidence in the index. Verified.
+    tp_size: [2, 3]
+    kv_pool_tokens: {tp2: 1844001, tp3: 4512769}
+    kv_pool_source: engine-config.txt      # read from the live engine, committed
+    harness: scripts/decode_depth_sweep.py @ aefa594 (pre-fix)
+    harness_committed: false        # referenced at ../../scripts/, not copied in
+    output_tokens_requested: 256
+    output_tokens_actual: {25: 43, 26: 27}    # from-raw across BOTH arms, 70 reps
+    output_tokens_actual_detail:
+      tp2-depth.jsonl: {25: 22, 26: 13}
+      tp3-depth.jsonl: {25: 21, 26: 14}
+    output_tokens_field: completion_tokens (PER-REQUEST — which is why the defect is visible)
+    output_tokens_note: >
+      from-raw and decisive; independently re-verified in the second pass
+      (35 lines per arm, 70 total, values 25 and 26 only). All 70 measured reps
+      returned 25 or 26 tokens against a requested 256. The prompt ended
+      "In one sentence, state what this describes", the model obeyed, and
+      nothing asserted the length. Every decode tok/s in this directory is a
+      ~0.4 s window.
+    reps: 7 per depth per arm (35 measured + 10 warm-ups per arm)
+    reps_verified: true    # wc -l == 35 per arm
+    statistic: median
+    fabric_gate: PRESENT-PASS
+    fabric_gate_artifact: fabric-gate-pre-tp2.txt
+    fabric_gate_evidence: >
+      VERIFIED by direct read. "== 33 passed, 0 failed, 3 skipped ==". Covers
+      ssh liveness (3), all six directed mesh pairs with rtt, peer egress
+      device, fabric addressing, fabric arp, netplan persistence, and NCCL
+      collective bandwidth: gate-p01 9.09, gate-p02 9.01, gate-p12 9.52 GB/s
+      @64MiB and gate-all 5.04 GB/s, all "via NET/IB/*" with zero NET/Socket.
+      The 3 skips are engine-rdma-health checks skipped because the engine was
+      correctly STOPPED. Taken between the arms.
+    fabric_gate_note: >
+      CAVEAT ON THE ARTIFACT'S OWN TRAILER. The file's last line reads
+      "GATE PASSED (with skips). Bandwidth unverified -- see above." That
+      trailer is a stock message triggered by the presence of ANY skip, and it
+      is WRONG here: bandwidth WAS verified, at 9.0-9.5 GB/s per pair, in the
+      same file. Do not read the trailer as a fabric warning. The gate is the
+      strongest in the index and the fabric on this run was healthy -- which
+      is exactly why this directory is VOID for the token window and NOT for
+      the fabric.
+    fabric_gated: true
+    fabric_state: healthy
+    raw_data_committed: true
+    raw_files:
+      - tp2-depth.jsonl
+      - tp3-depth.jsonl
+      - tp2-depth-summary.json
+      - tp3-depth-summary.json
+      - engine-config.txt
+      - fabric-gate-pre-tp2.txt
+    status: VOID-25-token-window
+    void_reasons:
+      - VOID-25-token-window
+    superseded_by: null
+    baseline_value: >
+      KEPT AS THE CANONICAL SHORT-WINDOW BASELINE. If your decode numbers look
+      implausibly high -- roughly 30-40% above what a matched run gives -- and
+      they cluster on a small set of suspiciously repeated values, check the
+      PER-REQUEST completion_tokens before you believe them. The fingerprint
+      here is exact and easy to match: 70 of 70 reps returned either 25 or 26
+      tokens against a requested 256, i.e. a ~0.4s measurement window. The
+      calibration run (20260826-harness-window-calibration) puts the resulting
+      overstatement at ~31% at 8K on TP=3. Root cause worth recognising: the
+      prompt ended "In one sentence, state what this describes", so the model
+      emitted one sentence and stopped -- max_tokens is a CEILING, not a
+      contract, and nothing in the old harness asserted the floor. The fix is
+      in decode_depth_sweep.py @ c3e8e0d: set min_tokens == max_tokens, set
+      ignore_eos, and RAISE if completion_tokens != max_tokens. Two further
+      cautions. (1) Do NOT apply a 31% correction factor to these numbers on
+      paper -- that calibration is one depth on one arm; re-measure instead.
+      (2) Do NOT discard the TTFT column: TTFT is measured to the FIRST token
+      and is completely independent of how many tokens follow, so the TTFT
+      finding (2 nodes 6-15% sooner past ~100K) stands, as do the fabric gate,
+      the KV pool readback and the zero-cache-hit assertions. What dies is
+      every decode MAGNITUDE, including the published +33.6% at 131K and
+      +17.9% at 262K -- the repo's headline case for the third node.
+    supersede_note: >
+      Not yet superseded — 20260826-harness-window-calibration measures the
+      size of the distortion at ONE depth on ONE arm (8K, TP=3) and finds the
+      short window overstated decode by ~31%. A matched re-run of all five
+      depths on both arms does not exist yet. Directions may survive (both
+      arms carried the same defect); no magnitude does, including the
+      published +33.6% at 131K.
+      TTFT figures from this run are NOT affected by the window defect —
+      TTFT is measured to the first token and is independent of how many
+      follow.
+
+  - dir: 20260826-four-hca-throughput
+    date: 2026-08-26
+    description: >
+      Does 2x fabric bandwidth buy decode throughput? A published null result:
+      decode is flat at cc=1/4/8/16.
+    readme_h1: "Four-HCA fabric: 2x the bandwidth buys no measurable decode throughput — 2026-08-26"
+    has_readme: true
+    nodes: 3
+    nodes_evidence: >
+      Single 3-node arm; README ties the config to the same-day
+      20260826-decode-depth-2v3 engine capture. No local engine-config.txt.
+    tp_size: 3
+    kv_pool_tokens: null
+    kv_pool_source: null
+    harness: bench_tp3.py
+    harness_committed: false        # lives in ../20260825-fabric-fix/harness/
+    output_tokens_requested: 256
+    output_tokens_actual: {256: 7, 1024: 7, 2048: 7, 4096: 7}
+    output_tokens_field: output_tokens (AGGREGATE = max_tokens x concurrency)
+    output_tokens_note: >
+      from-raw, re-verified: 28 records in 4hca-warmed.json, exactly 7 at each
+      of cc=1/4/8/16, aggregate output_tokens 256/1024/2048/4096 = 256 x
+      concurrency. Window honoured; not an issue #26 case.
+    reps: 7 per concurrency level, after 3 warm-up sweeps
+    reps_verified: true    # grep -c '"concurrency"' == 28, 7 per level
+    statistic: median
+    fabric_gate: ABSENT
+    fabric_gate_artifact: ../20260826-decode-depth-2v3/fabric-gate-pre-tp2.txt   # cross-referenced, not local
+    fabric_gate_evidence: >
+      No gate artifact is committed in THIS directory. README line 44 cites the
+      same-day gate in ../20260826-decode-depth-2v3/fabric-gate-pre-tp2.txt
+      (33 pass / 0 fail, verified independently), and that citation is sound
+      -- but a cross-reference is not local provenance, and this directory
+      cannot be audited standalone.
+    fabric_gate_note: >
+      Marked ABSENT rather than PRESENT-PASS on purpose: the rule is that a
+      result directory carries its own evidence. The cited gate is real and
+      passing, so the fabric claim is well supported; the PROVENANCE is not.
+      Relevant here more than most, since the entire finding is about fabric
+      bandwidth.
+    fabric_gated: cross-referenced
+    fabric_state: healthy
+    raw_data_committed: true
+    raw_files: [4hca-warmed.json, 4hca-warmed.log]
+    status: CURRENT
+    void_reasons: []
+    superseded_by: null
+    traceability_warning: >
+      This is a single-arm run. Its 2-HCA comparison column is quoted from
+      20260825-decode-2v3, whose cc=1 median (89.1) is itself untraceable —
+      the committed file says 81.7. The 4-HCA arm's own numbers (88.6 /
+      218.7 / 350.0 / 488.8) all verify against 4hca-warmed.log. The "flat"
+      conclusion is unaffected: it rests on the 2-HCA median sitting inside
+      the 4-HCA spread, and 81.7 sits inside it too.
+
+  - dir: 20260826-harness-window-calibration
+    date: 2026-08-26
+    description: >
+      Measures how much the 25-token decode window overstated decode: ~31% at
+      8K on TP=3. The run that establishes issue #26 is material.
+    readme_h1: "Harness calibration: the 25-token decode window overstated decode by ~31%"
+    has_readme: true
+    nodes: 3
+    nodes_evidence: README states TP=3, one arm, one depth (8K). No local engine capture.
+    tp_size: 3
+    kv_pool_tokens: null
+    kv_pool_source: null
+    harness: scripts/decode_depth_sweep.py @ c3e8e0d (fixed) vs aefa594 (old)
+    harness_committed: false        # referenced at ../../scripts/, not copied in
+    output_tokens_requested: 256
+    output_tokens_actual: {256: 7}   # from-raw: completion_tokens==256 on all 7 reps
+    output_tokens_field: completion_tokens (PER-REQUEST)
+    output_tokens_note: >
+      from-raw and re-verified: 7 lines in new-256tok-8k-tp3.jsonl, every one
+      completion_tokens == 256. The fixed harness pins min_tokens == max_tokens,
+      sets ignore_eos, and RAISES if completion_tokens != max_tokens. This is
+      the control that proves the defect in 20260826-decode-depth-2v3 is real.
+    reps: 7 (one depth, one arm)
+    reps_verified: true    # wc -l == 7
+    statistic: median
+    fabric_gate: ABSENT
+    fabric_gate_artifact: null
+    fabric_gate_evidence: null
+    fabric_gate_note: >
+      No gate artifact. Low impact for this particular run: it is a
+      SAME-ENGINE, same-day A/B of two harness versions, so any fabric state
+      is common to both arms and cancels out of the ~31% ratio. A fabric fault
+      would have to be intermittent WITHIN the run to distort the comparison.
+      The absolute tok/s reported here are correspondingly less certain.
+    fabric_gated: false
+    fabric_state: healthy
+    raw_data_committed: true
+    raw_files: [new-256tok-8k-tp3.jsonl]
+    status: CURRENT
+    void_reasons: []
+    superseded_by: null
+    scope_caveat: >
+      One depth, one arm, one day. It establishes that the defect is material
+      and roughly how large; it does NOT calibrate a correction factor to
+      apply to old numbers. Re-measure rather than adjust on paper.
+
+  - dir: 20260826-kv-dtype-ab
+    date: 2026-08-26
+    description: >
+      KV-cache dtype A/B — nvfp4_ds_mla vs fp8_ds_mla. Quality, speed and KV
+      pool size all equal; 23 of 24 matched cells byte-identical.
+    readme_h1: "KV-cache dtype A/B: `nvfp4_ds_mla` vs `fp8_ds_mla`"
+    has_readme: true
+    nodes: 3
+    nodes_evidence: >
+      Three committed engine-facts captures (nvfp4-engine-facts.txt,
+      nvfp4-engine-facts-run2.txt, fp8-engine-facts.txt) read from the engine
+      log, each with its KV pool. Verified.
+    tp_size: 3
+    kv_pool_tokens:
+      nvfp4_boot1: 4451877
+      fp8: 4504137
+      nvfp4_boot2: 4483281
+    kv_pool_source: "*-engine-facts.txt"    # read from the engine log, committed
+    harness: kvab.py
+    harness_committed: true
+    output_tokens_requested: 512 (speed arm); short answers (quality arm)
+    output_tokens_actual: {512: 100}   # from-raw: `ctok` field, 50 per arm, ALL 512
+    output_tokens_field: ctok (PER-REQUEST completion tokens, kvab.py's own field name)
+    output_tokens_note: >
+      CORRECTED IN THE SECOND PASS. The first pass reported "none-recorded /
+      window unverifiable". That was WRONG: kvab.py does not use the key
+      `completion_tokens`, it uses `ctok`, so the standard grep missed it.
+      Re-verified directly: nvfp4-speed.json and fp8-speed.json each contain 15
+      `ctok` arrays holding 50 per-request values, and EVERY one of the 100
+      values is exactly 512. The 512-token window was requested and honoured on
+      both arms. This directory is confirmed NOT an issue #26 case, and the
+      speed table does not need a completion-count caveat.
+      Lesson for future audits: grep for the harness's OWN field name, not just
+      the two canonical ones. The quality arm records status/codes/reply rather
+      than token counts, which is correct for a retrieval-correctness metric.
+    reps: quality 3 trials/cell (main) and 12 trials (extended 256K); speed median of 5
+    statistic: median (speed); exact pass counts (quality)
+    fabric_gate: ABSENT
+    fabric_gate_artifact: null
+    fabric_gate_evidence: >
+      No scripts/fabric_gate.sh artifact. The directory does commit a
+      correctness gate (17x23 = 391 checks, PASS on both arms) and three
+      jit-watermark captures, but a correctness gate proves the config serves
+      right answers, not that the fabric runs at speed -- a degraded link
+      serves correct answers slowly. The two gates test different failures.
+    fabric_gate_note: >
+      Low impact on the QUALITY conclusion (byte-identical replies are
+      fabric-insensitive) and on the KV pool sizes (read from engine log).
+      Higher impact on the SPEED table, which is a tok/s comparison with no
+      fabric verification behind it -- though both arms ran the same day on
+      the same cluster, so a common fault would largely cancel.
+    fabric_gated: false
+    fabric_state: healthy
+    raw_data_committed: true
+    raw_files:
+      - nvfp4-quality.jsonl
+      - fp8-quality.jsonl
+      - nvfp4-quality-256k-ext.jsonl
+      - fp8-quality-256k-ext.jsonl
+      - nvfp4-speed.json
+      - fp8-speed.json
+      - "*-engine-facts.txt"
+      - jit-watermark-*.txt
+    status: CURRENT
+    void_reasons: []
+    superseded_by: null
+    note: >
+      Supersedes 20260824-kv-quality by supplying its missing comparison arm.
+      The speed arm's window is VERIFIED at 512 tokens on all 100 requests
+      (see output_tokens_note) — the earlier "unverifiable-window" caveat is
+      withdrawn.
+
+  - dir: 20260826-nccl-controlled
+    date: 2026-08-26
+    description: >
+      Controlled NCCL bandwidth reproduction with the official all_gather_perf
+      — there was never a bandwidth gap. 12 runs, 23.92 GB/s at 16 GiB.
+    readme_h1: "Controlled NCCL bandwidth reproduction (issue #18)"
+    has_readme: true
+    nodes: [2, 3]
+    nodes_evidence: >
+      Raw log filenames encode world size per run (A/B/C/D _w3_, E_world2_w2_)
+      and summary.json records engine_state "STOPPED for all runs", NCCL
+      2.30.7+cuda13.3, nccl-tests commit 717b6831, -n 20 -w 5, 1 GPU/rank.
+      Verified.
+    tp_size: n/a          # world size 2 and 3, engine stopped
+    kv_pool_tokens: null
+    kv_pool_source: null
+    harness: nccl-tests all_gather_perf, NCCL 2.30.7, -n 20 -w 5 (Dockerfile.ntests + run_variant.sh)
+    harness_committed: true
+    output_tokens_requested: n/a
+    output_tokens_actual: n/a
+    output_tokens_note: >
+      Not an inference measurement — this is a collective-bandwidth test with
+      the engine stopped. No completion tokens exist. Issue #26 cannot apply.
+    reps: 12 runs across 5 variants; -n 20 iterations each, 5 warm-up
+    statistic: per-run busbw (oop and ip), with rep2/rep3 repeats on the baseline
+    fabric_gate: PRESENT-PASS
+    fabric_gate_artifact: [summary.json, "raw/*.log"]
+    fabric_gate_evidence: >
+      This run IS a fabric measurement, and a more rigorous one than the gate
+      script: the official nccl-tests all_gather_perf rather than a custom
+      harness, engine STOPPED for all runs, NCCL library and header versions
+      verified independently on all three nodes, #wrong=0 on every run and zero
+      NET/Socket occurrences. 23.92 GB/s busbw at 16 GiB on 3 ranks. Counted
+      PRESENT-PASS because committed bandwidth verification is exactly what the
+      fabric_gate column is asking for, and this exceeds the gate's standard.
+    fabric_gate_note: >
+      Use this as the reference for what healthy looks like. It also supersedes
+      the 5.80 GB/s custom-harness figure as a statement about the FABRIC's
+      capability -- the harness, not the link, produced the low number. A slow
+      custom bandwidth harness can masquerade as a slow fabric.
+    fabric_gated: n/a       # this run IS the fabric measurement
+    fabric_state: healthy
+    raw_data_committed: true
+    raw_files: [summary.json, "raw/*.log", "raw/*.nccldebug.log"]
+    status: CURRENT
+    void_reasons: []
+    superseded_by: null
+    note: >
+      Supersedes the 5.80 GB/s custom-harness figure as a statement about the
+      fabric's capability. Every run records #wrong=0 and zero NET/Socket
+      occurrences; one cold-start outlier is flagged in place rather than
+      dropped.
+
+  - dir: 20260826-near-ceiling-prefill
+    date: 2026-08-26
+    description: >
+      Near-ceiling prefill, single run — three streaming requests up to
+      967,286 prompt tokens (92% of the 1M ceiling), served without incident.
+    readme_h1: "Near-ceiling prefill, single run — 2026-08-26"
+    has_readme: true
+    nodes: 3
+    nodes_evidence: README states TP=3. No engine capture committed in-dir.
+    tp_size: 3
+    kv_pool_tokens: null
+    kv_pool_source: null
+    harness: ad-hoc sparkmain:/tmp/bench_compare.py — NOT committed anywhere
+    harness_committed: false
+    output_tokens_requested: 1
+    output_tokens_actual: none-recorded
+    output_tokens_field: none — raw.jsonl records no token-count field at all
+    output_tokens_note: >
+      from-raw, re-verified: raw.jsonl has exactly 3 lines and records only
+      requested_depth, actual_prompt_tokens, ttft_s, prefill_tok_s, content
+      and runs. max_tokens=1 per the README, so this is a prefill/TTFT
+      measurement and issue #26 does not apply.
+    reps: 1 per depth
+    reps_verified: true    # wc -l raw.jsonl == 3, "runs": 1 on each line
+    statistic: single-observation
+    fabric_gate: ABSENT
+    fabric_gate_artifact: null
+    fabric_gate_evidence: null
+    fabric_gate_note: >
+      No gate, and the directory says so itself in its own caveat banner
+      ("n=1, hex content, no fabric gate"). Combined with n=1 per depth and an
+      uncommitted harness, the tok/s here are the least-supported numbers in
+      any CURRENT row. The CAPABILITY datapoint (967,286 tokens served without
+      incident) does not depend on the fabric being fast, only on it working.
+    fabric_gated: false
+    fabric_state: healthy
+    raw_data_committed: true
+    raw_files: [raw.jsonl]
+    status: CURRENT
+    void_reasons: []
+    superseded_by: null
+    methodology_caveats: >
+      Self-flagged as PRELIMINARY by its own banner and the flags are real:
+      n=1 per depth, no fabric gate, uncommitted ad-hoc harness, and hex
+      content rather than the deterministic token-ID pool (which is why every
+      target depth overshot 10-20x: 8192 -> 81,124 and 100,000 -> 967,286).
+      Kept CURRENT because the capability datapoint (967,286 tokens served
+      cleanly) is sound and is untested anywhere else in the repo; the tok/s
+      figures should not be quoted as settled. The declining-rate TREND has
+      since been corroborated by 20260826-decode-depth-2v3's TTFT column.
+
+  - dir: 20260826-seqs32-retest
+    date: 2026-08-26
+    description: >
+      MAX_NUM_SEQS=32 retest on healthy fabric — the 2026-08-24 rejection is
+      falsified; +46.3% aggregate at cc=32.
+    readme_h1: "`MAX_NUM_SEQS=32` retest on healthy fabric — 2026-08-26"
+    has_readme: true
+    nodes: 3
+    nodes_evidence: >
+      README records the KV pool read from the engine at each boot
+      (seqs16 4,512,769 / seqs32 4,431,088), both 3-node TP=3. No
+      engine-config.txt committed in-dir.
+    tp_size: 3
+    kv_pool_tokens: {seqs16: 4512769, seqs32: 4431088}
+    kv_pool_source: README (read from the engine at each boot)
+    harness: bench_tp3.py
+    harness_committed: false        # lives in ../20260825-fabric-fix/harness/
+    output_tokens_requested: 256
+    output_tokens_actual: {256: 14, 1024: 14, 2048: 14, 4096: 14, 8192: 14}
+    output_tokens_field: output_tokens (AGGREGATE = max_tokens x concurrency)
+    output_tokens_note: >
+      from-raw, re-verified: 35 records per arm, exactly 7 at each of
+      cc=1/4/8/16/32, aggregate output_tokens 256/1024/2048/4096/8192 =
+      256 x concurrency. Window honoured on both arms; not an issue #26 case.
+    reps: 7 per concurrency level per arm (35 runs per arm, 70 total)
+    reps_verified: true    # grep -c '"concurrency"' == 35 per arm, 7 per level
+    statistic: median
+    fabric_gate: ABSENT
+    fabric_gate_artifact: null      # no gate JSON committed; same-day control arm instead
+    fabric_gate_evidence: >
+      No gate artifact. The README instead cites the 3-rank collective budget
+      contrast (0.49 GB/s degraded vs 3.25+ GB/s healthy, 6.6x) as narrative
+      context, and relies on a same-day matched control arm (seqs16) measured
+      ~40 minutes apart rather than on a quoted older baseline.
+    fabric_gate_note: >
+      Mitigated by design rather than by artifact: because BOTH arms were
+      measured the same day on the same cluster with only MAX_NUM_SEQS varying,
+      a common fabric fault would affect both and largely cancel out of the
+      +46.3% ratio. That is a legitimate substitute for gating a COMPARISON,
+      but it is not a substitute for gating an ABSOLUTE. Treat the ratio as
+      well supported and the absolute tok/s as ungated.
+    fabric_gated: false
+    fabric_state: healthy
+    raw_data_committed: true
+    raw_files:
+      - seqs16-baseline.json
+      - seqs16-baseline.log
+      - seqs32-test.json
+      - seqs32-test.log
+    status: CURRENT
+    void_reasons: []
+    superseded_by: null
+    note: >
+      Supersedes 20260824-seqs32-nccl's rejection. All five medians in both
+      arms verify against the committed .log files (seqs32: 87.6 / 219.4 /
+      321.3 / 485.0 / 685.9; seqs16: 89.0 / 205.7 / 341.7 / 502.5 / 468.8).
+      The control arm was measured the same day, ~40 min apart, rather than
+      quoted from the 08-25 record.
+
+  - dir: 20260827-decode-3node-fixed
+    date: 2026-08-27
+    description: >
+      IN PROGRESS. Engine-config capture for a 3-node decode re-run with the
+      fixed 256-token harness. No measurement output committed yet.
+    readme_h1: null
+    has_readme: false
+    nodes: 3
+    nodes_evidence: >
+      engine-config.txt is a LIVE capture (2026-08-27T02:08:15Z, sparkmain PID
+      556480) with full argv: --tensor-parallel-size 3, --pipeline-parallel-size
+      1, --nnodes 3, --node-rank 0, --max-num-seqs 32, --max-model-len 1048576,
+      --kv-cache-dtype nvfp4_ds_mla, --gpu-memory-utilization 0.80,
+      num_speculative_tokens 5. Verified — strongest config provenance in the
+      index, though it captures rank 0 only.
+    tp_size: 3
+    kv_pool_tokens: null
+    kv_pool_source: >
+      NOT CAPTURED for this boot. engine-config.txt states plainly that the KV
+      pool is "not present in any reachable log for the current engine boot"
+      and falls back to quoting a 2026-08-24 value (5,382,503) from a
+      different boot. That fallback must not be recorded as this run's pool.
+    harness: expected scripts/decode_depth_sweep.py @ c3e8e0d (fixed) — not yet committed here
+    harness_committed: false
+    output_tokens_requested: 256 (expected)
+    output_tokens_actual: none-yet          # no results file exists
+    output_tokens_note: >
+      No .json/.jsonl output is committed. Nothing to verify yet. When the run
+      lands, assert completion_tokens == 256 on every rep before publishing.
+    reps: not yet run
+    statistic: not yet run
+    fabric_gate: ABSENT
+    fabric_gate_artifact: null
+    fabric_gate_evidence: null
+    fabric_gate_note: >
+      No gate artifact yet. Take one BEFORE the benchmark, with the engine
+      stopped -- scripts/run_experiment.sh does this automatically and refuses
+      to proceed on failure. This directory is the natural place to prove the
+      workflow. Note the engine was already running at capture time (PID
+      556480, started 2026-08-26 16:26), so a gate taken now would come back
+      nccl_mode "skip" with bandwidth unmeasured; the engine must be stopped
+      for the collective checks to run.
+    fabric_gated: false
+    fabric_state: healthy
+    raw_data_committed: false
+    raw_files: [engine-config.txt]
+    status: IN-PROGRESS
+    void_reasons: []
+    superseded_by: null
+    note: >
+      Appeared during this audit (untracked in git). Config confirms the live
+      production profile: TP=3, PP=1, MAX_NUM_SEQS=32, 1M context, MTP=5,
+      nvfp4_ds_mla, gpu-mem 0.80 — the post-seqs32 profile, which differs from
+      20260826-decode-depth-2v3's MAX_NUM_SEQS=16. That difference means this
+      run will NOT be a clean matched replacement for the voided depth sweep
+      unless the seqs value is reconciled or a matched TP=2 arm is taken at
+      the same setting.
