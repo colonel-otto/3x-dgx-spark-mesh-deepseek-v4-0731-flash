@@ -1,0 +1,10 @@
+--gpu-memory-utilization 0.80
+--kv-cache-dtype nvfp4_ds_mla
+--max-model-len 1048576
+--max-num-batched-tokens 8192
+--max-num-seqs 32
+--pipeline-parallel-size 1
+--tensor-parallel-size 3
+MTP_NUM_TOKENS=5
+Read from `ps -eo args` on the live engine, 2026-08-27.
+Correctness gate before the suite: 17x23 -> 391 (PASS).
