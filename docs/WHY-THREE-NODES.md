@@ -12,7 +12,8 @@ Use these sources instead:
 - [Provenance index](../results/INDEX.md) — status of every older result.
 
 This path remains as a redirect because frozen result bundles cite it. The retired
-narrative is available from Git history:
+narrative can be
+[viewed on GitHub at its last full revision](https://github.com/colonel-otto/DeepSeek-V4-Flash-3x-DGX-Spark/blob/78a91e1/docs/WHY-THREE-NODES.md):
 
 ```bash
 git show 78a91e1:docs/WHY-THREE-NODES.md

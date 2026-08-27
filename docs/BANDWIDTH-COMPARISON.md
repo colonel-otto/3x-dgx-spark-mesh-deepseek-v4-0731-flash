@@ -132,7 +132,7 @@ compiles against 2.30.7 headers, but the loader resolves `libnccl.so.2` to the *
 2.28.9 copy. The first run printed `nccl-headers=23007 nccl-library=22809`. Fixed with
 `LD_LIBRARY_PATH`, then verified `23007/23007` independently **on all three nodes** — a
 per-rank mismatch would have been undetectable in the result. See
-[`NCCL-TESTS-BUILD.md`](NCCL-TESTS-BUILD.md).
+[setup requirements](setup.md#2-configure-and-prove-the-ring).
 
 **MPI's own OOB cannot use the fabric.** It is a set of point-to-point `/30` links, not a
 full mesh — spark2 has no route to `192.168.110.1`. MPI is launcher-only on management;
@@ -152,5 +152,5 @@ occurrences**. No run void.
 - [Forum 365160](https://forums.developer.nvidia.com/t/test-the-sample-about-connect-three-dgx-spark-in-a-ring-topology/365160) — the 3-rank ring reference
 - [Forum 350417](https://forums.developer.nvidia.com/t/connectx-7-nic-in-dgx-spark/350417/61) — PCIe lanes, no GPUDirect
 
-**Related:** [#18](../../issues/18) · [`NCCL-TESTS-BUILD.md`](NCCL-TESTS-BUILD.md) ·
+**Related:** [#18](../../issues/18) · [setup](setup.md#2-configure-and-prove-the-ring) ·
 [`../results/20260825-upper-mesh/`](../results/20260825-upper-mesh)

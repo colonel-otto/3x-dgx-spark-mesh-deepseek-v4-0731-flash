@@ -61,8 +61,8 @@ claim is withdrawn until a corrected two-node arm is measured.
 ## Retired redirects and historical reports
 
 Redirects keep links from frozen result bundles working without carrying a second copy of
-obsolete conclusions. Focused historical reports retain unique technical detail, but their
-old throughput magnitudes are not current evidence.
+obsolete conclusions. Each redirect states what survived, points to the current owner and
+raw evidence, and links to the last full revision for readers who need the original report.
 
 | Document | Classification |
 |---|---|
@@ -70,13 +70,20 @@ old throughput magnitudes are not current evidence.
 | [Why three nodes](WHY-THREE-NODES.md) | Redirect; former 2-vs-3 recommendation withdrawn |
 | [Early controlled results](results.md) | Redirect to the results and provenance indexes |
 | [Bandwidth next-test plan](BANDWIDTH-NEXT-TEST.md) | Redirect to the completed controlled result |
-| [2-Spark baseline](BASELINE-2SPARK.md) | Frozen degraded-fabric baseline |
-| [TP=3 tuning](TP3-TUNING.md) | Frozen older profile and degraded-fabric measurements |
-| [Sequence-cap and NCCL investigation](SEQS32-AND-NCCL-FABRIC.md) | Original rejection overturned by later retest |
+| [2-Spark baseline](BASELINE-2SPARK.md) | Redirect; timing values void, raw bundle preserved |
+| [TP=3 tuning](TP3-TUNING.md) | Redirect; patch result survives, performance claim does not |
+| [Sequence-cap and NCCL investigation](SEQS32-AND-NCCL-FABRIC.md) | Redirect; original rejection overturned by later retest |
 | [Prefill investigation](PREFILL-MEASURED.md) | Redirect to the resolved fabric finding and raw evidence |
-| [MTP, KV, and early tuning reports](MTP5-1M-AND-UPSTREAM-COMPARISON.md) | Redirects to current decisions and raw evidence |
-| [Expert parallelism](EP3-EXPERT-PARALLEL.md) | Falsified path; B12X kernel limitation survives |
-| [Pipeline parallelism](PP3-PIPELINE-PARALLEL.md) | Blocked path; no performance result exists |
+| [MTP and 1M context](MTP5-1M-AND-UPSTREAM-COMPARISON.md) | Redirect to current decisions and frozen evidence |
+| [KV long-context quality](KV-QUALITY-LONG-CONTEXT.md) | Redirect from single-arm study to matched A/B evidence |
+| [Prompt-sensitivity study](BENCHMARK-METHODOLOGY.md) | Redirect to benchmark policy and schema |
+| [Old reproduction protocol](reproduction-methodology.md) | Redirect to current policy, setup, and artifact schema |
+| [NCCL build note](NCCL-TESTS-BUILD.md) | Redirect to setup and controlled bandwidth result |
+| [TTFT and warm-up note](TTFT-AND-WARMUP.md) | Redirect to current warm-up policy |
+
+The [expert-parallel](EP3-EXPERT-PARALLEL.md) and
+[pipeline-parallel](PP3-PIPELINE-PARALLEL.md) reports remain focused technical
+explanations because their source-level blockers are unique.
 
 ## Before adding documentation or evidence
 

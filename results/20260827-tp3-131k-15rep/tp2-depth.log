@@ -1,0 +1,50 @@
+
+=== depth 2048 (tp2) ===
+  warmup 1 FAILED: <urlopen error [Errno 111] Connection refused>
+  warmup 2 FAILED: <urlopen error [Errno 111] Connection refused>
+  rep 1 FAILED: <urlopen error [Errno 111] Connection refused>
+  rep 2 FAILED: <urlopen error [Errno 111] Connection refused>
+  rep 3 FAILED: <urlopen error [Errno 111] Connection refused>
+  rep 4 FAILED: <urlopen error [Errno 111] Connection refused>
+  rep 5 FAILED: <urlopen error [Errno 111] Connection refused>
+  rep 6 FAILED: <urlopen error [Errno 111] Connection refused>
+  rep 7 FAILED: <urlopen error [Errno 111] Connection refused>
+  NO VALID SAMPLES
+
+=== depth 8192 (tp2) ===
+  warmup 1 FAILED: <urlopen error [Errno 111] Connection refused>
+  warmup 2 FAILED: <urlopen error [Errno 111] Connection refused>
+  rep 1 FAILED: <urlopen error [Errno 111] Connection refused>
+  rep 2 FAILED: <urlopen error [Errno 111] Connection refused>
+  rep 3 FAILED: <urlopen error [Errno 111] Connection refused>
+  rep 4 FAILED: <urlopen error [Errno 111] Connection refused>
+  rep 5 FAILED: <urlopen error [Errno 111] Connection refused>
+  rep 6 FAILED: <urlopen error [Errno 111] Connection refused>
+  rep 7 FAILED: <urlopen error [Errno 111] Connection refused>
+  NO VALID SAMPLES
+
+=== depth 32768 (tp2) ===
+  warmup 1 FAILED: <urlopen error [Errno 111] Connection refused>
+  warmup 2 FAILED: <urlopen error [Errno 111] Connection refused>
+  rep 1 FAILED: <urlopen error [Errno 111] Connection refused>
+  rep 2 FAILED: <urlopen error [Errno 111] Connection refused>
+  rep 3 FAILED: <urlopen error [Errno 111] Connection refused>
+  rep 4 FAILED: <urlopen error [Errno 111] Connection refused>
+  rep 5 FAILED: <urlopen error [Errno 111] Connection refused>
+  rep 6 FAILED: <urlopen error [Errno 111] Connection refused>
+  rep 7 FAILED: <urlopen error [Errno 111] Connection refused>
+  NO VALID SAMPLES
+
+=== depth 262144 (tp2) ===
+  warmup 1 FAILED: <urlopen error [Errno 111] Connection refused>
+  warmup 2 FAILED: <urlopen error [Errno 111] Connection refused>
+  rep 1 FAILED: <urlopen error [Errno 111] Connection refused>
+  rep 2 FAILED: <urlopen error [Errno 111] Connection refused>
+  rep 3 FAILED: <urlopen error [Errno 111] Connection refused>
+  rep 4 FAILED: <urlopen error [Errno 111] Connection refused>
+  rep 5 FAILED: <urlopen error [Errno 111] Connection refused>
+  rep 6 FAILED: <urlopen error [Errno 111] Connection refused>
+  rep 7 FAILED: <urlopen error [Errno 111] Connection refused>
+  NO VALID SAMPLES
+
+=== SUMMARY tp2 ===

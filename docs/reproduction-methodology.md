@@ -5,4 +5,4 @@ The current comparable-run procedure is owned by [benchmark policy](BENCHMARK-PO
 used outdated warm-up and output-window requirements; do not use it as configuration
 guidance.
 
-The complete historical text remains available through Git history.
+[View the complete retired protocol at its last full revision.](https://github.com/colonel-otto/DeepSeek-V4-Flash-3x-DGX-Spark/blob/78a91e1/docs/reproduction-methodology.md)

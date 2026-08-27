@@ -1,0 +1,8 @@
+{
+  "label": "profile-a",
+  "trials": 5,
+  "median_decoder_ttft_s": 149.99404985795263,
+  "median_decoder_decode_tok_s": 46.998557520780366,
+  "median_decoder_max_event_gap_s": 0.10402343899477273,
+  "max_decoder_event_gap_s": 0.1759496759623289
+}

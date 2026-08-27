@@ -9,8 +9,8 @@ adjacent.
 - **[MiaAI-Lab/DeepSeek-v4-Flash-DSpark-2x-DGX-Spark](https://github.com/MiaAI-Lab/DeepSeek-v4-Flash-DSpark-2x-DGX-Spark)**
   Two-node DSpark recipe. Their `scripts/bench-miaai.py` is the harness used for
   the matched 2-vs-3 node comparison in this repo, and their audit-suite design
-  notes independently identified the same prompt-sensitivity effect documented
-  in [`docs/BENCHMARK-METHODOLOGY.md`](docs/BENCHMARK-METHODOLOGY.md).
+  notes independently identified the same prompt-sensitivity effect recorded in
+  [benchmark policy](docs/BENCHMARK-POLICY.md#prompt-jit-and-reference-tool-discipline).
 
 - **[localaiguyy/DeepSeek-V4-Flash-DSpark-3x-DGX-Spark](https://github.com/localaiguyy/DeepSeek-V4-Flash-DSpark-3x-DGX-Spark)**
   Three-node TP=3 report and `benchmark_tp3.py`. The attention-group padding

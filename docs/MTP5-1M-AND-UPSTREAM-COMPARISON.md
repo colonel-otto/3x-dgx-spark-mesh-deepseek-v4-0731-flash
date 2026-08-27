@@ -6,5 +6,7 @@ memory-utilization profile, and its cross-repository throughput comparisons are 
 only.
 
 For current measurement rules, use [benchmark policy](BENCHMARK-POLICY.md); for frozen
-evidence, use [`results/`](../results/) and the [provenance index](../results/INDEX.md).
-The complete report remains available through Git history.
+evidence, use [`20260824-mtp5-1m`](../results/20260824-mtp5-1m/) and the
+[provenance index](../results/INDEX.md).
+
+[View the complete retired report at its last full revision.](https://github.com/colonel-otto/DeepSeek-V4-Flash-3x-DGX-Spark/blob/78a91e1/docs/MTP5-1M-AND-UPSTREAM-COMPARISON.md)

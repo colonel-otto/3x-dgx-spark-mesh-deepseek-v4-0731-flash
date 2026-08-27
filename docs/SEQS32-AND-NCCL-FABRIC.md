@@ -16,4 +16,4 @@ budget. Gate the fabric before lowering the sequence cap or drawing a hardware c
   [`20260824-seqs32-nccl`](../results/20260824-seqs32-nccl/) and
   [`20260826-seqs32-retest`](../results/20260826-seqs32-retest/).
 
-The complete investigation remains available through Git history.
+[View the complete retired investigation at its last full revision.](https://github.com/colonel-otto/DeepSeek-V4-Flash-3x-DGX-Spark/blob/78a91e1/docs/SEQS32-AND-NCCL-FABRIC.md)

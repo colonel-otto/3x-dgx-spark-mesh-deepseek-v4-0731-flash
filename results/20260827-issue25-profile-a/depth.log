@@ -1,0 +1,73 @@
+
+=== depth 2048 (profile-a) ===
+  warmup 1: 56.1 tok/s (ptok=2034, cached=0)
+  warmup 2: 56.4 tok/s (ptok=2034, cached=0)
+  rep 1: 57.1 tok/s ttft=1.3s ptok=2034
+  rep 2: 54.0 tok/s ttft=1.5s ptok=2034
+  rep 3: 54.1 tok/s ttft=0.9s ptok=2034
+  rep 4: 55.6 tok/s ttft=0.9s ptok=2034
+  rep 5: 49.6 tok/s ttft=0.9s ptok=2034
+  rep 6: 48.8 tok/s ttft=0.9s ptok=2034
+  rep 7: 56.1 tok/s ttft=0.9s ptok=2034
+  MEDIAN 54.1 tok/s  (n=7, spread 15.4%, cache_hits=0)
+
+=== depth 8192 (profile-a) ===
+  warmup 1: 55.5 tok/s (ptok=8080, cached=0)
+  warmup 2: 57.3 tok/s (ptok=8080, cached=0)
+  rep 1: 59.5 tok/s ttft=3.4s ptok=8080
+  rep 2: 59.6 tok/s ttft=4.2s ptok=8080
+  rep 3: 49.3 tok/s ttft=3.5s ptok=8080
+  rep 4: 54.4 tok/s ttft=3.5s ptok=8080
+  rep 5: 59.2 tok/s ttft=3.5s ptok=8080
+  rep 6: 57.5 tok/s ttft=4.1s ptok=8080
+  rep 7: 52.0 tok/s ttft=3.5s ptok=8080
+  MEDIAN 57.5 tok/s  (n=7, spread 18.0%, cache_hits=0)
+
+=== depth 32768 (profile-a) ===
+  warmup 1: 47.5 tok/s (ptok=32268, cached=0)
+  warmup 2: 45.0 tok/s (ptok=32268, cached=0)
+  rep 1: 55.0 tok/s ttft=14.6s ptok=32268
+  rep 2: 56.5 tok/s ttft=15.6s ptok=32268
+  rep 3: 56.7 tok/s ttft=14.5s ptok=32268
+  rep 4: 54.1 tok/s ttft=15.9s ptok=32268
+  rep 5: 52.7 tok/s ttft=14.5s ptok=32268
+  rep 6: 47.3 tok/s ttft=16.4s ptok=32268
+  rep 7: 55.8 tok/s ttft=13.8s ptok=32268
+  MEDIAN 55.0 tok/s  (n=7, spread 17.1%, cache_hits=0)
+
+=== depth 131072 (profile-a) ===
+  warmup 1: 50.4 tok/s (ptok=129006, cached=0)
+  warmup 2: 51.8 tok/s (ptok=129006, cached=0)
+  rep 1: 49.0 tok/s ttft=71.8s ptok=129006
+  rep 2: 42.0 tok/s ttft=75.2s ptok=129006
+  rep 3: 46.7 tok/s ttft=78.0s ptok=129006
+
+=== depth 131072 (profile-a) ===
+  warmup 1: 47.5 tok/s (ptok=129006, cached=0)
+  warmup 2: 40.6 tok/s (ptok=129006, cached=0)
+  rep 1: 38.6 tok/s ttft=69.9s ptok=129006
+  rep 2: 47.6 tok/s ttft=78.6s ptok=129006
+  rep 3: 45.8 tok/s ttft=73.7s ptok=129006
+  rep 4: 47.2 tok/s ttft=77.6s ptok=129006
+  rep 5: 52.7 tok/s ttft=75.5s ptok=129006
+  rep 6: 50.3 tok/s ttft=77.1s ptok=129006
+  rep 7: 49.1 tok/s ttft=74.8s ptok=129006
+  MEDIAN 47.6 tok/s  (n=7, spread 29.7%, cache_hits=0)
+
+=== SUMMARY profile-a ===
+   129006 tok ->   47.61 tok/s  (spread 29.7%, cache 0)
+
+=== depth 262144 (profile-a) ===
+  warmup 1: 46.2 tok/s (ptok=257992, cached=0)
+  warmup 2: 43.2 tok/s (ptok=257992, cached=0)
+  rep 1: 44.9 tok/s ttft=183.3s ptok=257992
+  rep 2: 42.9 tok/s ttft=193.7s ptok=257992
+  rep 3: 49.2 tok/s ttft=187.9s ptok=257992
+  rep 4: 54.2 tok/s ttft=203.1s ptok=257992
+  rep 5: 39.5 tok/s ttft=199.8s ptok=257992
+  rep 6: 38.2 tok/s ttft=179.8s ptok=257992
+  rep 7: 53.9 tok/s ttft=189.6s ptok=257992
+  MEDIAN 44.9 tok/s  (n=7, spread 35.6%, cache_hits=0)
+
+=== SUMMARY profile-a ===
+   257992 tok ->   44.94 tok/s  (spread 35.6%, cache 0)

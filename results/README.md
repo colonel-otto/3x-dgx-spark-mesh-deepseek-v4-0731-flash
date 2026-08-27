@@ -23,6 +23,8 @@ fabric gate weakens performance evidence but does not invalidate pass/fail quali
 
 | Bundle | Nodes | Gate | What it establishes |
 |---|---:|---|---|
+| [20260827-tp3-131k-15rep](20260827-tp3-131k-15rep/) | 3 | Present/pass | 15-rep 131K single-stream evaluation for issue #24; 51.04 tok/s median |
+| [20260827-issue25-profile-b](20260827-issue25-profile-b/) | 3 | Present/pass | Winning Profile B tuning bundle for issue #25; starvation resistance & depth sweep |
 | [20260827-decode-concurrency-2v3-fixed](20260827-decode-concurrency-2v3-fixed/) | 2/3 | TP=2 present/pass; TP=3 live check | Corrected-window concurrency crossover at 8K |
 | [20260827-decode-2v3-fixed](20260827-decode-2v3-fixed/) | 2/3 | TP=2 present/pass; TP=3 live check | Corrected-window cc=1 node-count sweep; 7 reps per depth and arm |
 | [20260827-decode-3node-fixed](20260827-decode-3node-fixed/) | 3 | Absent | Corrected 256-token depth curve; single arm; intermittent slow mode at 131K/262K |
@@ -55,6 +57,7 @@ fabric gate weakens performance evidence but does not invalidate pass/fail quali
 
 | Bundle | Replaced by |
 |---|---|
+| [20260827-issue25-profile-a](20260827-issue25-profile-a/) | [20260827-issue25-profile-b](20260827-issue25-profile-b/) |
 | [20260824-kv-quality](20260824-kv-quality/) | [20260826-kv-dtype-ab](20260826-kv-dtype-ab/) |
 | [20260824-seqs32-nccl](20260824-seqs32-nccl/) | [20260826-seqs32-retest](20260826-seqs32-retest/) |
 

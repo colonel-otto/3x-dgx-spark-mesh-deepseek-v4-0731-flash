@@ -30,7 +30,7 @@
 > **RETRACTED:** §3's claim that RoCE cannot work across three nodes without a switch.
 > See the correction in that section.
 >
-> **Current healthy-fabric numbers instead:** [`../README.md`](../README.md#is-the-third-node-worth-it)
+> **Current evidence status instead:** [`../README.md`](../README.md#current-evidence)
 > for 2v3 decode, [`DECISIONS.md`](DECISIONS.md) for the settled config.
 
 Captured 2026-08-21. Raw data and the exact configs that ran:
@@ -169,8 +169,7 @@ So the benchmark above is *not* a clean node-count comparison. It is
 > 1. **`NCCL_IB_SUBNET_AWARE_ROUTING=1`** — this makes NCCL select the HCA whose subnet
 >    reaches each peer instead of pairing by device index, which is exactly the failure
 >    diagnosed below. It is the whole fix for the triangle, and it is undocumented in
->    NVIDIA's public env reference. See [`WHY-THREE-NODES.md`](WHY-THREE-NODES.md) §5 and
->    [`DECISIONS.md`](DECISIONS.md).
+>    NVIDIA's public env reference. See the [fabric decisions](DECISIONS.md#fabric).
 > 2. **The upper `roceP2p` HCA pair had no IPv4.** Giving all four controllers persistent
 >    `/30` addressing doubled fabric bandwidth —
 >    [`../results/20260825-upper-mesh/`](../results/20260825-upper-mesh).
@@ -342,7 +341,7 @@ Stated explicitly so nobody assumes these were covered:
 > **Superseded in part.** The recommendation to stay off EP still stands — it rests on the
 > kernel finding in §2, which survived. But the deployment recommendation moved: this
 > repo now runs **3 nodes on TP=3**, not the 2-Spark TP=2 baseline. See
-> [`../README.md`](../README.md#is-the-third-node-worth-it) and
+> [`../README.md`](../README.md#current-evidence) and
 > [`DECISIONS.md`](DECISIONS.md). And item 3 below is retracted with §3 — no switch is
 > needed.
 

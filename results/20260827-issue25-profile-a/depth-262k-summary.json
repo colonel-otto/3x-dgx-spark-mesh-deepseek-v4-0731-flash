@@ -1,0 +1,14 @@
+[
+  {
+    "label": "profile-a",
+    "target_depth": 262144,
+    "actual_prompt_tokens": 257992,
+    "n": 7,
+    "median_decode_tok_s": 44.94,
+    "min": 38.25,
+    "max": 54.23,
+    "spread_pct": 35.6,
+    "cache_hits": 0,
+    "median_ttft_s": 189.57
+  }
+]
