@@ -33,14 +33,17 @@ variable.** Every row links to raw per-run data.
 | 🟢 **Aggregate @cc=32** | — | **685.9 tok/s** | above the 618 published upstream figure |
 | 🟢 **Max verified context** | 131K | **967,286 tok** | 92% of the 1M ceiling, served without incident |
 | 🟡 **Decode below 32K** | 70.8–75.8 | 70.2–76.3 | **parity** — the third node earns nothing here |
-| 🟡 **Prefill ≤32K** | 1,913–2,081 | 2,023–2,095 | **parity** (±2%); TTFT slightly favours 3 nodes |
-| 🔴 **TTFT @262K** | **158.4 s** | 181.6 s | **2 nodes 13% sooner** |
-| 🔴 **Aggregate @cc=16** | **481.3** | 474.8 | 2 nodes win batch throughput |
+| 🟡 **Prefill ≤32K** | 1,913–2,081 | 2,023–2,095 | **parity** (±2%) by designed harness |
+| 🟢 **TTFT below 32K** | 1.1–16.0 s | **0.9–14.6 s** | **3 nodes 9–18% sooner** — where most prompts live |
+| 🔴 **TTFT past ~100K** | **72.4 / 158.4 s** | 77.1 / 181.6 s | 2 nodes 6–15% sooner; crossover ~100K |
+| 🟡 **Aggregate @cc=16** | 481.3 | 474.8 | **parity** (−1.4%, inside run-to-run noise) |
 | 🔴 **Hardware freed** | **1 whole GB10** | none | two nodes leave a spare machine |
 
-**The one-line answer:** *a third Spark buys per-stream speed at long context and costs
-you time-to-first-token and batch throughput.* If your prompts are short or your load is
-concurrent, **two nodes are the better buy** — and we publish that as plainly as the wins.
+**The one-line answer:** *a third Spark buys per-stream decode speed past ~100K and faster
+first tokens below 32K; it costs you time-to-first-token on very deep prompts, and one
+whole GB10.* Batch aggregate is a wash at cc=16 and strongly favours three nodes at cc=32,
+which is the production setting. **The honest case against a third node is the hardware
+cost and the deep-prompt TTFT crossover** — we publish that as plainly as the wins.
 
 ### The bad and the ugly, stated up front
 
@@ -53,6 +56,10 @@ concurrent, **two nodes are the better buy** — and we publish that as plainly 
   and have retracted it in place rather than quietly editing it. → [`docs/WHY-THREE-NODES.md`](docs/WHY-THREE-NODES.md)
 - **Two of our own rejections were wrong.** `MAX_NUM_SEQS=32` and the four-HCA fabric were
   both rejected against a fabric that was lying. Both are now production.
+- **We also over-corrected.** An earlier draft of the scoreboard above marked a −1.4%
+  aggregate delta as a red loss when our own result page calls it "inside run-to-run
+  noise", and showed only the deep end of a TTFT curve that reverses sign below 32K.
+  Reporting a loss the data does not support is as much a misrepresentation as hiding one.
 - **Expert parallelism and pipeline parallelism do not work here** — dead ends kept so
   nobody re-proposes them. → [`docs/EP3-EXPERT-PARALLEL.md`](docs/EP3-EXPERT-PARALLEL.md) ·
   [`docs/PP3-PIPELINE-PARALLEL.md`](docs/PP3-PIPELINE-PARALLEL.md)
@@ -200,28 +207,37 @@ concurrency, not context depth:
 | **decode cc=1** | 76.2 tok/s | **89.1 tok/s** | **3-node, +17%** |
 | decode cc=4 | 192.8 | **208.8** | 3-node, +8% |
 | decode cc=8 | 302.7 | **322.7** | 3-node, +7% |
-| decode cc=16 | **481.3** | 474.8 | 2-node, +1.4% |
+| decode cc=16 | 481.3 | 474.8 | **parity**, −1.4% (inside noise) |
 | prefill 1K/8K/32K | 1913 / 2081 / 2066 | 2023 / 2070 / 2095 | **parity** (±2%) |
 | deep concurrency (4×200K) TTFT | **293,987 ms** | 396,804 ms | 2-node, 1.35x |
 | KV cache | 1,711,307 tok | **4,457,627 tok** | 3-node 2.6x — *never binds* |
 
-The 3-node advantage **decays monotonically with concurrency and crosses over near
-cc=16**. Three nodes win per-stream latency; two win batch aggregate.
+The 3-node advantage **decays monotonically with concurrency and reaches parity near
+cc=16** — the −1.4% there is inside run-to-run noise, not a two-node win.
 
-Both axes are true at once, and they are not in conflict: three nodes win per-stream **at
-depth**, two nodes win aggregate **under concurrency**.
+> **This table stops at cc=16, which is no longer the production cap.** These runs used
+> `MAX_NUM_SEQS=16`; that setting was raised to 32 on 2026-08-26 after the fabric fix.
+> At cc=32 three nodes reach **685.9 tok/s**
+> ([`results/20260826-seqs32-retest/`](results/20260826-seqs32-retest)), so the "aggregate
+> favours two nodes" reading does **not** survive past the cap this table was measured at.
+
+Three nodes win per-stream latency at depth and win aggregate at the production cap; the
+two configurations are level in the middle of the concurrency range.
 
 ### Choose by workload
 
 | Your workload | Node count |
 |---|---|
 | Long context (>100K) with substantial generation | **3** — +18–34% per stream |
-| Interactive coding under ~32K | **either** — measured parity |
-| Deep one-shot prompt, short answer | **2** — first token 6–13% sooner |
-| Several concurrent users, agent swarm, batch | **2** — 12–19% more aggregate, third GB10 freed |
+| Interactive coding under ~32K | **3** — decode parity, but first token 9–18% sooner |
+| Deep one-shot prompt (>100K), short answer | **2** — first token 6–15% sooner |
+| Several concurrent users, agent swarm, batch | **3** — 685.9 tok/s at the cc=32 production cap |
+| Cost-constrained, or you need a spare GB10 | **2** — frees a whole machine |
 
-Two things the third node does **not** buy: prefill throughput (parity at every depth
-tested), and usable KV capacity (`vllm:num_preemptions_total` has read **0 in every test
+Two things the third node does **not** buy: prefill *throughput* (parity ±2% at every
+depth the designed harness reached — though TTFT, the same work by a second instrument,
+favours three nodes below 32K and two nodes past ~100K), and usable KV capacity
+(`vllm:num_preemptions_total` has read **0 in every test
 ever run here**, including a 4×200K test designed specifically to make KV bite — the KV
 advantage shows up as *decode speed at depth*, not as capacity headroom that binds).
 
