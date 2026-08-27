@@ -1,0 +1,97 @@
+{
+  "target": "http://localhost:8100",
+  "model": "deepseek-v4-flash-0731",
+  "max_tokens": 256,
+  "results": [
+    {
+      "concurrency": 1,
+      "ok": 1,
+      "of": 1,
+      "wall_s": 3.15,
+      "output_tokens": 256,
+      "aggregate_tok_s": 81.4,
+      "per_stream_tok_s": 81.4,
+      "mean_latency_s": 3.15
+    },
+    {
+      "concurrency": 1,
+      "ok": 1,
+      "of": 1,
+      "wall_s": 3.11,
+      "output_tokens": 256,
+      "aggregate_tok_s": 82.3,
+      "per_stream_tok_s": 82.3,
+      "mean_latency_s": 3.11
+    },
+    {
+      "concurrency": 1,
+      "ok": 1,
+      "of": 1,
+      "wall_s": 3.05,
+      "output_tokens": 256,
+      "aggregate_tok_s": 84.1,
+      "per_stream_tok_s": 84.1,
+      "mean_latency_s": 3.04
+    },
+    {
+      "concurrency": 8,
+      "ok": 8,
+      "of": 8,
+      "wall_s": 12.77,
+      "output_tokens": 2048,
+      "aggregate_tok_s": 160.4,
+      "per_stream_tok_s": 20.4,
+      "mean_latency_s": 12.54
+    },
+    {
+      "concurrency": 8,
+      "ok": 8,
+      "of": 8,
+      "wall_s": 8.55,
+      "output_tokens": 2048,
+      "aggregate_tok_s": 239.5,
+      "per_stream_tok_s": 30.6,
+      "mean_latency_s": 8.36
+    },
+    {
+      "concurrency": 8,
+      "ok": 8,
+      "of": 8,
+      "wall_s": 7.38,
+      "output_tokens": 2048,
+      "aggregate_tok_s": 277.5,
+      "per_stream_tok_s": 35.2,
+      "mean_latency_s": 7.26
+    },
+    {
+      "concurrency": 16,
+      "ok": 16,
+      "of": 16,
+      "wall_s": 20.44,
+      "output_tokens": 4096,
+      "aggregate_tok_s": 200.4,
+      "per_stream_tok_s": 12.7,
+      "mean_latency_s": 20.19
+    },
+    {
+      "concurrency": 16,
+      "ok": 16,
+      "of": 16,
+      "wall_s": 11.28,
+      "output_tokens": 4096,
+      "aggregate_tok_s": 363.1,
+      "per_stream_tok_s": 23.0,
+      "mean_latency_s": 11.15
+    },
+    {
+      "concurrency": 16,
+      "ok": 16,
+      "of": 16,
+      "wall_s": 12.02,
+      "output_tokens": 4096,
+      "aggregate_tok_s": 340.6,
+      "per_stream_tok_s": 21.7,
+      "mean_latency_s": 11.82
+    }
+  ]
+}
