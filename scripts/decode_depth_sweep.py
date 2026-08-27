@@ -19,6 +19,17 @@ Three constraints this harness exists to satisfy, all learned the hard way:
 3. DECODE, NOT END-TO-END. tok/s is measured from first content token to last,
    so prefill and queueing are excluded. A depth sweep that includes TTFT
    measures prefill, which we already know is at parity.
+
+4. THE DECODE WINDOW MUST BE LONG ENOUGH TO AVERAGE MTP ACCEPTANCE, AND MUST
+   BE VERIFIED. This harness originally ended its prompt with "In one sentence,
+   state what this describes." The model obeyed: all 70 reps of the 2026-08-26
+   sweep returned 25-26 tokens against a requested 256, giving 0.39-0.68 s
+   windows. At MTP=5 that is ~5 speculative cycles, so one accepted-vs-rejected
+   draft moves the rate double digits -- identical reps at 131K spanned
+   37.0-64.3 tok/s, a 1.74x swing that was mistaken for JIT noise.
+   Fix is threefold: do not ask for a short answer, pin the window with
+   min_tokens + ignore_eos, and ASSERT completion_tokens == max_tokens so the
+   run fails instead of publishing a collapsed window. See issue #26.
 """
 
 from __future__ import annotations
@@ -55,7 +66,11 @@ def build_prompt(target_tokens: int, salt: str) -> str:
     body_chars = max(int(target_tokens * _CHARS_PER_TOKEN) - len(header), 0)
     reps = body_chars // len(_LOREM) + 1
     body = (_LOREM * reps)[:body_chars]
-    return header + body + "\n\nIn one sentence, state what this describes."
+    # NOTE: do NOT ask for a short answer here. An earlier version ended with
+    # "In one sentence, state what this describes." and the model obeyed it,
+    # returning 25-26 tokens against a requested 256 on every single rep. See
+    # trap 4 below and issue #26.
+    return header + body + "\n\nDescribe what this text is, in detail."
 
 
 def run_once(url: str, model: str, prompt: str, max_tokens: int) -> dict:
@@ -64,6 +79,11 @@ def run_once(url: str, model: str, prompt: str, max_tokens: int) -> dict:
         "messages": [{"role": "user", "content": prompt}],
         "temperature": 0,
         "max_tokens": max_tokens,
+        # min_tokens + ignore_eos pin the decode window to exactly max_tokens.
+        # Without both, generation length is a property of the prompt rather
+        # than of the harness, and the measured window silently collapses.
+        "min_tokens": max_tokens,
+        "ignore_eos": True,
         "stream": True,
         "stream_options": {"include_usage": True},
     }).encode()
@@ -101,6 +121,18 @@ def run_once(url: str, model: str, prompt: str, max_tokens: int) -> dict:
         raise RuntimeError("stream completed without content")
     if completion_tokens is None:
         raise RuntimeError("server did not return completion token usage")
+    # Trap 4 (issue #26): the decode window must be the length we asked for.
+    # Every rep of the 2026-08-26 sweep returned 25-26 tokens against a
+    # requested 256 because the prompt asked for one sentence, and nothing
+    # checked. A 0.4s window cannot average MTP acceptance: identical reps
+    # spanned 37.0-64.3 tok/s. Fail loudly rather than publish that spread.
+    if completion_tokens != max_tokens:
+        raise RuntimeError(
+            "decode window is %d tokens, expected %d -- the model stopped early. "
+            "Check that min_tokens/ignore_eos are honoured by this server and "
+            "that the prompt does not request a short answer (issue #26)."
+            % (completion_tokens, max_tokens)
+        )
     decode_s = max(finished - first_content, 1e-9)
     return {
         "timestamp_utc": datetime.now(timezone.utc).isoformat(),
