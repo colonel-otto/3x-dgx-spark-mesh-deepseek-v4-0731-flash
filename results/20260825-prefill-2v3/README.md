@@ -103,3 +103,38 @@ the degraded fabric, so it belongs on the issue #14 suspect list too.
 | `fabric-gate.json` | `scripts/fabric_gate.sh --nccl=pairs` taken immediately before |
 
 The TP=3 arm lives at [`../20260825-fabric-fix/anemll_fresh.txt`](../20260825-fabric-fix).
+
+---
+
+## Extended 2026-08-26: what happens past 32K
+
+This page only reaches 32,768 tokens. Two measurements taken on 2026-08-26 extend the
+depth axis, and the answer changes sign.
+
+**TTFT is prefill latency**, so the depth sweep's TTFT column measures the same physical
+work by a second instrument ([`../20260826-decode-depth-2v3/`](../20260826-decode-depth-2v3),
+median of 7, matched arms, fabric gated 33/0):
+
+| depth | TP=2 TTFT | TP=3 TTFT | 3-node | implied TP=3 tok/s |
+|---:|---:|---:|---:|---:|
+| 2,036 | 1.1 s | **0.9 s** | **−18%** (faster) | 2,213 |
+| 8,081 | 3.9 s | **3.3 s** | **−15%** (faster) | 2,419 |
+| 32,268 | 16.0 s | **14.6 s** | **−9%** (faster) | 2,206 |
+| 129,006 | **72.4 s** | 77.1 s | +6.5% (slower) | 1,673 |
+| 257,993 | **158.4 s** | 181.6 s | **+14.6%** (slower) | 1,421 |
+
+**The third node helps prefill below ~32K and costs 6–15% past ~100K.** That is
+consistent with this page's parity finding — the shallow depths here sit in the
+"slightly faster" region, within the ±2% this page measured with its own harness — and
+it adds the crossover this page could not see.
+
+**Prefill rate declines with depth on both configurations**, from ~2,400 tok/s at 8K to
+~1,400 at 258K, and to ~700 near the 1M ceiling
+([`../20260826-near-ceiling-prefill/`](../20260826-near-ceiling-prefill), preliminary).
+That decline is a property of attention cost at depth, **not** of node count.
+
+> **Caveat on instrument.** The TTFT figures come from a decode-focused harness with a
+> prose filler prompt, not from `benchmark_prefill.py`'s deterministic token-ID pool.
+> Treat them as corroboration of the *direction*, not as a replacement for a designed
+> prefill run. **A matched `benchmark_prefill.py` arm above 32K does not exist yet** —
+> that is the remaining gap on this axis.

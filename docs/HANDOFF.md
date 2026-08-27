@@ -173,10 +173,47 @@ Re-run these on the healthy fabric. Priority order:
 5. **`GPU_MEMORY_UTILIZATION` 0.80 vs 0.85.** The +14% was measured on the bad fabric.
 6. **MTP=4 vs 5 aggregate throughput.** Acceptance counters are fine; aggregates are not.
 
-## 4b. ✗ FALSIFIED 2026-08-25: adding the `roceP2p` HCAs to `NCCL_IB_HCA`
+## 4b. ⚠️ SUPERSEDED 2026-08-26: the `roceP2p` HCAs are now **in production**
 
-**Do not set `NCCL_IB_HCA==rocep1s0f0,roceP2p1s0f0,rocep1s0f1,roceP2p1s0f1`.** It wedges
-the cluster. Tried, failed, rolled back.
+> [!CAUTION]
+> **This section's instruction is out of date and now contradicts the running cluster.**
+> All four HCAs are live, and have been through every measurement taken on 2026-08-26.
+>
+> **The precondition this section names was met.** It ends with *"give the `roceP2p` pair
+> stable IPv4 addressing and routing first, validate it independently, and only then widen
+> `NCCL_IB_HCA`."* That is exactly what happened on 2026-08-25 — each of the six fabric
+> controllers now holds a unique `/30`:
+>
+> ```
+> node0  enP2p1s0f0np0 192.168.110.1/30   enP2p1s0f1np1 192.168.111.1/30
+> node1  enP2p1s0f0np0 192.168.112.1/30   enP2p1s0f1np1 192.168.110.2/30
+> node2  enP2p1s0f0np0 192.168.111.2/30   enP2p1s0f1np1 192.168.112.2/30
+> ```
+>
+> **The failure signature below is absent.** On the live container: **zero**
+> `IBV_WC_RETRY_EXC_ERR`, **zero** link-local `fe80::` GIDs, **zero** `GID table changed`.
+> Validated by a 408-request soak with 0 RDMA counter deltas across 132 counters
+> ([#17](../../issues/17)), and by every benchmark on 2026-08-26 including a matched
+> 70-run depth sweep and a `seqs=32` load test.
+>
+> **What it bought: bandwidth, not speed.** Pairs went 4.6 → 7.78/9.19/9.33 GB/s, but
+> decode throughput measured **flat** against a matched 2-HCA arm — every apparent gain
+> sat inside the other arm's spread
+> ([`../results/20260826-four-hca-throughput/`](../results/20260826-four-hca-throughput)).
+> It is kept for **redundancy and headroom**, not for speed.
+>
+> **The `==` is not a typo.** The live value reads `NCCL_IB_HCA==rocep1s0f0,...`, so NCCL
+> receives the literal `=rocep1s0f0,...`. A leading `=` in `NCCL_IB_HCA` means **exact
+> device match** rather than prefix match — verified from the engine log, which selects
+> all four devices and splits traffic across `NET/IB/4` and `NET/IB/5`. **Do not "fix" it**;
+> removing the `=` silently switches to prefix matching.
+>
+> **Everything below remains accurate as a description of what happens WITHOUT the
+> addressing**, and is kept as a diagnostic signature. If you widen `NCCL_IB_HCA` before
+> addressing the upper pair, this is what you will see.
+
+**Historical (2026-08-25, before the upper pair was addressed):**
+It wedged the cluster. Tried, failed, rolled back.
 
 **Why it looked right.** Upstream MiaAI-Lab's `.env.dspark.example` documents that a GB10
 QSFP port enumerates as **two virtual NICs** (2× PCIe Gen5 x4 controllers, ~100G each) and

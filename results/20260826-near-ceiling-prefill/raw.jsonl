@@ -1,0 +1,3 @@
+{"requested_depth": 8192, "actual_prompt_tokens": 81124, "ttft_s": 41.92, "prefill_tok_s": 1935.0, "content": "random uuid-hex words, not token-ID pool", "runs": 1}
+{"requested_depth": 32768, "actual_prompt_tokens": 317904, "ttft_s": 231.51, "prefill_tok_s": 1373.2, "content": "random uuid-hex words, not token-ID pool", "runs": 1}
+{"requested_depth": 100000, "actual_prompt_tokens": 967286, "ttft_s": 1380.93, "prefill_tok_s": 700.5, "content": "random uuid-hex words, not token-ID pool", "runs": 1}
