@@ -1,12 +1,19 @@
 # Post-mortem — 2026-08-25: the fabric was lying, and so were our benchmarks
 
+> [!CAUTION]
+> **The fabric diagnosis and failure lessons survive; the node-count performance verdict
+> does not.** The later depth comparison cited in §2.2 returned only 25–26 output tokens
+> per request and is now `VOID-25-token-window`. A corrected 3-node arm exists, but no
+> matching corrected 2-node arm does. Use the [current handoff](HANDOFF-2026-08-27.md),
+> not this dated post-mortem, for the present comparison status.
+
 **Scope.** One working day. Started as "re-run the deep-concurrency test from issue #15."
 Ended having overturned or qualified most of what this repo believed about node count,
 and having found four classes of failure that were invisible to every check we had.
 
-**Outcome in one line.** Three nodes ARE superior for this deployment (+17–18% decode at
-cc=1), but not for the reasons previously claimed, and the evidence for it did not exist
-until today.
+**Outcome in one line.** A silent RDMA fault invalidated the earlier performance corpus
+and established that fabric gating is mandatory; the node-count conclusion drawn that day
+was later withdrawn.
 
 ---
 
@@ -76,6 +83,11 @@ marked suspect. At cc=1 it reproduces in the same range.
 > a claim's *direction* on a different workload is not a re-run of the claim. Restating it
 > as "vindicated" carried the original's depth range along with it for free, unmeasured.
 > [`../results/20260826-decode-depth-2v3/`](../results/20260826-decode-depth-2v3).
+
+> **Further correction, 2026-08-27.** That depth table is also void. Its prompt requested
+> 256 tokens but instructed the model to answer in one sentence, and all 70 responses
+> stopped at 25–26 tokens. The apparent depth-dependent advantage measured draft-acceptance
+> variance over roughly five MTP steps. It does not establish a 2-vs-3 winner.
 
 ---
 
@@ -243,9 +255,11 @@ fault** and confirming exit 1.
    every shape.
 3. **Root cause of spark1's original degradation** — never determined. It had been up a
    long time. If it recurs, a periodic fabric check or reboot cadence is warranted.
-4. **The 0.49 GB/s "GB10 ceiling" analysis** was measured on the degraded fabric. True
-   3-rank is 3.25 GB/s — **6.6x higher** — so the EP=3 / PP=3 / seqs=32 rejections were all
-   decided against a communication budget that was far too small. Worth revisiting.
+4. ~~**The 0.49 GB/s "GB10 ceiling" analysis.**~~ **RESOLVED.** The same fabric reaches
+   23.92 GB/s in official `all_gather_perf`; 3.25 and 5.80 GB/s are results from the
+   workload-shaped custom harness, not hardware ceilings. The healthy retest overturned
+   the `seqs=32` rejection. PP=3 remains source-blocked; EP=3's historical slowdown margin
+   remains unmeasured on healthy RDMA.
 
 ---
 

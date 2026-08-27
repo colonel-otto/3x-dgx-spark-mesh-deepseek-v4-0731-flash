@@ -8,9 +8,10 @@ Use these completed sources:
 
 - [Bandwidth comparison](BANDWIDTH-COMPARISON.md) — conclusion and controlled variants.
 - [Controlled raw bundle](../results/20260826-nccl-controlled/) — commands and raw logs.
-- [NCCL test build](NCCL-TESTS-BUILD.md) — version-matched reproduction.
+- [Setup requirements](setup.md#2-configure-and-prove-the-ring) — version-matched reproduction.
 
-This redirect preserves links from frozen results. The original test plan remains in Git:
+This redirect preserves links from frozen results. The original test plan can be
+[viewed on GitHub at its last full revision](https://github.com/colonel-otto/DeepSeek-V4-Flash-3x-DGX-Spark/blob/78a91e1/docs/BANDWIDTH-NEXT-TEST.md):
 
 ```bash
 git show 78a91e1:docs/BANDWIDTH-NEXT-TEST.md

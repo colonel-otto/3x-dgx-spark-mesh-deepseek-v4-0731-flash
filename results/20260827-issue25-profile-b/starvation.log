@@ -1,0 +1,13 @@
+trial 0: decoder ttft=155.87s decode=48.37 tok/s max_gap=0.18s
+trial 1: decoder ttft=135.48s decode=49.18 tok/s max_gap=0.10s
+trial 2: decoder ttft=133.26s decode=44.55 tok/s max_gap=0.13s
+trial 3: decoder ttft=133.91s decode=49.61 tok/s max_gap=0.10s
+trial 4: decoder ttft=133.64s decode=49.41 tok/s max_gap=0.11s
+{
+  "label": "profile-b",
+  "trials": 5,
+  "median_decoder_ttft_s": 133.91453073709272,
+  "median_decoder_decode_tok_s": 49.17834122245994,
+  "median_decoder_max_event_gap_s": 0.10859411908313632,
+  "max_decoder_event_gap_s": 0.17808543797582388
+}

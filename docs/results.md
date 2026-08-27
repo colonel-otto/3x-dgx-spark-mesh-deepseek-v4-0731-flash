@@ -11,7 +11,8 @@ Use these canonical sources instead:
 - [Experiment log](EXPERIMENT-LOG.md) — chronological decisions.
 - [Degraded-data catalogue](DEGRADED-DATA-CATALOGUE.md) — what the old numbers diagnose.
 
-The full retired page is preserved in Git history:
+The full retired page can be
+[viewed on GitHub at its last full revision](https://github.com/colonel-otto/DeepSeek-V4-Flash-3x-DGX-Spark/blob/78a91e1/docs/results.md):
 
 ```bash
 git show 78a91e1:docs/results.md

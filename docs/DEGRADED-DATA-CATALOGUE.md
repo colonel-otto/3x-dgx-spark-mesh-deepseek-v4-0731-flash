@@ -5,7 +5,7 @@
 >
 > Every number on it is a **symptom to match against**, captured from a cluster with a
 > real, specific fault. None of it is what this deployment achieves — for that, see
-> [`../README.md`](../README.md#is-the-third-node-worth-it) and
+> [`../README.md`](../README.md#current-evidence) and
 > [`DECISIONS.md`](DECISIONS.md).
 >
 > We keep these numbers because they are the hardest part of reproducing this work. Both
@@ -27,7 +27,7 @@
 | Pairwise NCCL busbw near **~0.7 GB/s** where a healthy pair reads ~4.6 (2 HCA) / ~9.7 (4 HCA) | **D1** — one node's fabric has silently degraded | Run the pairwise collective on all three pairs. The bad node is the one present in every slow pair | **Reboot the degraded node.** A cable swap does not fix it — we tested the alternate cable and got the same 0.68 GB/s |
 | 3-rank collective reads **below** your worst pair (e.g. 0.49 vs 0.69) | **D1** — a collective is paced by its slowest member | Compare the 3-rank figure against each pair individually | Reboot the node common to the slow pairs |
 | Two configurations you expect to differ measure suspiciously **equal** | **D1** — both throttled to a common floor | Gate the fabric before benchmarking, then re-run both arms | Fix the fabric first; the comparison is void until then |
-| A gap between two arms is suspiciously **uniform across a swept variable** (e.g. a flat ~13% at 2K, 8K, 32K and 131K alike) | **D1** — a shared floor flattens a real curve into a constant | Re-run the sweep on gated fabric. Ours turned out to be **parity below 32K and +33.6% at 131K** | Fix the fabric. Note that consistency across levels reads as *robustness* and is the reason this went unquestioned for five days |
+| A gap between two arms is suspiciously **uniform across a swept variable** (e.g. a flat ~13% at 2K, 8K, 32K and 131K alike) | **D1** — a shared floor can flatten a real curve into a constant | Re-run both arms on gated fabric with a forced, verified output window | Fix the fabric first. Our first healthy rerun was also void because every response stopped at 25–26 tokens; a plausible curve is not sufficient evidence |
 | Benchmark is slow but **no counter anywhere is failing** | **D1 or D2** — this whole family is invisible to status checks | `make gate-full CONFIG=configs/3spark-live.env`, engine stopped | Follow whichever gate check fails |
 | Containers `running`, ranks completed NCCL init, engine never finishes loading | **Init success ≠ health** (see below) | Look for `IBV_WC_RETRY_EXC_ERR` with both GIDs `fe80::` in the engine log | The HCA pair you enabled has no IPv4. Address and route it, or roll back to the pair that has one |
 | A single stream is fast but wildly variable run to run | JIT compilation landing inside a request — not a fabric fault | `jit_monitor` warning in the log: `JIT compilation during inference` | Warm every shape you intend to measure, discard contaminated sweeps, take median of ≥7 |
@@ -36,7 +36,7 @@
 the prompt alone moves single-stream decode **1.65x** (81.8 code-shaped vs 49.4 dense
 prose, same engine, minutes apart) because MTP acceptance is content-dependent. The
 healthy range above spans 53.95–57.73 on a dense-prose prompt and 85.6–89.1 on an
-18-token code brief. See [`BENCHMARK-METHODOLOGY.md`](BENCHMARK-METHODOLOGY.md).
+18-token code brief. See [benchmark policy](BENCHMARK-POLICY.md#prompt-jit-and-reference-tool-discipline).
 
 **Before anything else, check the date on the data you are comparing against.** Anything
 in this repo measured before **2026-08-25** was taken on the degraded fabric in D1, and
@@ -51,7 +51,7 @@ it showed a 1.19x deficit while the real RDMA deficit was 6.8x. Use an NCCL coll
 
 | Tier | Meaning | Where it lives |
 |---|---|---|
-| **Our results** | Healthy fabric, RDMA confirmed `via NET/IB/*`, matched arms | [`../README.md`](../README.md#is-the-third-node-worth-it) · [`DECISIONS.md`](DECISIONS.md) · [`FABRIC-FIX-PARITY.md`](FABRIC-FIX-PARITY.md) |
+| **Current evidence** | Healthy fabric and provenance stated per result; only comparisons with complete matched arms are treated as comparisons | [`../README.md`](../README.md#current-evidence) · [`DECISIONS.md`](DECISIONS.md) · [`FABRIC-FIX-PARITY.md`](FABRIC-FIX-PARITY.md) |
 | **Diagnostic signatures** | Numbers from a known-broken setup, kept so you can recognise the fault | **This page** |
 | **Falsified claims** | Assertions we made that later proved wrong — neither result nor symptom | Listed per-page, and in the "What it corrupted" table below |
 
@@ -91,8 +91,8 @@ slowest member. That is the tell, and we read it as a hardware ceiling instead.
 
 | Claim made | Reality | Status |
 |---|---|---|
-| "GB10 has a ~0.5 GB/s communication ceiling" | The ceiling is **3.25 GB/s** | ❌ **Retracted.** This was the most expensive error — it anchored three rejections below |
-| `MAX_NUM_SEQS=32` rejected | Rejected against a budget **6.6x too small** | ⚠️ Re-open, [#10](../../issues/10) |
+| "GB10 has a ~0.5 GB/s communication ceiling" | Official `all_gather_perf` reaches **23.92 GB/s**; the custom workload harness measures a different regime | ❌ **Retracted.** This was the most expensive error — it anchored three rejections below |
+| `MAX_NUM_SEQS=32` rejected | Healthy-fabric retest succeeded; 32 is production | ✅ **Overturned**, [#10](../../issues/10) |
 | EP=3 rejected | 2.5x slower — but partly re-measure | ⚠️ Kernel finding stands; the margin does not |
 | PP=3 rejected | Blocked by MTP + DSA stride | ✅ **Survives** — a hard block, not a perf number |
 | "2 and 3 nodes are equally unusable at 4×200K" | 1.025x apart then; **1.35x** apart now | ❌ **Retracted** |
@@ -110,7 +110,7 @@ lives instead. Read the banner before quoting anything from these pages.
 
 | Page | What its numbers are | Contaminated by |
 |---|---|---|
-| [`WHY-THREE-NODES.md`](WHY-THREE-NODES.md) | Degraded-fabric 2v3 decode table. **Its "+8–17% from 2K upward" headline is retracted** — re-measured 2026-08-26 as parity below 32K and +33.6% at 131K | D1 — and spark1 sat in the **3-node** arm |
+| [`WHY-THREE-NODES.md`](WHY-THREE-NODES.md) | Degraded-fabric 2v3 decode table. Its "+8–17% from 2K upward" headline is retracted; the first healthy depth rerun is also void because its output window collapsed | D1 — and the later D3 output-window defect |
 | [`EP3-EXPERT-PARALLEL.md`](EP3-EXPERT-PARALLEL.md) | Degraded fabric **and** TCP fallback | D1 + D2 — the only transport that ran was `NCCL_NET=Socket` |
 | [`TP3-TUNING.md`](TP3-TUNING.md) | Degraded-fabric tuning sweep at the superseded profile | D1 |
 | [`SEQS32-AND-NCCL-FABRIC.md`](SEQS32-AND-NCCL-FABRIC.md) | Degraded-fabric collective budget (0.49 GB/s) | D1 |

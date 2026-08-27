@@ -49,7 +49,7 @@
 
 meta:
   generated: 2026-08-27
-  verified: 2026-08-27           # all 26 result directories represented
+  verified: 2026-08-27           # all 29 result directories represented
   fabric_fix_date: 2026-08-25
   gate_tool: scripts/fabric_gate.sh
   gate_enforced_by: scripts/run_experiment.sh
@@ -68,11 +68,11 @@ meta:
     - ABSENT
     - PRE-DATES-GATE
   fabric_gate_tally:
-    PRESENT-PASS: 8
+    PRESENT-PASS: 11
     PRESENT-FAIL: 0
     ABSENT: 13
     PRE-DATES-GATE: 5
-    total: 26
+    total: 29
   fabric_gate_tally_detail:
     PRESENT-PASS:
       - 20260825-deep-concurrency        # fabric-gate-full.json 13/13, nccl=full
@@ -83,6 +83,9 @@ meta:
       - 20260827-decode-2node-failed     # gate passed; benchmark produced no samples
       - 20260827-decode-2v3-fixed        # TP=2 stopped gate; TP=3 restore gate skipped NCCL
       - 20260827-decode-concurrency-2v3-fixed # TP=2 stopped gate; TP=3 restore gate skipped NCCL
+      - 20260827-issue25-profile-a       # stopped fabric gate passed (9.29 GB/s NCCL)
+      - 20260827-issue25-profile-b       # stopped fabric gate passed (9.50 GB/s NCCL)
+      - 20260827-tp3-131k-15rep          # restored fabric gate passed + live completion
     PRESENT-FAIL: []
     ABSENT:
       - 20260824-kv-quality
@@ -105,7 +108,7 @@ meta:
       - 20260821T133000Z-3spark-tp3
       - 20260821T142000Z-3spark-tp3-upstream-harness
   fabric_gate_tally_note: >
-    Eight of 26 directories commit their own passing gate or direct fabric
+    Eleven of 29 directories commit their own passing gate or direct fabric
     measurement. Three newly imported bundles carry a stopped TP=2 gate; their
     restored TP=3 checks ran with the engine live and therefore skipped NCCL.
     One passing-gate bundle (20260826-decode-depth-2v3) is void for an unrelated
@@ -1672,3 +1675,152 @@ directories:
     note: >
       TP=2 used MAX_NUM_SEQS=16 and TP=3 used 32. Three trials establish the
       crossover direction, not a high-precision magnitude.
+
+  - dir: 20260827-issue25-profile-a
+    date: 2026-08-27
+    description: >
+      Baseline TP=3 production configuration before applying the recipe
+      tuning deltas in issue #25. Includes 5-trial starvation probe and
+      5-depth fixed-window sweep.
+    readme_h1: Profile A baseline tuning evaluation — 2026-08-27
+    has_readme: true
+    nodes: 3
+    nodes_evidence: engine-config.txt records --tensor-parallel-size 3, --nnodes 3, and GPU_MEMORY_UTILIZATION=0.80
+    tp_size: 3
+    kv_pool_tokens: null
+    kv_pool_source: not captured
+    harness: scripts/decode_depth_sweep.py @ c3e8e0d and scripts/benchmark_prefill_starvation.py
+    harness_committed: true
+    output_tokens_requested: 256
+    output_tokens_actual: {256: 35}
+    output_tokens_field: completion_tokens (PER-REQUEST)
+    output_tokens_note: completion_tokens=256 and cached_tokens=0 on all 35 measured reps
+    reps: 7 per depth (35 total) + 5 starvation trials
+    reps_verified: true
+    statistic: median with full per-rep JSONL retained
+    fabric_gate: PRESENT-PASS
+    fabric_gate_artifact: fabric-gate-stopped.json
+    fabric_gate_evidence: 30 pass, 0 fail, 3 expected engine skips; 9.29 GB/s NCCL
+    fabric_gate_note: stopped fabric gate passed across all directed pairs
+    fabric_gated: true
+    fabric_state: healthy
+    raw_data_committed: true
+    raw_files:
+      - container-env.json
+      - depth-131k.jsonl
+      - depth-131k-summary.json
+      - depth-262k.jsonl
+      - depth-262k-summary.json
+      - depth.jsonl
+      - depth.log
+      - depth-summary.json
+      - engine-config.txt
+      - fabric-gate-stopped.json
+      - models.json
+      - orchestration.log
+      - starvation.jsonl
+      - starvation.log
+      - starvation-summary.json
+    status: SUPERSEDED-BY-20260827-issue25-profile-b
+    void_reasons: []
+    superseded_by: 20260827-issue25-profile-b
+    note: >
+      Baseline TP=3 numbers: 54.12 / 57.54 / 54.96 / 48.89 / 44.94 tok/s.
+      Starvation probe median decoder TTFT 149.99 s, decode 47.00 tok/s.
+      Superseded by Profile B (issue #25 winner).
+
+  - dir: 20260827-issue25-profile-b
+    date: 2026-08-27
+    description: >
+      Profile B evaluation for issue #25 applying published recipe deltas:
+      GPU_MEMORY_UTILIZATION=0.835, LONG_PREFILL_TOKEN_THRESHOLD=1024,
+      DSPARK_MAX_INFLIGHT_PREFILLS=2, VLLM_PREFIX_CACHE_RETENTION_INTERVAL=4096,
+      and concurrency hotfixes.
+    readme_h1: Profile B recipe tuning evaluation — 2026-08-27
+    has_readme: true
+    nodes: 3
+    nodes_evidence: engine-config.txt records --tensor-parallel-size 3, --nnodes 3, and GPU_MEMORY_UTILIZATION=0.835
+    tp_size: 3
+    kv_pool_tokens: null
+    kv_pool_source: not captured
+    harness: scripts/decode_depth_sweep.py @ c3e8e0d and scripts/benchmark_prefill_starvation.py
+    harness_committed: true
+    output_tokens_requested: 256
+    output_tokens_actual: {256: 35}
+    output_tokens_field: completion_tokens (PER-REQUEST)
+    output_tokens_note: completion_tokens=256 and cached_tokens=0 on all 35 measured reps
+    reps: 7 per depth (35 total) + 5 starvation trials
+    reps_verified: true
+    statistic: median with full per-rep JSONL retained
+    fabric_gate: PRESENT-PASS
+    fabric_gate_artifact: fabric-gate-stopped.json
+    fabric_gate_evidence: 30 pass, 0 fail, 3 expected engine skips; 9.50 GB/s NCCL
+    fabric_gate_note: stopped fabric gate passed across all directed pairs
+    fabric_gated: true
+    fabric_state: healthy
+    raw_data_committed: true
+    raw_files:
+      - container-env.json
+      - depth.jsonl
+      - depth.log
+      - depth-summary.json
+      - engine-config.txt
+      - fabric-gate-stopped.json
+      - models.json
+      - starvation.jsonl
+      - starvation.log
+      - starvation-summary.json
+    status: CURRENT
+    void_reasons: []
+    superseded_by: null
+    note: >
+      Winning tuning bundle for issue #25. Decode medians: 53.94 / 59.82 /
+      53.52 / 50.12 / 46.08 tok/s. Starvation probe median decoder TTFT
+      improved by 10.7% (133.91 s vs 149.99 s), decode 49.18 tok/s, 0.178 s max gap.
+      262K TTFT improved from 189.57 s to 177.29 s (-6.5%). Restored as
+      active production configuration.
+
+  - dir: 20260827-tp3-131k-15rep
+    date: 2026-08-27
+    description: >
+      15-repetition single-stream decode and TTFT evaluation at 131K on TP=3
+      (Profile B) with live restoration completion check for issue #24.
+    readme_h1: TP=3 15-rep 131K depth evaluation — 2026-08-27
+    has_readme: true
+    nodes: 3
+    nodes_evidence: live-completion.json and fabric-gate-restored.json confirm 3-node TP=3
+    tp_size: 3
+    kv_pool_tokens: null
+    kv_pool_source: not captured
+    harness: scripts/decode_depth_sweep.py @ c3e8e0d
+    harness_committed: true
+    output_tokens_requested: 256
+    output_tokens_actual: {256: 15}
+    output_tokens_field: completion_tokens (PER-REQUEST)
+    output_tokens_note: completion_tokens=256 and cached_tokens=0 on all 15 measured reps
+    reps: 15 reps at 131K
+    reps_verified: true
+    statistic: median with full sorted per-rep distribution
+    fabric_gate: PRESENT-PASS
+    fabric_gate_artifact: fabric-gate-restored.json
+    fabric_gate_evidence: 24 pass, 0 fail, 1 expected skip (engine live); verified live completion 391
+    fabric_gate_note: restored cluster verified healthy and producing correct completions
+    fabric_gated: true
+    fabric_state: healthy
+    raw_data_committed: true
+    raw_files:
+      - tp3-131k-15rep.jsonl
+      - tp3-131k-15rep.log
+      - tp3-131k-15rep-summary.json
+      - fabric-gate-restored.json
+      - fabric-gate-tp2-stopped.json
+      - live-completion.json
+    status: CURRENT
+    void_reasons: []
+    superseded_by: null
+    note: >
+      15 reps at 131K on TP=3 Profile B for issue #24. Median decode: 51.04 tok/s.
+      Median TTFT: 79.00 s. Full sorted distributions committed. Confirms TP=3
+      +15% decode advantage over TP=2 (51.04 vs 44.40 tok/s) and explains TTFT gap
+      as intrinsic chunked-prefill all-reduce communication cost.
+

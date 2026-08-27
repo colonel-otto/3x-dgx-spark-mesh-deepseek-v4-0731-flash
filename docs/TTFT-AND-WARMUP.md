@@ -5,4 +5,5 @@ containing JIT compilation. Do not use a periodic keep-alive: idle costs about 2
 while a new shape can compile during inference and add seconds.
 
 These current rules are owned by [benchmark policy](BENCHMARK-POLICY.md). The original
-measurements remain available through Git history.
+measurements are available at the
+[last full revision](https://github.com/colonel-otto/DeepSeek-V4-Flash-3x-DGX-Spark/blob/78a91e1/docs/TTFT-AND-WARMUP.md).

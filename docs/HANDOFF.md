@@ -13,7 +13,8 @@ Use these canonical pages instead:
 - [Experiment log](EXPERIMENT-LOG.md) — chronological history.
 
 Old result bundles still link here, so this redirect remains stable. The complete retired
-text is preserved in Git history:
+text is preserved in Git history and can be
+[viewed on GitHub at its last full revision](https://github.com/colonel-otto/DeepSeek-V4-Flash-3x-DGX-Spark/blob/78a91e1/docs/HANDOFF.md):
 
 ```bash
 git show 78a91e1:docs/HANDOFF.md

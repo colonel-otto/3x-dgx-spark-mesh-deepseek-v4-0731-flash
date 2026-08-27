@@ -9,4 +9,4 @@ cells were byte-identical and no material speed or memory difference was demonst
   [`20260827-quality-suite-3node`](../results/20260827-quality-suite-3node/).
 - Original single-arm evidence: [`20260824-kv-quality`](../results/20260824-kv-quality/).
 
-The complete report remains available through Git history.
+[View the complete retired single-arm report at its last full revision.](https://github.com/colonel-otto/DeepSeek-V4-Flash-3x-DGX-Spark/blob/78a91e1/docs/KV-QUALITY-LONG-CONTEXT.md)
