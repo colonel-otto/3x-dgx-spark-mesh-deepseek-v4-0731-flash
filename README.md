@@ -353,7 +353,7 @@ The essential TP=3/RoCE settings are:
 
 ```bash
 TP_SIZE=3
-PP_SIZE=1
+PP_SIZE=1                      # Pipeline Parallelism (PP=3 is blocked; see docs/PP3-PIPELINE-PARALLEL.md)
 NNODES=3
 MOE_BACKEND=flashinfer_b12x
 
@@ -361,24 +361,24 @@ NCCL_IB_DISABLE=0
 NCCL_NET=IB
 NCCL_IB_SUBNET_AWARE_ROUTING=1
 NCCL_NET_PLUGIN=none
-NCCL_IB_HCA=rocep1s0f0,rocep1s0f1
+NCCL_IB_HCA=rocep1s0f0,rocep1s0f1,roceP2p1s0f0,roceP2p1s0f1
 NCCL_NVLS_ENABLE=0
 NCCL_IB_ADDR_FAMILY=AF_INET
 NCCL_IB_ROCE_VERSION_NUM=2
 ```
 
-The settled serving profile (2026-08-25) is:
+The settled serving profile (2026-08-26) is:
 
 ```bash
 MAX_MODEL_LEN=1048576          # 1M is free here: memory-bound, not comms-bound
-MAX_NUM_SEQS=16
+MAX_NUM_SEQS=32                # raised 16 -> 32 on 2026-08-26 (+46.3% at cc=32; issue #10)
 GPU_MEMORY_UTILIZATION=0.80
 MTP_NUM_TOKENS=5               # beats 4; matched control 2026-08-24
 MAX_NUM_BATCHED_TOKENS=8192    # do NOT raise to 16384 -- see pitfall 8
 VLLM_USE_BREAKABLE_CUDAGRAPH=0
 ```
 
-> Earlier documents describe `460800` / `seqs=8` / `0.85` / `MTP=4`. That profile is
+> Earlier documents describe `460800` / `seqs=8` / `seqs=16` / `0.85` / `MTP=4`. That profile is
 > **superseded**; it survives only inside dated result pages, which are frozen to the
 > configuration they were measured under. [`config/tp3.env.example`](config/tp3.env.example)
 > is authoritative and carries the reasoning for every value.
