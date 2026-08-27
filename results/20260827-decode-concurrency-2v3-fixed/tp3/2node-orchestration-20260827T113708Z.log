@@ -1,0 +1,125 @@
+[2026-08-27T07:37:08-04:00] === Step 1: stop 3-node cluster (dsv4.service) ===
+[2026-08-27T07:37:49-04:00] === Step 2: fabric gate with engine stopped (2-node) ===
+== fabric gate: 2 nodes from 2spark-live.env ==
+-- ssh liveness
+  [32mPASS[0m  sparkmain -> node0
+  [32mPASS[0m  spark1 -> node1
+-- fabric mesh (all directed pairs) + latency
+  [32mPASS[0m  sparkmain -> spark1 (192.168.100.2) rtt 0.824ms
+  [32mPASS[0m  spark1 -> sparkmain (192.168.200.1) rtt 0.600ms
+-- peer egress device (RDMA/model data must leave via the fabric)
+  [32mPASS[0m  sparkmain: all peer FABRIC routes egress the fabric
+  [32mPASS[0m  spark1: all peer FABRIC routes egress the fabric
+-- fabric addressing (duplicate/overlapping subnets)
+  [32mPASS[0m  sparkmain fabric addressing clean: enp1s0f0np0=192.168.100.1/30 enp1s0f1np1=192.168.101.1/30 enP2p1s0f0np0=192.168.110.1/30 enP2p1s0f1np1=192.168.111.1/30
+  [32mPASS[0m  spark1 fabric addressing clean: enp1s0f0np0=192.168.102.1/30 enp1s0f1np1=192.168.100.2/30 enP2p1s0f0np0=192.168.112.1/30 enP2p1s0f1np1=192.168.110.2/30
+-- fabric arp (peer on correct port)
+  [32mPASS[0m  sparkmain: every fabric peer on its cabled port
+  [32mPASS[0m  spark1: every fabric peer on its cabled port
+-- fabric config persistence (survives reboot?)
+  [32mPASS[0m  sparkmain: fabric addressing persisted and netplan generates
+  [32mPASS[0m  spark1: fabric addressing persisted and netplan generates
+-- engine rdma health (if running)
+  [33mSKIP[0m  sparkmain: no engine running (nothing to check)
+  [33mSKIP[0m  spark1: no engine running (nothing to check)
+-- nccl collective bandwidth
+  [32mPASS[0m  gate-p01 transport: via NET/IB/4 via NET/IB/5 (ndevs=1 ndevs=2)
+  [32mPASS[0m  gate-p01 merged devices: rocep1s0f0 rocep1s0f0+rocep1s0f1 rocep1s0f1 roceP2p1s0f0 roceP2p1s0f0+roceP2p1s0f1 roceP2p1s0f1
+  [32mPASS[0m  gate-p01: 9.47 GB/s @64MiB
+
+== 15 passed, 0 failed, 2 skipped ==
+wrote /home/sparkmain/bench-repo/results/20260827T113708Z-cc-2node/fabric-gate-stopped.json
+GATE PASSED (with skips). Bandwidth unverified -- see above.
+[2026-08-27T07:38:14-04:00] === Step 3: bring up 2-node TP=2 cluster ===
+[2026-08-27T07:38:14-04:00] Config verified identical across both ranks:
+    GPU_MEMORY_UTILIZATION=0.80
+    MAX_MODEL_LEN=1048576
+    MAX_NUM_BATCHED_TOKENS=8192
+    MAX_NUM_SEQS=16
+    MTP_NUM_TOKENS=5
+[2026-08-27T07:38:15-04:00] Starting worker spark1 (rank 1) ...
+ Container dspark-vllm-gx10-vllm-dspark-1 Creating
+ Container dspark-vllm-gx10-vllm-dspark-1 Created
+ Container dspark-vllm-gx10-vllm-dspark-1 Starting
+ Container dspark-vllm-gx10-vllm-dspark-1 Started
+[2026-08-27T07:38:31-04:00] Starting head sparkmain (rank 0) ...
+ Container dspark-vllm-gx10-vllm-dspark-1 Creating
+ Container dspark-vllm-gx10-vllm-dspark-1 Created
+ Container dspark-vllm-gx10-vllm-dspark-1 Starting
+ Container dspark-vllm-gx10-vllm-dspark-1 Started
+[2026-08-27T07:38:31-04:00] Waiting for http://127.0.0.1:8100 (cold start is ~7 min) ...
+[2026-08-27T07:44:42-04:00] READY after ~350s
+--gpu-memory-utilization 0.80
+--max-model-len 1048576
+--max-num-seqs 16
+--tensor-parallel-size 2
+[2026-08-27T07:44:42-04:00] === Step 4: sanity check (correctness) ===
+{"id":"chatcmpl-b5b0194d306a1a33","object":"chat.completion","created":1787831082,"model":"deepseek-v4-flash-0731","choices":[{"index":0,"message":{"role":"assistant","content":"391","refusal":null,"annotations":null,"audio":null,"function_call":null,"reasoning":null},"logprobs":null,"finish_reason":"stop","stop_reason":null,"token_ids":null,"routed_experts":null}],"service_tier":null,"system_fingerprint":"vllm-0.25.2.dev0+g752a3a504.d20260714-tp2-26ea8310","usage":{"prompt_tokens":18,"total_tokens":20,"completion_tokens":2,"prompt_tokens_details":null},"prompt_logprobs":null,"prompt_token_ids":null,"prompt_text":null,"kv_transfer_params":null,"metrics":null}
+[2026-08-27T07:44:42-04:00] === Step 5: concurrency sweep cc=4,8,16 at depth=8192, max_tokens=256 (2-node) ===
+[2026-08-27T07:44:42-04:00] --- cc=4 ---
+trial 0: c=4 p=8192 median_decode=18.4 tok/s agg=35.1 ttft=14634ms n=[256, 256, 256, 256]
+trial 1: c=4 p=8192 median_decode=21.4 tok/s agg=39.3 ttft=13723ms n=[256, 256, 256, 256]
+trial 2: c=4 p=8192 median_decode=36.3 tok/s agg=47.9 ttft=13710ms n=[256, 256, 256, 256]
+
+FINAL: median-of-trials decode = 21.4 tok/s (min 18.4 max 36.3)
+[2026-08-27T07:45:59-04:00] --- cc=8 ---
+trial 0: c=8 p=8192 median_decode=10.4 tok/s agg=43.8 ttft=21536ms n=[256, 256, 256, 256, 256, 256, 256, 256]
+trial 1: c=8 p=8192 median_decode=15.8 tok/s agg=53.4 ttft=21497ms n=[256, 256, 256, 256, 256, 256, 256, 256]
+trial 2: c=8 p=8192 median_decode=16.3 tok/s agg=54.1 ttft=21532ms n=[256, 256, 256, 256, 256, 256, 256, 256]
+
+FINAL: median-of-trials decode = 15.8 tok/s (min 10.4 max 16.3)
+[2026-08-27T07:48:03-04:00] --- cc=16 ---
+trial 0: c=16 p=8192 median_decode=7.5 tok/s agg=56.4 ttft=37193ms n=[256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256]
+trial 1: c=16 p=8192 median_decode=7.4 tok/s agg=56.2 ttft=37210ms n=[256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256]
+trial 2: c=16 p=8192 median_decode=7.4 tok/s agg=55.7 ttft=37297ms n=[256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256]
+
+FINAL: median-of-trials decode = 7.4 tok/s (min 7.4 max 7.5)
+[2026-08-27T07:51:43-04:00] === Step 6: bring down 2-node cluster ===
+[2026-08-27T07:51:43-04:00] Stopping head sparkmain ...
+[2026-08-27T07:51:49-04:00] Stopping worker spark1 ...
+[2026-08-27T07:52:04-04:00] Stopped.
+[2026-08-27T07:52:04-04:00] === Step 7: restore 3-node cluster (dsv4.service) ===
+[2026-08-27T07:59:19-04:00] === Step 8: verify 3-node cluster is healthy ===
+[2026-08-27T07:59:20-04:00] 3-node cluster healthy after restart.
+[2026-08-27T07:59:20-04:00] === Step 9: fabric gate on restored 3-node cluster (engine running, --nccl=skip) ===
+== fabric gate: 3 nodes from 3spark-live.env ==
+-- ssh liveness
+  [32mPASS[0m  sparkmain -> node0
+  [32mPASS[0m  spark1 -> node1
+  [32mPASS[0m  spark2 -> node2
+-- fabric mesh (all directed pairs) + latency
+  [32mPASS[0m  sparkmain -> spark1 (192.168.100.2) rtt 0.780ms
+  [32mPASS[0m  sparkmain -> spark2 (192.168.101.2) rtt 1.061ms
+  [32mPASS[0m  spark1 -> sparkmain (192.168.200.1) rtt 0.715ms
+  [32mPASS[0m  spark1 -> spark2 (192.168.101.2) rtt 0.665ms
+  [32mPASS[0m  spark2 -> sparkmain (192.168.200.1) rtt 0.367ms
+  [32mPASS[0m  spark2 -> spark1 (192.168.100.2) rtt 0.873ms
+-- peer egress device (RDMA/model data must leave via the fabric)
+  [32mPASS[0m  sparkmain: all peer FABRIC routes egress the fabric
+  [32mPASS[0m  spark1: all peer FABRIC routes egress the fabric
+  [32mPASS[0m  spark2: all peer FABRIC routes egress the fabric
+-- fabric addressing (duplicate/overlapping subnets)
+  [32mPASS[0m  sparkmain fabric addressing clean: enp1s0f0np0=192.168.100.1/30 enp1s0f1np1=192.168.101.1/30 enP2p1s0f0np0=192.168.110.1/30 enP2p1s0f1np1=192.168.111.1/30
+  [32mPASS[0m  spark1 fabric addressing clean: enp1s0f0np0=192.168.102.1/30 enp1s0f1np1=192.168.100.2/30 enP2p1s0f0np0=192.168.112.1/30 enP2p1s0f1np1=192.168.110.2/30
+  [32mPASS[0m  spark2 fabric addressing clean: enp1s0f0np0=192.168.101.2/30 enp1s0f1np1=192.168.102.2/30 enP2p1s0f0np0=192.168.111.2/30 enP2p1s0f1np1=192.168.112.2/30
+-- fabric arp (peer on correct port)
+  [32mPASS[0m  sparkmain: every fabric peer on its cabled port
+  [32mPASS[0m  spark1: every fabric peer on its cabled port
+  [32mPASS[0m  spark2: every fabric peer on its cabled port
+-- fabric config persistence (survives reboot?)
+  [32mPASS[0m  sparkmain: fabric addressing persisted and netplan generates
+  [32mPASS[0m  spark1: fabric addressing persisted and netplan generates
+  [32mPASS[0m  spark2: fabric addressing persisted and netplan generates
+-- engine rdma health (if running)
+  [32mPASS[0m  sparkmain: engine log clean of RDMA completion errors
+  [32mPASS[0m  spark1: engine log clean of RDMA completion errors
+  [32mPASS[0m  spark2: engine log clean of RDMA completion errors
+-- nccl collective bandwidth
+  [33mSKIP[0m  bandwidth not measured (engine up, or --nccl=skip). THIS IS THE CHECK THAT MATTERS -- run it when the engine is down.
+
+== 24 passed, 0 failed, 1 skipped ==
+wrote /home/sparkmain/bench-repo/results/20260827T113708Z-cc-2node/fabric-gate-restored-3node.json
+GATE PASSED (with skips). Bandwidth unverified -- see above.
+[2026-08-27T07:59:48-04:00] === Step 10: live completion sanity check on restored 3-node cluster ===
+{"id":"chatcmpl-a2f68117dfd70ee0","object":"chat.completion","created":1787831988,"model":"deepseek-v4-flash-0731","choices":[{"index":0,"message":{"role":"assistant","content":"391","refusal":null,"annotations":null,"audio":null,"function_call":null,"reasoning":null},"logprobs":null,"finish_reason":"stop","stop_reason":null,"token_ids":null,"routed_experts":null}],"service_tier":null,"system_fingerprint":"vllm-0.25.2.dev0+g752a3a504.d20260714-tp3-f6419537","usage":{"prompt_tokens":18,"total_tokens":20,"completion_tokens":2,"prompt_tokens_details":null},"prompt_logprobs":null,"prompt_token_ids":null,"prompt_text":null,"kv_transfer_params":null,"metrics":null}
+[2026-08-27T07:59:48-04:00] === DONE. Run directory: /home/sparkmain/bench-repo/results/20260827T113708Z-cc-2node ===

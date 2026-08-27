@@ -91,6 +91,36 @@ noise**. 2-node also leads at `c=8` (161.0 vs 143.6, **+12%**).
 > `summary.csv` states this sourcing explicitly in the row's notes rather than relabelling
 > the config.
 
+> ### ❌ RE-RUN 2026-08-26 on healthy fabric — finding 2 does NOT survive
+>
+> Matched arms, healthy fabric, five depths, 7 reps each, 70 measured runs
+> (`results/20260826-decode-depth-2v3/`, harness `scripts/decode_depth_sweep.py`). Per-stream
+> decode tok/s, median, prefill excluded:
+>
+> | context | 2-node | 3-node | 3-node gain | claimed above |
+> |---:|---:|---:|---:|---:|
+> | 2,036 | 75.8 | 76.3 | +0.8% | +14% |
+> | 8,081 | 72.4 | 72.6 | +0.3% | +8% |
+> | 32,268 | **70.8** | 70.2 | −0.9% | +17% |
+> | 129,006 | 54.4 | **72.6** | **+33.6%** | +13% |
+> | 257,993 | 71.5 | **84.4** | **+17.9%** | not measured |
+>
+> **"+8–17% from 2K to 131K" is retracted.** It is wrong in both directions: below 32K the
+> advantage does not exist (three cells inside noise, one negative), and above 100K it is
+> more than double what was claimed. The degraded link had compressed a strongly
+> depth-dependent effect into a flat band.
+>
+> **The crossover is between 32K and 131K.** Mechanistically consistent with KV pressure —
+> the 2-node pool is 1,844,001 tokens against the 3-node ~4.5M — and with prefill measuring
+> at parity, since below 32K decode is bound by per-token compute a third rank does not add.
+>
+> **Finding 1 (2-node wins aggregate) is untouched by this run** — it is a concurrency
+> measurement and this is a depth measurement at cc=1. Both stand.
+>
+> Also new: TTFT at depth favours **two** nodes (158.4 s vs 181.6 s at 262K), and the depth
+> curve is a **U** on both node counts — 262K decodes faster than 8K, likely rising MTP
+> acceptance.
+
 **3. The 1.95x KV advantage did NOT convert at deep concurrency.** Four concurrent
 **200,000-token** prompts were run on each config:
 

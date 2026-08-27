@@ -1,0 +1,3 @@
+{"concurrency": 16, "elapsed_s": 86.46128579200013, "aggregate_tok_s": 47.373803922529504, "median_ttft_s": 41.84588720751344, "median_output_tok_s": 6.3615351184233795, "prompt_target": 8192, "max_tokens": 256, "rep": 0}
+{"concurrency": 16, "elapsed_s": 77.61550513497787, "aggregate_tok_s": 52.772960671670155, "median_ttft_s": 35.94432585051982, "median_output_tok_s": 7.000051552581441, "prompt_target": 8192, "max_tokens": 256, "rep": 1}
+{"concurrency": 16, "elapsed_s": 77.51396340102656, "aggregate_tok_s": 52.84209218936358, "median_ttft_s": 37.554424631467555, "median_output_tok_s": 6.862017211228672, "prompt_target": 8192, "max_tokens": 256, "rep": 2}

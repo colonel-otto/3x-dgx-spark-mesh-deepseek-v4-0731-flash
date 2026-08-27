@@ -70,7 +70,7 @@ If it recurs, that is worth investigating properly.
 
 Every multi-node number recorded before 2026-08-25 was taken with one of three nodes at
 ~15% collective bandwidth. **Tracked in
-[issue #14](https://github.com/colonel-otto/3spark-dsv4/issues/14)**; treat the following
+[issue #14](../../issues/14)**; treat the following
 as provisional (*) until re-run:
 
 - **Decode baselines** (374.2 cc=16, ~80 cc=1) — these anchor most other conclusions.

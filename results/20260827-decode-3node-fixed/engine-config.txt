@@ -1,0 +1,108 @@
+# LIVE engine config captured 2026-08-27T02:08:15Z from sparkmain PID 556480
+# process start: Wed Aug 26 16:26:22 2026
+
+== full argv ==
+/usr/bin/python3
+/usr/local/bin/vllm
+serve
+/models/dsv4-abliterated
+--served-model-name
+deepseek-v4-flash-0731
+--host
+0.0.0.0
+--port
+8100
+--trust-remote-code
+--tensor-parallel-size
+3
+--pipeline-parallel-size
+1
+--kv-cache-dtype
+nvfp4_ds_mla
+--block-size
+256
+--max-model-len
+1048576
+--max-num-seqs
+32
+--max-num-batched-tokens
+8192
+--max-cudagraph-capture-size
+192
+--gpu-memory-utilization
+0.80
+--enable-prefix-caching
+--async-scheduling
+--enable-chunked-prefill
+--speculative-config
+{"method":"dspark","num_speculative_tokens":5,"draft_sample_method":"probabilistic"}
+--tokenizer-mode
+deepseek_v4
+--distributed-executor-backend
+mp
+--moe-backend
+flashinfer_b12x
+--tool-call-parser
+deepseek_v4
+--enable-auto-tool-choice
+--reasoning-parser
+deepseek_v4
+--reasoning-config
+{"reasoning_parser":"deepseek_v4","reasoning_start_str":"<think>","reasoning_end_str":"</think>"}
+--default-chat-template-kwargs
+{"thinking":false}
+--generation-config
+vllm
+--enable-flashinfer-autotune
+--nnodes
+3
+--node-rank
+0
+--master-addr
+192.168.200.1
+--master-port
+25000
+--jit-monitor-mode
+warn
+
+== key flags ==
+--tensor-parallel-size
+3
+--pipeline-parallel-size
+1
+--kv-cache-dtype
+nvfp4_ds_mla
+--block-size
+256
+--max-model-len
+1048576
+--max-num-seqs
+32
+--max-num-batched-tokens
+8192
+--
+--gpu-memory-utilization
+0.80
+--
+--speculative-config
+{"method":"dspark","num_speculative_tokens":5,"draft_sample_method":"probabilistic"}
+--
+--moe-backend
+flashinfer_b12x
+--
+--nnodes
+3
+--node-rank
+0
+
+== node/GPU ==
+node0  # hostname redacted; head node of the 3-node TP=3 cluster
+name, memory.total [MiB], memory.used [MiB]
+NVIDIA GB10, [N/A], [N/A]
+
+== KV pool ==
+not present in any reachable log for the current engine boot (started Wed Aug 26 16:26:22 2026);
+the systemd unit for this process does not journal, and /tmp logs are from earlier boots.
+Last recorded value on this hardware+config (2026-08-24 boot, same flags):
+(EngineCore pid=182) INFO 08-24 23:52:41 [kv_cache_utils.py:2146] GPU KV cache size: 5,382,503 tokens
+(EngineCore pid=182) INFO 08-24 23:52:41 [kv_cache_utils.py:2147] Maximum concurrency for 1,048,576 tokens per request: 5.13x

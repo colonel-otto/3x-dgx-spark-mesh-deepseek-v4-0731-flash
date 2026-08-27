@@ -14,7 +14,17 @@ adjacent.
 
 - **[localaiguyy/DeepSeek-V4-Flash-DSpark-3x-DGX-Spark](https://github.com/localaiguyy/DeepSeek-V4-Flash-DSpark-3x-DGX-Spark)**
   Three-node TP=3 report and `benchmark_tp3.py`. The attention-group padding
-  approach that makes TP=3 correct (`o_groups` 8 to 9) originates there.
+  approach that makes TP=3 correct (`o_groups` 8 to 9) originates there —
+  **without it, vLLM at TP=3 serves fluent nonsense rather than failing**, so
+  every result in this repository depends on it.
+
+  Their published **618 tok/s at `max_num_seqs=32`** was, for several days, the
+  one figure here we could not match. We had rejected `seqs=32` as a stability
+  regression. Re-tested on 2026-08-26 against a fabric that turned out to have
+  been degraded when we rejected it, it reached **685.9 tok/s** — the single
+  largest throughput gain in this project, and it came from taking someone
+  else's number seriously enough to re-open our own conclusion.
+  See [`results/20260826-seqs32-retest/`](results/20260826-seqs32-retest).
 
 - **[NVIDIA dgx-spark-playbooks](https://github.com/NVIDIA/dgx-spark-playbooks)**
   Reference three-Spark ring topology and the switchless NCCL settings.

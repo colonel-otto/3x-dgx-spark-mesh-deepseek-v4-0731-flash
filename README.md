@@ -1,313 +1,100 @@
 # DeepSeek-V4-Flash on three DGX Sparks
 
-A reproducible recipe and controlled benchmark for serving DeepSeek-V4-Flash on three
-NVIDIA DGX Spark systems with tensor parallelism (`TP=3`) over a switchless 200 GbE
+Reproducible deployment notes and benchmark evidence for serving DeepSeek-V4-Flash on
+three NVIDIA DGX Spark systems with tensor parallelism (`TP=3`) over a switchless 200 GbE
 RoCE ring.
 
-The useful result is not merely that TP=3 starts. With the attention-group padding
-patch and subnet-aware RoCE, TP=3 retains the B12X MXFP4 MoE kernel and MTP, passes the
-correctness suite, and outperforms our matched two-Spark baseline. The complete decision
-trail—including the unsuccessful EP and PP paths—is retained in
-[`docs/EXPERIMENT-LOG.md`](docs/EXPERIMENT-LOG.md).
+The three-node deployment is working and passes the available correctness and long-context
+quality suites. The performance question—whether three nodes beat two—remains open because
+the corrected 256-token three-node sweep exists, but the matching corrected two-node sweep
+does not.
 
-> **Picking this work up?** Four pages, in order:
->
-> 1. **[`docs/HANDOFF.md`](docs/HANDOFF.md)** — what is running, how to operate it, what is open.
-> 2. **[`docs/DECISIONS.md`](docs/DECISIONS.md)** — every settled value and the measurement behind it.
-> 3. **[`docs/POSTMORTEM-2026-08-25.md`](docs/POSTMORTEM-2026-08-25.md)** — four classes of silent
->    failure that produced plausible-but-wrong numbers here. **Read before adding a benchmark.**
-> 4. **[`docs/DEGRADED-DATA-CATALOGUE.md`](docs/DEGRADED-DATA-CATALOGUE.md)** — what bad data
->    looked like, itemized, so you can recognise the shape.
->
-> Full map: **[`docs/README.md`](docs/README.md)**.
+> [!WARNING]
+> Do not cite the older 2-vs-3 decode claims. The 2026-08-26 sweep requested 256 output
+> tokens but returned only 25–26, biasing both its magnitudes and its curve. The affected
+> bundle is retained as a diagnostic baseline and marked `VOID-25-token-window` in the
+> [provenance index](results/INDEX.md).
 
-## What this project found, in plain terms
+## Start here
 
-Three findings, in order of how much time they cost:
+1. [Current handoff](docs/HANDOFF-2026-08-27.md) — current cluster state, reliable
+   findings, open work, and the benchmark defect.
+2. [Documentation index](docs/README.md) — setup, operations, method, decisions, and
+   historical investigations.
+3. [Results index](results/README.md) — one readable row per frozen run bundle.
+4. [Provenance index](results/INDEX.md) — status, gate coverage, raw evidence, and caveats.
+5. [Repository and data map](docs/REPOSITORY-MAP.md) — what belongs on GitHub and what
+   should stay local.
 
-**1. A machine was silently broken for days.** One Spark ran at ~15% of its network speed
-with **every status indicator reading healthy** — link up at 200 Gb/s, all error counters
-zero. A reboot fixed it. It had been distorting every prior measurement, and because it
-sat in the *3-node* arm, it made 2 and 3 nodes look equivalent when they are not.
-→ [`docs/DEGRADED-DATA-CATALOGUE.md`](docs/DEGRADED-DATA-CATALOGUE.md)
+## Current evidence
 
-**2. We chased a network deficit that never existed.** Our own tool measured 5.80 GB/s
-where published results showed ~20. We produced **four** plausible explanations. All four
-were wrong. The official NVIDIA benchmark, on the same unchanged machines, reads
-**23.92 GB/s** — *above* the 20.84 we were envying. Our harness was built to time our
-workload, not to measure peak bandwidth; we used it outside its purpose.
-→ [`docs/BANDWIDTH-COMPARISON.md`](docs/BANDWIDTH-COMPARISON.md)
-
-**3. Two settings we worried about turned out not to matter.** The KV cache dtype
-(`nvfp4_ds_mla` vs `fp8_ds_mla`) is identical on every axis — same memory, same speed, and
-**23 of 24 matched tests produced byte-identical output**. It was a free choice all along.
-→ [`docs/KV-QUALITY-LONG-CONTEXT.md`](docs/KV-QUALITY-LONG-CONTEXT.md)
-
-> **The through-line:** most of what we found was about **how we measure**, not what we
-> own. The hardware was largely fine; our instruments misled us in both directions — a
-> healthy-looking signal hid a broken machine, and later a broken-looking signal (a frozen
-> counter) hid a perfectly healthy one. Both classes are catalogued so the next person
-> recognises them.
-
-## Can the extra memory buy a better model? No.
-
-A reasonable expectation is that three nodes (~363 GiB) allow a higher-quality checkpoint
-than two (~242 GiB). **It does not**, and the reason is specific:
-
-| option | size | verdict |
-|---|---:|---|
-| what we run (FP4 experts) | **167 GB** | leaves ~195 GiB for KV → **1M context** |
-| FP8 "upcast" | 307 GB | **same numbers, bigger container** — a documented lossless cast |
-| BF16 | 1,137 GB | 3.1x over budget |
-
-The FP8 and BF16 files on Hugging Face are conversions *of the FP4 weights*, not
-higher-fidelity originals — the full-precision master was never released. Loading the
-307 GB version would cost you 1M context and the fast MoE kernel **for an identical
-model**.
-
-The third node buys **latency**, not quality or capacity.
-
-## Is the third node worth it?
-
-**Yes for single-stream interactive work; no for batch throughput.** Measured
-2026-08-25 on healthy fabric, identical config on both arms (`1M` / `seqs 16` / `MTP=5` /
-`0.80`), same harness, node count the only variable:
-
-| measurement | 2 Spark | 3 Spark | winner |
-|---|---:|---:|---|
-| **decode cc=1** | 76.2 tok/s | **89.1 tok/s** | **3-node, +17%** |
-| decode cc=4 | 192.8 | **208.8** | 3-node, +8% |
-| decode cc=8 | 302.7 | **322.7** | 3-node, +7% |
-| decode cc=16 | **481.3** | 474.8 | 2-node, +1.4% |
-| prefill 1K/8K/32K | 1913 / 2081 / 2066 | 2023 / 2070 / 2095 | **parity** (±2%) |
-| deep concurrency (4×200K) TTFT | **293,987 ms** | 396,804 ms | 2-node, 1.35x |
-| KV cache | 1,711,307 tok | **4,457,627 tok** | 3-node 2.6x — *never binds* |
-
-The 3-node advantage **decays monotonically with concurrency and crosses over near
-cc=16**. Three nodes win per-stream latency; two win batch aggregate.
-
-**Choose by workload, not by node count.** Single-user interactive coding is
-per-stream-latency bound → three nodes. Multi-user batch serving → two nodes, and the
-third is free for another model.
-
-Two things the third node does **not** buy: prefill throughput (parity), and usable KV
-capacity (`vllm:num_preemptions_total` has read **0 in every test ever run here**,
-including a 4×200K test designed specifically to make KV bite).
-
-Evidence: [`results/20260825-decode-2v3/`](results/20260825-decode-2v3) ·
-[`results/20260825-prefill-2v3/`](results/20260825-prefill-2v3) ·
-[`results/20260825-deep-concurrency/`](results/20260825-deep-concurrency)
-
-> Historical numbers from before 2026-08-25 were taken while one node ran at ~15% of its
-> collective bandwidth and are **provisional**. Every affected measurement is itemized in
-> [`docs/DEGRADED-DATA-CATALOGUE.md`](docs/DEGRADED-DATA-CATALOGUE.md) — kept deliberately,
-> because knowing what bad data looked like is how you spot the next batch. See also
-> [issue #14](../../issues/14).
-
-## Status: what is settled, what is open
-
-| Question | Status | Where |
+| Question | Current answer | Evidence |
 |---|---|---|
-| Is the 3rd node worth it? | ✅ **Yes for single-stream** (+17% at cc=1), no for batch | table above |
-| Is our fabric slow vs published rings? | ✅ **No — 23.92 GB/s, above reference** | [#18](../../issues/18) |
-| Does the 4-HCA fabric survive load? | ✅ **Yes** — 408/408 requests, 0 RDMA errors | [#17](../../issues/17) |
-| Is `nvfp4_ds_mla` costing us quality? | ✅ **No** — 23/24 cells byte-identical vs `fp8` | [#16](../../issues/16) |
-| Can extra RAM buy a better model? | ✅ **No** — no higher-fidelity checkpoint exists | section above |
-| Was prefill behind the 2-node recipe? | ✅ **Resolved** — it was the degraded node | [#11](../../issues/11) |
-| Does 4-HCA improve *throughput*? | ⏳ **Unmeasured** — soak proved stability, not benefit | [#17](../../issues/17) |
-| Is `MAX_NUM_SEQS=32` viable? | ⏳ **Re-test needed** — rejected against a budget 6.6x too small | [#10](../../issues/10) |
-| Do pre-08-25 benchmarks need re-running? | ⏳ **Partly done** — decode/prefill/deep-concurrency redone | [#14](../../issues/14) |
+| Does TP=3 serve correct output? | Yes; the attention-group padding patch is required. | [Patch](docs/patch.md), [quality suite](results/20260827-quality-suite-3node/) |
+| Does three-node quality hold at long context? | Yes in the tested suite: RULER-lite 12/12, tool battery 7/7, deep-context tools 8/8, garble sweep clean through 131K. | [Quality suite](results/20260827-quality-suite-3node/) |
+| What is corrected three-node decode speed? | Median 50.7–56.0 tok/s from 2K–262K with 256 output tokens; 131K and 262K show intermittent slow modes. | [Corrected curve](results/20260827-decode-3node-fixed/) |
+| Is three-node faster than two-node? | **Unknown.** A method-matched corrected two-node arm has not been run. | [Current handoff](docs/HANDOFF-2026-08-27.md#open-problem-1--the-2-node-arm-does-not-exist) |
+| Is the fabric below the published reference? | No. Official `nccl-tests` measured 23.92 GB/s at 16 GiB. | [Controlled NCCL run](results/20260826-nccl-controlled/) |
+| Does four-HCA addressing improve decode throughput? | No measurable benefit despite doubling fabric bandwidth. | [Four-HCA result](results/20260826-four-hca-throughput/) |
+| Does KV dtype change quality? | No material difference in the tested A/B; 23/24 matched cells were byte-identical. | [KV dtype A/B](results/20260826-kv-dtype-ab/) |
 
-**Every ✅ above was measured on healthy fabric with matched arms.** Every ⏳ is named
-rather than quietly assumed.
+The corrected decode curve is a single three-node arm, not a purchasing comparison. Its
+262K median also hides a severe bimodal distribution: two measured reps fell to 1.2–3.3
+tok/s while five were near 50 tok/s. Read the spread, not only the median.
 
-## Pitfalls — read before you deploy
+## How benchmark data is organized
 
-Each of these cost real time here, and none announced itself.
+| Location | Purpose | Edit policy |
+|---|---|---|
+| [`results/YYYYMMDD-<subject>/`](results/) | Frozen raw run bundle: harness, config capture, gate, logs, and per-rep output | Never rewrite; supersede with a new dated bundle |
+| [`results/index.yaml`](results/index.yaml) | Machine-readable provenance and status for every run bundle | Source of truth for result status |
+| [`results/INDEX.md`](results/INDEX.md) | Human-readable provenance summary | Keep aligned with the YAML |
+| [`benchmarks/measurements.csv`](benchmarks/measurements.csv) | Append-only normalized observations | Add measured points with prompt and harness attribution |
+| [`benchmarks/summary.csv`](benchmarks/summary.csv) | Generated headline metrics | Regenerate; do not hand-edit |
+| [`docs/`](docs/) | Method, setup, operations, decisions, and interpretation | Update living docs; freeze dated reports |
 
-1. **TP=3 silently serves nonsense without the padding patch.** Stock vLLM computes
-   `n_local_groups = 8 // 3 == 2`, dropping 6 of 8 attention groups. Output stays
-   *fluent*. Always run a correctness check (17×23 → 391) after any restart.
-2. **A parallelism-flag mismatch between ranks hangs startup forever with no error.**
-   Verify a checksum across all ranks before starting; `scripts/cluster_tp2.sh` refuses
-   to start rather than let you watch a silent hang.
-3. **NetworkManager here is only a renderer — netplan owns the config.** NM connections
-   live in `/run/…` (tmpfs, wiped on reboot). An `nmcli` change that does not reach
-   `/etc/netplan/` looks applied and reverts. This nearly made the cluster unrecoverable.
-4. **A degraded RDMA link has zero error indicators.** Ports ACTIVE, 200,000 Mb/s, all
-   counters 0 — while running at 15% speed. **TCP throughput will not find it** (it hid a
-   6.8x RDMA deficit behind a 1.19x TCP one). Only an NCCL collective does.
-5. **Init success is not health.** All ranks can complete NCCL init and every container
-   stay `running` while live RDMA completions fail. There is no container health check.
-   Check `IBV_WC_*_ERR` in the engine log, not `docker ps`.
-6. **The `roceP2p` HCAs double bandwidth — but only once they are addressed.** Each QSFP
-   port is two ~100G controllers; using all four takes pairs 4.6 → 9.7 GB/s and the 3-rank
-   collective 2.85 → 5.80. Enabling them *before* giving the upper pair IPv4, routes and
-   netplan persistence **wedges the cluster** with `IBV_WC_RETRY_EXC_ERR` while every
-   container still reports `running`. See
-   [`results/20260825-upper-mesh/`](results/20260825-upper-mesh).
-7. **JIT compiles land *during* inference** — one measured at 5 s inside a request. Warm
-   every shape you intend to measure, and discard sweeps containing a `jit_monitor`
-   warning.
-8. **`MAX_NUM_BATCHED_TOKENS=16384` is a trap** despite vLLM's own log suggesting it.
-   That advice assumes intra-node NVLink; here it cost 43% of the KV pool for zero gain.
+Before publishing a benchmark, follow the [benchmark policy](docs/BENCHMARK-POLICY.md):
+commit a passing fabric gate, force and verify the output window, publish every rep and
+its spread, and capture config from the live process.
 
-9. **No Spark-to-Spark data may cross Wi-Fi.** Wi-Fi is operator access and API responses
-   only. If a fabric route disappears the kernel falls back to the management path
-   silently — everything still pings while inter-node traffic crawls (fabric 0.47–0.93 ms
-   vs Wi-Fi 3–135 ms). Gated as `egress:*`; it bit us once already
-   ([issue #13](../../issues/13)).
-
-**Before any benchmark:** `scripts/fabric_gate.sh configs/<your>.env --nccl=full` with the
-engine stopped. It gates on liveness, mesh, latency, subnets, ARP-port correctness, config
-persistence, **peer egress device**, transport, RDMA errors, and collective bandwidth —
-and exits non-zero so a bad run cannot silently happen.
-
-These are measurements from one cluster, not universal product specifications. See
-[`docs/results.md`](docs/results.md) and [`benchmarks/summary.csv`](benchmarks/summary.csv).
-
-## Why a patch is required
-
-DeepSeek-V4-Flash has eight output attention groups. Eight is not divisible by three.
-The TP=3 patch pads the group count from 8 to 9 and the corresponding head count from
-64 to 72 while keeping eight heads per group unchanged. The added group is masked out
-of the model result.
-
-That last invariant matters: the checkpoint's output projection expects eight heads
-per group. A TP=3 speed number is not credible without correctness validation.
-
-This repository pins the upstream implementation rather than silently copying a moving
-target:
-
-- Patch project: [`localaiguyy/DeepSeek-V4-Flash-DSpark-3x-DGX-Spark`](https://github.com/localaiguyy/DeepSeek-V4-Flash-DSpark-3x-DGX-Spark)
-- Pinned publication revision: `496c6a146a383f1b7c3f5991f4f1930091420720`
-
-See [`docs/patch.md`](docs/patch.md).
-
-## Hardware topology
-
-Use NVIDIA's canonical cross-connected ring:
+## Deployment shape
 
 ```text
-Node 1 port 0  <---->  Node 2 port 1
-Node 2 port 0  <---->  Node 3 port 1
-Node 3 port 0  <---->  Node 1 port 1
+rank 0 -- 200 GbE -- rank 1
+   \                  /
+    +---- 200 GbE ---+
+          rank 2
 ```
 
-Port 0 is the CX-7 connector nearest the ordinary Ethernet connector. Port 1 is the
-CX-7 connector farther away. Double-check with LLDP before assigning addresses.
+The TP=3 patch pads eight attention groups to nine for sharding, then trims the padding
+after gather. Without it, stock integer division silently drops groups and can produce
+fluent but wrong output. See [topology](docs/topology.md), [setup](docs/setup.md), and
+[patch details](docs/patch.md).
 
-Our example address plan gives each point-to-point cable its own subnet:
-
-| Cable | Node-side addresses |
-|---|---|
-| Node 1 p0 <-> Node 2 p1 | `192.168.100.1` <-> `192.168.100.2` |
-| Node 1 p1 <-> Node 3 p0 | `192.168.101.1` <-> `192.168.101.2` |
-| Node 2 p0 <-> Node 3 p1 | `192.168.102.1` <-> `192.168.102.2` |
-
-Follow [`docs/topology.md`](docs/topology.md) and NVIDIA's
-[`Connect Three DGX Spark in a Ring Topology`](https://github.com/NVIDIA/dgx-spark-playbooks/blob/main/nvidia/connect-three-sparks/README.md).
-
-## Working configuration
-
-The essential TP=3/RoCE settings are:
+## Reproduce or add a result
 
 ```bash
-TP_SIZE=3
-PP_SIZE=1
-NNODES=3
-MOE_BACKEND=flashinfer_b12x
+# First copy and edit the tracked example; the live file remains local.
+cp configs/3spark-live.env.example configs/3spark-live.env
 
-NCCL_IB_DISABLE=0
-NCCL_NET=IB
-NCCL_IB_SUBNET_AWARE_ROUTING=1
-NCCL_NET_PLUGIN=none
-NCCL_IB_HCA=rocep1s0f0,rocep1s0f1
-NCCL_NVLS_ENABLE=0
-NCCL_IB_ADDR_FAMILY=AF_INET
-NCCL_IB_ROCE_VERSION_NUM=2
+# Engine stopped: measure the full fabric and retain the artifact.
+make gate-full CONFIG=configs/3spark-live.env
+
+# Run the repository test suite and sensitive-data scan before publishing.
+make test
+make check-sensitive
 ```
 
-The settled serving profile (2026-08-25) is:
+New runs must use a dated directory with a provenance header and include raw per-rep
+evidence. See [Adding a run](results/README.md#adding-a-run).
 
-```bash
-MAX_MODEL_LEN=1048576          # 1M is free here: memory-bound, not comms-bound
-MAX_NUM_SEQS=16
-GPU_MEMORY_UTILIZATION=0.80
-MTP_NUM_TOKENS=5               # beats 4; matched control 2026-08-24
-MAX_NUM_BATCHED_TOKENS=8192    # do NOT raise to 16384 -- see pitfall 8
-VLLM_USE_BREAKABLE_CUDAGRAPH=0
-```
+## Scope and credit
 
-> Earlier documents describe `460800` / `seqs=8` / `0.85` / `MTP=4`. That profile is
-> **superseded**; it survives only inside dated result pages, which are frozen to the
-> configuration they were measured under. [`config/tp3.env.example`](config/tp3.env.example)
-> is authoritative and carries the reasoning for every value.
+This repository contributes the controlled comparison work, TP=3 integration notes,
+failure gates, and evidence trail. It builds on Anemll's DGX Spark vLLM runtime, MiaAI-Lab
+benchmark and deployment work, localaiguyy's TP=3 attention-group padding, and NVIDIA's
+DGX Spark playbooks and `nccl-tests`. See [CREDITS.md](CREDITS.md) for attribution.
 
-Use `NCCL_DEBUG=INFO` and `NCCL_DEBUG_SUBSYS=INIT,NET,GRAPH` for the first validation
-launch. The log must show `NET/IB`; `NET/Socket` is a TCP fallback. Return to
-`NCCL_DEBUG=WARN` for normal serving.
-
-Environment-file values do nothing unless Compose forwards them into the container.
-Always inspect the rendered configuration before launch:
-
-```bash
-docker compose --env-file config/node0.env -f docker-compose.yml config \
-  | grep -E 'SUBNET_AWARE|NCCL_NET|NCCL_IB_HCA|tensor-parallel'
-```
-
-Start workers first and the HTTP-serving head last. See [`docs/setup.md`](docs/setup.md)
-and the sanitized templates in [`config/`](config/).
-
-## Reproducing the comparison
-
-1. Update all three systems through the NVIDIA-supported update path and verify that
-   OS, driver, kernel and CX-7 firmware versions match.
-2. Cable and address the official ring; prove each direct edge before involving vLLM.
-3. Run NVIDIA's NCCL tests and capture a log showing `NET/IB`.
-4. Pin the container image, checkpoint revision and TP=3 patch revision.
-5. Launch three identical ranks, changing only rank-specific identity and interfaces.
-6. Run correctness before performance.
-7. Benchmark TP=2 RoCE, TP=3 TCP and TP=3 RoCE with the same prompt, sampling settings,
-   context profile and harness revision.
-8. Save a complete artifact bundle; do not publish only the best run.
-
-Detailed reproduction protocol:
-[`docs/reproduction-methodology.md`](docs/reproduction-methodology.md).
-
-## Repository map
-
-```text
-config/       engine env -- runs ON the Sparks         (config/README.md)
-configs/      harness targets -- runs on your WORKSTATION (configs/README.md)
-docs/         all documentation, indexed and status-tagged (docs/README.md)
-scripts/      fabric gate, launchers, benchmark helpers
-results/      dated raw run bundles -- frozen, never edited
-benchmarks/   machine-readable summary + CHANGELOG
-tests/        schema validation for benchmark artifacts
-artifacts/    schema for complete future run bundles
-```
-
-> [!IMPORTANT]
-> **`config/` and `configs/` are different things.** `config/` holds the vLLM engine
-> environment that lives on each Spark; `configs/` holds benchmark harness targets that
-> live on your workstation. A file from one will not work in the other — each directory
-> has a README stating which is which.
-
-Dated directories under `results/` are **frozen**: they record one experiment at the
-configuration it was measured under. Supersede them with a new dated directory; never
-edit one in place.
-
-## Privacy and safety
-
-The examples deliberately use generic node names and RFC1918 fabric addresses. Before
-publishing artifacts, remove management-network addresses, MAC addresses, usernames,
-SSH material, registry credentials, absolute model paths and container environment
-secrets. See [`SECURITY.md`](SECURITY.md).
-
-## Primary references
-
-- [NVIDIA: Connect Three DGX Spark in a Ring Topology](https://github.com/NVIDIA/dgx-spark-playbooks/blob/main/nvidia/connect-three-sparks/README.md)
-- [NVIDIA: NCCL for Multiple Sparks](https://github.com/NVIDIA/dgx-spark-playbooks/blob/main/nvidia/nccl/README.md)
-- [NVIDIA: DGX Spark OS and Component Update Guide](https://docs.nvidia.com/dgx/dgx-spark/os-and-component-update.html)
-- [NVIDIA: DGX Spark Release Notes](https://docs.nvidia.com/dgx/dgx-spark/release-notes.html)
+Security and redaction rules are in [SECURITY.md](SECURITY.md). Do not commit live `.env`
+files, credentials, management addresses, usernames, serials, or unredacted environment
+captures.

@@ -1,5 +1,7 @@
 # Upper mesh addressed: the four-HCA path, re-tested
 
+**Status:** `CURRENT` within the provenance caveats in [`../index.yaml`](../index.yaml).
+
 **Date:** 2026-08-25T23:12–23:15Z · **Fabric:** 🟢 healthy · **Engine:** stopped
 
 Re-tests the `roceP2p` HCA pair **after giving it the IPv4 addressing and routing it

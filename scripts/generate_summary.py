@@ -203,8 +203,10 @@ def build():
             continue
         cfg, r = hit
         note = ("matched 2-vs-3-node comparison; per-stream decode at 131,072-token "
-                "context, c=1 (MTP=4 on both); 3-node leads by ~13% here and by "
-                "8-17% across 2K-131K")
+                "context, c=1 (MTP=4 on both); DEGRADED FABRIC (#14) - SUPERSEDED by "
+                "results/20260826-decode-depth-2v3 (healthy, matched, 7 reps/depth), "
+                "which measured parity below 32K (+0.8/+0.3/-0.9%) and +33.6% at 131K; "
+                "the '8-17% across 2K-131K' claim is retracted in both directions")
         if cfg != prefer[0]:
             note += (" | NOTE: not present under " + prefer[0] + "; sourced from "
                      "config_id " + cfg + ", which is the same 3-node TP=3 shape "

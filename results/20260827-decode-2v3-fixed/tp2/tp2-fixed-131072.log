@@ -1,0 +1,15 @@
+
+=== depth 131072 (tp2-fixed) ===
+  warmup 1: 46.9 tok/s (ptok=129008, cached=0)
+  warmup 2: 43.1 tok/s (ptok=129008, cached=0)
+  rep 1: 37.6 tok/s ttft=71.2s ptok=129008
+  rep 2: 45.7 tok/s ttft=70.4s ptok=129008
+  rep 3: 45.7 tok/s ttft=70.3s ptok=129008
+  rep 4: 45.2 tok/s ttft=70.0s ptok=129008
+  rep 5: 42.3 tok/s ttft=70.2s ptok=129008
+  rep 6: 44.4 tok/s ttft=70.9s ptok=129008
+  rep 7: 42.1 tok/s ttft=70.6s ptok=129008
+  MEDIAN 44.4 tok/s  (n=7, spread 18.2%, cache_hits=0)
+
+=== SUMMARY tp2-fixed ===
+   129008 tok ->   44.40 tok/s  (spread 18.2%, cache 0)

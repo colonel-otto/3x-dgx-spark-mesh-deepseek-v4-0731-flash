@@ -1,8 +1,59 @@
-# Catalogue of degraded data — what bad numbers looked like
+# Troubleshooting guide: your numbers don't match ours
 
-**Kept deliberately.** Every measurement below is wrong, and every one of them looked
-completely reasonable at the time. That is the point: this page is a reference for
-recognising bad data *before* you build on it.
+> [!IMPORTANT]
+> **This page is a diagnostic reference, not a results page.**
+>
+> Every number on it is a **symptom to match against**, captured from a cluster with a
+> real, specific fault. None of it is what this deployment achieves — for that, see
+> [`../README.md`](../README.md#is-the-third-node-worth-it) and
+> [`DECISIONS.md`](DECISIONS.md).
+>
+> We keep these numbers because they are the hardest part of reproducing this work. Both
+> faults below produce **plausible results with zero error indicators**: the engine
+> serves, the containers stay `running`, `ibstat` reads ACTIVE, every counter reads 0, and
+> the tok/s figure looks like a legitimate finding. If your reproduction lands on one of
+> these numbers, you have not measured our cluster differently — you have measured a
+> broken one.
+>
+> Start with the flow below.
+
+---
+
+## Start here: your numbers don't match ours
+
+| Symptom you are seeing | Likely cause | How to confirm | Fix |
+|---|---|---|---|
+| 3-node TP=3 decode near **~25 tok/s** at cc=1, against a healthy range of **54–89** depending on prompt shape † | **D2** — NCCL fell back to TCP | `NCCL_DEBUG=INFO` shows `via NET/Socket` instead of `via NET/IB/*` | Set `NCCL_IB_SUBNET_AWARE_ROUTING=1`, confirm it reaches the container (`docker compose config \| grep SUBNET_AWARE`), and verify `/dev/infiniband` is passed through |
+| Pairwise NCCL busbw near **~0.7 GB/s** where a healthy pair reads ~4.6 (2 HCA) / ~9.7 (4 HCA) | **D1** — one node's fabric has silently degraded | Run the pairwise collective on all three pairs. The bad node is the one present in every slow pair | **Reboot the degraded node.** A cable swap does not fix it — we tested the alternate cable and got the same 0.68 GB/s |
+| 3-rank collective reads **below** your worst pair (e.g. 0.49 vs 0.69) | **D1** — a collective is paced by its slowest member | Compare the 3-rank figure against each pair individually | Reboot the node common to the slow pairs |
+| Two configurations you expect to differ measure suspiciously **equal** | **D1** — both throttled to a common floor | Gate the fabric before benchmarking, then re-run both arms | Fix the fabric first; the comparison is void until then |
+| A gap between two arms is suspiciously **uniform across a swept variable** (e.g. a flat ~13% at 2K, 8K, 32K and 131K alike) | **D1** — a shared floor flattens a real curve into a constant | Re-run the sweep on gated fabric. Ours turned out to be **parity below 32K and +33.6% at 131K** | Fix the fabric. Note that consistency across levels reads as *robustness* and is the reason this went unquestioned for five days |
+| Benchmark is slow but **no counter anywhere is failing** | **D1 or D2** — this whole family is invisible to status checks | `make gate-full CONFIG=configs/3spark-live.env`, engine stopped | Follow whichever gate check fails |
+| Containers `running`, ranks completed NCCL init, engine never finishes loading | **Init success ≠ health** (see below) | Look for `IBV_WC_RETRY_EXC_ERR` with both GIDs `fe80::` in the engine log | The HCA pair you enabled has no IPv4. Address and route it, or roll back to the pair that has one |
+| A single stream is fast but wildly variable run to run | JIT compilation landing inside a request — not a fabric fault | `jit_monitor` warning in the log: `JIT compilation during inference` | Warm every shape you intend to measure, discard contaminated sweeps, take median of ≥7 |
+
+† **Never compare a tok/s figure to one taken on a different prompt.** On this deployment
+the prompt alone moves single-stream decode **1.65x** (81.8 code-shaped vs 49.4 dense
+prose, same engine, minutes apart) because MTP acceptance is content-dependent. The
+healthy range above spans 53.95–57.73 on a dense-prose prompt and 85.6–89.1 on an
+18-token code brief. See [`BENCHMARK-METHODOLOGY.md`](BENCHMARK-METHODOLOGY.md).
+
+**Before anything else, check the date on the data you are comparing against.** Anything
+in this repo measured before **2026-08-25** was taken on the degraded fabric in D1, and
+carries a banner saying so.
+
+**A healthy TCP number proves nothing.** TCP never touches the RDMA verbs path. During D1
+it showed a 1.19x deficit while the real RDMA deficit was 6.8x. Use an NCCL collective.
+
+---
+
+## What these numbers are, and are not
+
+| Tier | Meaning | Where it lives |
+|---|---|---|
+| **Our results** | Healthy fabric, RDMA confirmed `via NET/IB/*`, matched arms | [`../README.md`](../README.md#is-the-third-node-worth-it) · [`DECISIONS.md`](DECISIONS.md) · [`FABRIC-FIX-PARITY.md`](FABRIC-FIX-PARITY.md) |
+| **Diagnostic signatures** | Numbers from a known-broken setup, kept so you can recognise the fault | **This page** |
+| **Falsified claims** | Assertions we made that later proved wrong — neither result nor symptom | Listed per-page, and in the "What it corrupted" table below |
 
 Nothing here is deleted. It is itemized, bounded, and labelled with what specifically was
 wrong and how far off it was.
@@ -52,14 +103,19 @@ slowest member. That is the tell, and we read it as a hardware ceiling instead.
 fell disproportionately on the arm under test, which is the worst possible place for it —
 it made two configurations look equivalent by throttling one to the other's floor.
 
-### Superseded result pages
+### Pages whose numbers are diagnostic signatures, not results
 
-Frozen, banner-marked, kept for the record:
-[`WHY-THREE-NODES.md`](WHY-THREE-NODES.md) ·
-[`TP3-TUNING.md`](TP3-TUNING.md) ·
-[`SEQS32-AND-NCCL-FABRIC.md`](SEQS32-AND-NCCL-FABRIC.md) ·
-[`results.md`](results.md) ·
-[`BASELINE-2SPARK.md`](BASELINE-2SPARK.md)
+Each carries a banner naming what survives, what is void, and where the healthy number
+lives instead. Read the banner before quoting anything from these pages.
+
+| Page | What its numbers are | Contaminated by |
+|---|---|---|
+| [`WHY-THREE-NODES.md`](WHY-THREE-NODES.md) | Degraded-fabric 2v3 decode table. **Its "+8–17% from 2K upward" headline is retracted** — re-measured 2026-08-26 as parity below 32K and +33.6% at 131K | D1 — and spark1 sat in the **3-node** arm |
+| [`EP3-EXPERT-PARALLEL.md`](EP3-EXPERT-PARALLEL.md) | Degraded fabric **and** TCP fallback | D1 + D2 — the only transport that ran was `NCCL_NET=Socket` |
+| [`TP3-TUNING.md`](TP3-TUNING.md) | Degraded-fabric tuning sweep at the superseded profile | D1 |
+| [`SEQS32-AND-NCCL-FABRIC.md`](SEQS32-AND-NCCL-FABRIC.md) | Degraded-fabric collective budget (0.49 GB/s) | D1 |
+| [`results.md`](results.md) | Earliest TP=2/TP=3 comparison, pre-rewire cabling | D1 + D2 (the 24.59 arm) |
+| [`BASELINE-2SPARK.md`](BASELINE-2SPARK.md) | 2-node baseline over the **sparkmain↔spark1** link | D1 — see that page's banner for the timing caveat |
 
 ---
 

@@ -1,0 +1,62 @@
+[
+  {
+    "label": "tp3",
+    "target_depth": 2048,
+    "actual_prompt_tokens": 2036,
+    "n": 7,
+    "median_decode_tok_s": 76.35,
+    "min": 74.1,
+    "max": 90.6,
+    "spread_pct": 21.6,
+    "cache_hits": 0,
+    "median_ttft_s": 0.92
+  },
+  {
+    "label": "tp3",
+    "target_depth": 8192,
+    "actual_prompt_tokens": 8081,
+    "n": 7,
+    "median_decode_tok_s": 72.64,
+    "min": 56.56,
+    "max": 85.61,
+    "spread_pct": 40.0,
+    "cache_hits": 0,
+    "median_ttft_s": 3.34
+  },
+  {
+    "label": "tp3",
+    "target_depth": 32768,
+    "actual_prompt_tokens": 32268,
+    "n": 7,
+    "median_decode_tok_s": 70.21,
+    "min": 55.26,
+    "max": 82.78,
+    "spread_pct": 39.2,
+    "cache_hits": 0,
+    "median_ttft_s": 14.63
+  },
+  {
+    "label": "tp3",
+    "target_depth": 131072,
+    "actual_prompt_tokens": 129006,
+    "n": 7,
+    "median_decode_tok_s": 72.64,
+    "min": 53.79,
+    "max": 79.27,
+    "spread_pct": 35.1,
+    "cache_hits": 0,
+    "median_ttft_s": 77.12
+  },
+  {
+    "label": "tp3",
+    "target_depth": 262144,
+    "actual_prompt_tokens": 257993,
+    "n": 7,
+    "median_decode_tok_s": 84.37,
+    "min": 69.5,
+    "max": 98.07,
+    "spread_pct": 33.9,
+    "cache_hits": 0,
+    "median_ttft_s": 181.58
+  }
+]

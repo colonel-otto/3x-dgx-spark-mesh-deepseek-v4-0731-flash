@@ -1,7 +1,8 @@
 # Reproduction setup
 
-This guide assumes one GB10 GPU per Spark, the same username on every node, local copies
-of the same model checkpoint, and passwordless SSH over the management network.
+This guide assumes one GB10 GPU per Spark, local copies of the same model checkpoint, and
+passwordless SSH over the management network. Different login names are supported through
+`SSH_USER_MAP` in the workstation harness config.
 
 ## 1. Match software and firmware
 
@@ -29,6 +30,12 @@ Then follow NVIDIA's
 [`NCCL for Multiple Sparks`](https://github.com/NVIDIA/dgx-spark-playbooks/blob/main/nvidia/nccl/README.md)
 procedure. Capture both small-message `all_reduce_perf` results and NVIDIA's large
 `all_gather_perf` test.
+
+When building `nccl-tests`, use the headers and library from the same NCCL package that
+the engine maps at runtime; the container can also contain an older system copy. Run the
+reference test inside a container with the serving RDMA devices, memory-lock limit, shared
+memory size, host network, and NCCL environment. Stop the engine before a 16 GiB test.
+Record the runtime NCCL version, `#wrong=0`, and `via NET/IB/*` with the result.
 
 ## 3. Obtain the TP=3 patch at a pinned revision
 
@@ -74,7 +81,10 @@ grep -E 'SUBNET_AWARE|NCCL_NET|NCCL_IB_HCA|MAX_MODEL_LEN|MAX_NUM_SEQS' rendered.
 Start rank 2 and rank 1, then rank 0. Use the serving project's launch command while
 passing the corresponding env file. Cold startup can take approximately six minutes.
 
-The common model arguments must resolve to:
+The current production model arguments must resolve to the following. Read them from the
+live process after every start; do not infer them from an environment file. The evidence
+capture is in
+[`20260827-decode-3node-fixed/engine-config.txt`](../results/20260827-decode-3node-fixed/engine-config.txt).
 
 ```text
 --tensor-parallel-size 3
@@ -83,11 +93,15 @@ The common model arguments must resolve to:
 --moe-backend flashinfer_b12x
 --kv-cache-dtype nvfp4_ds_mla
 --block-size 256
---max-model-len 460800
---max-num-seqs 16
---gpu-memory-utilization 0.85
+--max-model-len 1048576
+--max-num-seqs 32
+--max-num-batched-tokens 8192
+--gpu-memory-utilization 0.80
 --speculative-config {method: dspark, num_speculative_tokens: 5, ...}
 ```
+
+The older `460800` / `seqs=16` / `gpu-memory-utilization=0.85` profile appears in frozen
+results and historical docs. It is evidence provenance, not the current default.
 
 ## 7. Validate before benchmarking
 
@@ -97,8 +111,25 @@ Require all of the following:
 - startup reports `B12X_MXFP4`;
 - startup reports the DSpark MTP speculator with five speculative tokens;
 - NCCL INFO log reports `NET/IB`, not only `NET/Socket`;
-- `/v1/models` reports a 460,800-token model limit;
+- `/v1/models` reports a 1,048,576-token model limit;
 - the correctness suite passes;
 - RDMA hardware counters increase during inference.
 
 Only then run the matched benchmark protocol.
+
+## 8. Switch to the two-node comparison arm
+
+The repository's `scripts/cluster_tp2.sh` is the cluster-specific TP=2 launcher. It checks
+that engine-shaping values match, starts the worker before the head, waits for health, and
+reads the applied process arguments back. Run `status` before changing shapes and stop the
+three-node service before `up` so rank 2 is not still holding its GPU.
+
+```bash
+bash scripts/cluster_tp2.sh status
+bash scripts/cluster_tp2.sh up
+bash scripts/cluster_tp2.sh down
+```
+
+Live engine env files remain on the Sparks and are not committed. Workstation gate targets
+come from [`../configs/`](../configs/README.md); copy the tracked example to a gitignored
+live file before running a gate.

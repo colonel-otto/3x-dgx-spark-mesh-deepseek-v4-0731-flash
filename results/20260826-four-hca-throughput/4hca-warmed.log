@@ -1,0 +1,42 @@
+target : http://127.0.0.1:8100
+model  : deepseek-v4-flash-0731
+tokens : 256 per completion, temperature 0
+runs   : 7 per level
+
+cc=1   wall=  2.91s  ok=1/1  aggregate=  87.9 tok/s  per-stream= 87.9 tok/s
+cc=1   wall=  2.84s  ok=1/1  aggregate=  90.1 tok/s  per-stream= 90.1 tok/s
+cc=1   wall=  2.84s  ok=1/1  aggregate=  90.3 tok/s  per-stream= 90.3 tok/s
+cc=1   wall=  2.89s  ok=1/1  aggregate=  88.6 tok/s  per-stream= 88.6 tok/s
+cc=1   wall=  2.83s  ok=1/1  aggregate=  90.4 tok/s  per-stream= 90.4 tok/s
+cc=1   wall=  3.40s  ok=1/1  aggregate=  75.3 tok/s  per-stream= 75.3 tok/s
+cc=1   wall=  3.08s  ok=1/1  aggregate=  83.1 tok/s  per-stream= 83.1 tok/s
+      median=  88.6 tok/s  spread=17%
+
+cc=4   wall=  4.68s  ok=4/4  aggregate= 218.7 tok/s  per-stream= 55.5 tok/s
+cc=4   wall=  4.69s  ok=4/4  aggregate= 218.5 tok/s  per-stream= 55.6 tok/s
+cc=4   wall=  5.45s  ok=4/4  aggregate= 188.0 tok/s  per-stream= 47.8 tok/s
+cc=4   wall=  4.54s  ok=4/4  aggregate= 225.4 tok/s  per-stream= 56.4 tok/s
+cc=4   wall=  4.06s  ok=4/4  aggregate= 252.0 tok/s  per-stream= 64.1 tok/s
+cc=4   wall=  4.47s  ok=4/4  aggregate= 228.9 tok/s  per-stream= 57.7 tok/s
+cc=4   wall=  5.04s  ok=4/4  aggregate= 203.2 tok/s  per-stream= 50.8 tok/s
+      median= 218.7 tok/s  spread=29%   <-- wide spread, check for other traffic
+
+cc=8   wall=  5.85s  ok=8/8  aggregate= 350.0 tok/s  per-stream= 44.7 tok/s
+cc=8   wall=  5.87s  ok=8/8  aggregate= 349.0 tok/s  per-stream= 44.5 tok/s
+cc=8   wall=  6.65s  ok=8/8  aggregate= 307.8 tok/s  per-stream= 38.7 tok/s
+cc=8   wall=  5.85s  ok=8/8  aggregate= 350.1 tok/s  per-stream= 44.7 tok/s
+cc=8   wall=  5.84s  ok=8/8  aggregate= 350.6 tok/s  per-stream= 44.8 tok/s
+cc=8   wall=  7.22s  ok=8/8  aggregate= 283.5 tok/s  per-stream= 36.4 tok/s
+cc=8   wall=  5.59s  ok=8/8  aggregate= 366.6 tok/s  per-stream= 46.4 tok/s
+      median= 350.0 tok/s  spread=24%
+
+cc=16  wall=  6.73s  ok=16/16  aggregate= 608.8 tok/s  per-stream= 38.1 tok/s
+cc=16  wall=  9.36s  ok=16/16  aggregate= 437.8 tok/s  per-stream= 27.8 tok/s
+cc=16  wall=  6.82s  ok=16/16  aggregate= 600.6 tok/s  per-stream= 37.6 tok/s
+cc=16  wall=  9.01s  ok=16/16  aggregate= 454.6 tok/s  per-stream= 29.1 tok/s
+cc=16  wall=  8.38s  ok=16/16  aggregate= 488.8 tok/s  per-stream= 31.2 tok/s
+cc=16  wall=  8.76s  ok=16/16  aggregate= 467.8 tok/s  per-stream= 29.7 tok/s
+cc=16  wall=  8.15s  ok=16/16  aggregate= 502.9 tok/s  per-stream= 31.9 tok/s
+      median= 488.8 tok/s  spread=35%   <-- wide spread, check for other traffic
+
+wrote /home/sparkmain/bench-seqs32/4hca-warmed.json

@@ -1,5 +1,7 @@
 # Controlled NCCL bandwidth reproduction (issue #18)
 
+**Status:** `CURRENT` within the provenance caveats in [`../index.yaml`](../index.yaml).
+
 **Date:** 2026-08-26 · **Engine:** stopped for all runs · **Harness:** official
 `nccl-tests all_gather_perf`, NCCL **2.30.7**, `-n 20 -w 5`, 1 GPU/rank.
 

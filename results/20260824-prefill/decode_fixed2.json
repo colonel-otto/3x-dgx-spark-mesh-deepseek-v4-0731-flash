@@ -1,0 +1,67 @@
+{
+  "target": "http://localhost:8100",
+  "model": "deepseek-v4-flash-0731",
+  "max_tokens": 256,
+  "results": [
+    {
+      "concurrency": 1,
+      "ok": 1,
+      "of": 1,
+      "wall_s": 2.9,
+      "output_tokens": 256,
+      "aggregate_tok_s": 88.4,
+      "per_stream_tok_s": 88.4,
+      "mean_latency_s": 2.89
+    },
+    {
+      "concurrency": 1,
+      "ok": 1,
+      "of": 1,
+      "wall_s": 2.89,
+      "output_tokens": 256,
+      "aggregate_tok_s": 88.4,
+      "per_stream_tok_s": 88.5,
+      "mean_latency_s": 2.89
+    },
+    {
+      "concurrency": 1,
+      "ok": 1,
+      "of": 1,
+      "wall_s": 3.05,
+      "output_tokens": 256,
+      "aggregate_tok_s": 84.0,
+      "per_stream_tok_s": 84.0,
+      "mean_latency_s": 3.05
+    },
+    {
+      "concurrency": 16,
+      "ok": 16,
+      "of": 16,
+      "wall_s": 8.52,
+      "output_tokens": 4096,
+      "aggregate_tok_s": 480.5,
+      "per_stream_tok_s": 30.5,
+      "mean_latency_s": 8.38
+    },
+    {
+      "concurrency": 16,
+      "ok": 16,
+      "of": 16,
+      "wall_s": 8.55,
+      "output_tokens": 4096,
+      "aggregate_tok_s": 479.1,
+      "per_stream_tok_s": 30.4,
+      "mean_latency_s": 8.42
+    },
+    {
+      "concurrency": 16,
+      "ok": 16,
+      "of": 16,
+      "wall_s": 9.02,
+      "output_tokens": 4096,
+      "aggregate_tok_s": 454.1,
+      "per_stream_tok_s": 29.2,
+      "mean_latency_s": 8.78
+    }
+  ]
+}

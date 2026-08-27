@@ -1,0 +1,10 @@
+ctx=  2048 run=0: CLEAN [] (104.4s)
+ctx=  2048 run=1: CLEAN [] (2.1s)
+ctx=  8192 run=0: CLEAN [] (3.9s)
+ctx=  8192 run=1: CLEAN [] (19.7s)
+ctx= 32768 run=0: CLEAN [] (19.2s)
+ctx= 32768 run=1: CLEAN [] (2.9s)
+ctx=131072 run=0: CLEAN [] (101.5s)
+ctx=131072 run=1: CLEAN [] (260.5s)
+
+result: ALL CLEAN -> /home/sparkmain/xrepo/out/quality-tp3-S/garble.md

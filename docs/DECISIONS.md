@@ -1,13 +1,22 @@
-# Settled decisions
+# Configuration decisions
 
-One row per knob: the value, the measurement that settled it, and what happens if you
-change it. If a value is not here, it is not settled.
+One row per operational knob: the current value, the evidence behind it, and what happens
+if it changes. This is not a claim that every strategic question is settled; notably, the
+performance case for two versus three nodes remains open.
 
 > [!IMPORTANT]
-> **Not every row is closed.** Rows marked ⚠️ carry an open question — currently the
-> four-HCA **throughput** benefit ([#17](../../issues/17) — soak passed, fabric verified), the KV dtype A/B ([#16](../../issues/16)), and
-> `MAX_NUM_SEQS=32` awaiting retest ([#10](../../issues/10)). The **value** in each is what
-> we run today; the **justification** is still being tested.
+> The four-HCA **throughput** question ([#17](../../issues/17)) was settled 2026-08-26:
+> **there is none.** Decode is flat against a matched 2-HCA arm. Four-HCA is kept for
+> redundancy and headroom, which is a different justification than the one it was
+> originally adopted under.
+>
+> ⚠️ marks a row whose *value* is settled but which carries an operational trap — read
+> the "What breaks" column before changing it.
+>
+> **`MAX_NUM_SEQS` moved 16 → 32 on 2026-08-26** ([#10](../../issues/10)) — the first
+> value in this table changed by a retest rather than a first measurement. The prior
+> `_ALLGATHER_BASE` timeout is retained as a degraded-fabric signature in the
+> [`degraded-data catalogue`](DEGRADED-DATA-CATALOGUE.md), with its raw bundle preserved.
 
 **Authoritative config:** [`../config/tp3.env.example`](../config/tp3.env.example).
 This page is the *reasoning*; that file is the *artifact*.
@@ -18,25 +27,28 @@ This page is the *reasoning*; that file is the *artifact*.
 
 | Knob | Value | Settled by | If you change it |
 |---|---|---|---|
-| `TP_SIZE` | **3** | Decode cc=1 76.2 → 89.1 tok/s vs 2 nodes (2026-08-25, healthy fabric, matched) | cc≥16 favours 2 nodes; see the crossover below |
+| `TP_SIZE` | **3** operational default | TP=3 passes correctness and quality through 131K, retains the B12X kernel and MTP, and is the currently deployed shape. **Its performance advantage over TP=2 is not settled.** | TP=2 frees one node and is the required comparison arm; use the cluster launcher and re-run the same corrected harness |
 | `PP_SIZE` | **1** | [`PP3-PIPELINE-PARALLEL.md`](PP3-PIPELINE-PARALLEL.md) | ❌ Blocked by MTP + a DSA stride constraint. No PP tok/s exists |
-| expert parallel | **off** | [`EP3-EXPERT-PARALLEL.md`](EP3-EXPERT-PARALLEL.md) | ❌ 2.5x slower — the B12X kernel refuses EP. Also blocks EPLB, whose prerequisite is EP |
+| expert parallel | **off** | [`EP3-EXPERT-PARALLEL.md`](EP3-EXPERT-PARALLEL.md) | ❌ ~2.5x slower — the B12X kernel refuses EP by an explicit source-code check. Also blocks EPLB, whose prerequisite is EP. ⚠️ The **mechanism** is settled (source check + `ValueError`); the **2.5x** came from a degraded-fabric run over TCP fallback and has never been re-measured on RDMA |
 | TP=3 padding patch | **required** | Correctness 14/14; [`patch.md`](patch.md) | ☠️ **Silently serves fluent nonsense.** Stock vLLM computes `8 // 3 == 2` and drops 6 of 8 attention groups |
 
-**The node-count answer is conditional.** The 3-node advantage decays monotonically with
-concurrency and crosses over near cc=16: three nodes win per-stream latency, two win batch
-aggregate. Single-user interactive coding is per-stream-bound → three nodes.
+**The node-count performance answer is open.** The former depth comparison returned only
+25–26 completion tokens per request and is now
+[`VOID-25-token-window`](../results/20260826-decode-depth-2v3/). The corrected TP=3 arm
+measures 50.7–56.0 tok/s from 2K–262K, but there is no corrected TP=2 arm. Do not infer a
+winner until that matched run exists. The short-prompt concurrency result remains
+supporting evidence only because its gate artifact and one headline cell are not committed.
 
 ## Engine shape
 
 | Knob | Value | Settled by | If you change it |
 |---|---|---|---|
 | `MAX_MODEL_LEN` | **1048576** | 1M is free: memory-bound, not comms-bound | Nothing gained by lowering |
-| `MAX_NUM_SEQS` | **16** | Sweep; `32` rejected — but against a budget now known 6.6x too small ([#10](../../issues/10)) | Worth re-testing |
+| `MAX_NUM_SEQS` | **32** | Retest 2026-08-26 on healthy fabric: **+46.3% at cc=32** (685.9 vs 468.8), parity below it, 70/70 requests OK, zero crash signatures. Supersedes the 08-24 rejection, which died on an `_ALLGATHER_BASE` timeout at a 6.6x-too-small budget with a 600 s watchdog ([#10](../../issues/10)) | Costs 0.92 GiB more graph capture and 1.8% of KV. Nothing below cc=32 |
 | `GPU_MEMORY_UTILIZATION` | **0.80** | KV pool 4.46M tokens, **0 preemptions in every test ever run** | 0.85 leaves 2–4 GB free per node |
 | `MTP_NUM_TOKENS` | **5** | Matched control 2026-08-24, beats 4 | `0` is **invalid** (vLLM rejects it); `1` collapses decode to ~47 tok/s |
 | `MAX_NUM_BATCHED_TOKENS` | **8192** | A/B: 16384 cost **43% of the KV pool for zero gain** | ⚠️ vLLM's own log suggests 16384. That advice assumes intra-node NVLink. It is a trap here |
-| `--kv-cache-dtype` | `nvfp4_ds_mla` | Speed-identical to `fp8_ds_mla` | ⚠️ **Open** — memory-identical too (shared 584-byte envelope), quality unvalidated ([#16](../../issues/16)) |
+| `--kv-cache-dtype` | `nvfp4_ds_mla` | Tested against `fp8_ds_mla`: speed and memory equivalent; 23/24 matched quality cells byte-identical | No demonstrated benefit from changing; see [`20260826-kv-dtype-ab`](../results/20260826-kv-dtype-ab/) |
 | `JIT_MONITOR_MODE` | **warn** | Surfaces compiles landing inside requests — one measured at 5 s | Leave on. It is how you know a benchmark is contaminated |
 
 **MTP is quality-neutral.** Speculative decoding is lossless by construction; it is a
@@ -46,7 +58,7 @@ speed knob only. Raising it cannot buy accuracy.
 
 | Knob | Value | Settled by | If you change it |
 |---|---|---|---|
-| `NCCL_IB_HCA` | **all four** (`rocep1s0f0,rocep1s0f1,roceP2p1s0f0,roceP2p1s0f1`) | Upper mesh addressed 2026-08-25: **2.0x** bandwidth, live gate 21/21 with `rdma:*` **0 errors** | ⚠️ Prerequisite is IPv4 + routing + persistence on the upper pair. Without it NCCL picks the pair anyway and wedges under load while every container stays `running`. **Soak PASSED** 2026-08-26 (408 req, 0 RDMA deltas, 0 log events) — [#17](../../issues/17). Throughput benefit still unmeasured |
+| `NCCL_IB_HCA` | **all four** (`rocep1s0f0,rocep1s0f1,roceP2p1s0f0,roceP2p1s0f1`) | Upper mesh addressed 2026-08-25: **2.0x** bandwidth, live gate 21/21 with `rdma:*` **0 errors** | ⚠️ Prerequisite is IPv4 + routing + persistence on the upper pair. Without it NCCL picks the pair anyway and wedges under load while every container stays `running`. **Soak PASSED** 2026-08-26 (408 req, 0 RDMA deltas, 0 log events) — [#17](../../issues/17). **Throughput benefit measured 2026-08-26: none.** Decode is flat cc=1–16 against a matched 2-HCA arm; every apparent gain sits inside the other arm's spread. Kept for redundancy and headroom, not speed — [`../results/20260826-four-hca-throughput/`](../results/20260826-four-hca-throughput) |
 | `NCCL_NET` | `IB` | — | ⚠️ A **request, not a guarantee.** On failure NCCL falls back to sockets and reports a plausible number. We measured `NET/Socket` at 0.44 GB/s and it looked real. Always confirm `via NET/IB/x` |
 | `NCCL_IB_SUBNET_AWARE_ROUTING` | `1` | Required on a switchless ring | Undocumented in NVIDIA's public env reference, but present in the NCCL 2.30.7 binary |
 | subnet masks | **`/30` on all six** | Consistency | Mixed masks on a fabric are a latent trap even when they cannot overlap |

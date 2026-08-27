@@ -51,8 +51,31 @@ deployment is single-user interactive coding — per-stream-latency bound — cc
 operative number and three nodes are correct. **A multi-user batch deployment should run
 two nodes and free the third.**
 
-This vindicates the old "+8–17% per-stream at long context" claim, which #14 had marked
-suspect. It reproduces in the same range on healthy fabric.
+This vindicates the **direction** of the old "+8–17% per-stream" claim, which #14 had
+marked suspect. At cc=1 it reproduces in the same range.
+
+> **Correction, 2026-08-26.** The words "at long context" did not belong in that sentence,
+> and the vindication is narrower than it reads. **This run used an 18-token prompt** — it
+> measured concurrency, not context depth. The matched depth sweep landed the next day and
+> the old claim fails on the axis it actually named:
+>
+> | context (cc=1) | 2-node | 3-node | gain |
+> |---:|---:|---:|---:|
+> | 2,036 | 75.8 | 76.3 | +0.8% |
+> | 8,081 | 72.4 | 72.6 | +0.3% |
+> | 32,268 | **70.8** | 70.2 | −0.9% |
+> | 129,006 | 54.4 | **72.6** | **+33.6%** |
+> | 257,993 | 71.5 | **84.4** | **+17.9%** |
+>
+> **No per-stream benefit below 32K, and past 100K more than double what was claimed.** The
+> table in §2.2 stands as measured — it is simply about a different axis. Both are true at
+> once: three nodes win per-stream **at depth**, two nodes win aggregate **under
+> concurrency**.
+>
+> **The methodological lesson, and it belongs in this postmortem:** a re-run that confirms
+> a claim's *direction* on a different workload is not a re-run of the claim. Restating it
+> as "vindicated" carried the original's depth range along with it for free, unmeasured.
+> [`../results/20260826-decode-depth-2v3/`](../results/20260826-decode-depth-2v3).
 
 ---
 
