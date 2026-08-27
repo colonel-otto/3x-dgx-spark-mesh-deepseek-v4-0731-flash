@@ -21,6 +21,93 @@ trail—including the unsuccessful EP and PP paths—is retained in
 >
 > Full map: **[`docs/README.md`](docs/README.md)**.
 
+## Where this got to — the honest scoreboard
+
+**Against our own matched two-Spark baseline, on healthy fabric, node count the only
+variable.** Every row links to raw per-run data.
+
+| | 2 Spark | 3 Spark | verdict |
+|---|---:|---:|---|
+| 🟢 **Decode @131K context** | 54.4 tok/s | **72.6** | **+33.6%** — the strongest case for the third node |
+| 🟢 **Decode @262K context** | 71.5 | **84.4** | **+17.9%** |
+| 🟢 **Aggregate @cc=32** | — | **685.9 tok/s** | above the 618 published upstream figure |
+| 🟢 **Max verified context** | 131K | **967,286 tok** | 92% of the 1M ceiling, served without incident |
+| 🟡 **Decode below 32K** | 70.8–75.8 | 70.2–76.3 | **parity** — the third node earns nothing here |
+| 🟡 **Prefill ≤32K** | 1,913–2,081 | 2,023–2,095 | **parity** (±2%); TTFT slightly favours 3 nodes |
+| 🔴 **TTFT @262K** | **158.4 s** | 181.6 s | **2 nodes 13% sooner** |
+| 🔴 **Aggregate @cc=16** | **481.3** | 474.8 | 2 nodes win batch throughput |
+| 🔴 **Hardware freed** | **1 whole GB10** | none | two nodes leave a spare machine |
+
+**The one-line answer:** *a third Spark buys per-stream speed at long context and costs
+you time-to-first-token and batch throughput.* If your prompts are short or your load is
+concurrent, **two nodes are the better buy** — and we publish that as plainly as the wins.
+
+### The bad and the ugly, stated up front
+
+- **A node was silently broken for days** at ~15% network speed with every indicator
+  green. It distorted every measurement taken before 2026-08-25, and it sat in the 3-node
+  arm — the worst possible place. → [`docs/DEGRADED-DATA-CATALOGUE.md`](docs/DEGRADED-DATA-CATALOGUE.md)
+- **We chased a bandwidth deficit that never existed** and produced four wrong
+  explanations before running the reference tool. → [`docs/BANDWIDTH-COMPARISON.md`](docs/BANDWIDTH-COMPARISON.md)
+- **We published a headline that was wrong in both directions** (`+8–17% from 2K upward`)
+  and have retracted it in place rather than quietly editing it. → [`docs/WHY-THREE-NODES.md`](docs/WHY-THREE-NODES.md)
+- **Two of our own rejections were wrong.** `MAX_NUM_SEQS=32` and the four-HCA fabric were
+  both rejected against a fabric that was lying. Both are now production.
+- **Expert parallelism and pipeline parallelism do not work here** — dead ends kept so
+  nobody re-proposes them. → [`docs/EP3-EXPERT-PARALLEL.md`](docs/EP3-EXPERT-PARALLEL.md) ·
+  [`docs/PP3-PIPELINE-PARALLEL.md`](docs/PP3-PIPELINE-PARALLEL.md)
+
+## How the results progressed
+
+Linear, with every reversal visible. **Read down the "what changed" column to see how much
+of the improvement came from fixing our own measurements rather than the machines.**
+
+| date | change | decode cc=1 | prefill @32K | aggregate | what it taught |
+|---|---|---:|---:|---:|---|
+| 08-21 | 2-Spark baseline (`TP=2`) | 48.2 | — | — | the reference to beat |
+| 08-21 | 3-Spark `EP=3` | 19–20 | — | 138 @cc16 | ❌ B12X kernel refuses EP — **2.5x slower** |
+| 08-21 | 3-Spark `PP=3` | — | — | — | ❌ blocked by MTP + DSA stride |
+| 08-21 | 3-Spark `TP=3` + padding patch | 53.9–57.7 | — | — | ✅ TP=3 works and beats 2-node |
+| 08-22 | `MAX_NUM_BATCHED_TOKENS=16384` | — | — | — | ❌ trap: 43% of KV for zero gain, reverted |
+| 08-24 | `MTP=5` + 1M context | ~80 | — | 374 @cc16 † | ✅ 1M context is free; MTP=5 beats MTP=4 |
+| 08-24 | `MAX_NUM_SEQS=32` | — | — | crash | ❌ *rejected — later proved wrong* |
+| **08-25** | **degraded node found + rebooted** | **85.6** | **1,034 → 2,095** | **491 @cc16** | ☠️ **+103% prefill from a reboot.** Everything above is suspect |
+| 08-25 | four-HCA upper mesh addressed | — | — | — | ✅ 2x fabric bandwidth, soak-validated |
+| 08-26 | official `nccl-tests` run | — | — | — | ✅ **no bandwidth gap ever existed** (23.92 GB/s) |
+| 08-26 | KV dtype A/B | — | — | — | ✅ free choice — 23/24 cells byte-identical |
+| 08-26 | depth sweep, matched 2v3 | 76.3 | — | — | ✅ **the real curve**: parity <32K, +33.6% @131K |
+| 08-26 | **`MAX_NUM_SEQS=32` retest** | 87.6 | — | **685.9 @cc32** | ✅ **+46.3%** — the 08-24 rejection was the fabric |
+| 08-26 | four-HCA throughput | — | — | flat | ✅ 2x bandwidth buys **no speed** — a null result, published |
+
+† The 374 aggregate is the `MTP=4`/`seqs=16` profile measured in that window, and it was
+taken on the **degraded** fabric — the same configuration read **491** after the reboot.
+Rows above the 08-25 line are kept because they are the decision trail, not because their
+numbers are trustworthy; each is labelled in
+[`docs/DEGRADED-DATA-CATALOGUE.md`](docs/DEGRADED-DATA-CATALOGUE.md).
+
+**Two of the three biggest wins came from re-testing our own rejections**, not from new
+ideas. That is the most transferable lesson here.
+Full trail: [`docs/EXPERIMENT-LOG.md`](docs/EXPERIMENT-LOG.md).
+
+## Standing on other people's work
+
+This repo is a **measurement** project layered on other people's engineering. Where a
+number, a patch, or a harness came from someone else, it is named:
+
+| what | whose | how we used it |
+|---|---|---|
+| TP=3 attention-group padding (`o_groups` 8→9) | [localaiguyy](https://github.com/localaiguyy/DeepSeek-V4-Flash-DSpark-3x-DGX-Spark) | **The patch that makes TP=3 correct at all.** Without it vLLM serves fluent nonsense |
+| `benchmark_tp3.py`, the 618 tok/s `seqs=32` figure | [localaiguyy](https://github.com/localaiguyy/DeepSeek-V4-Flash-DSpark-3x-DGX-Spark) | Our matched harness — and the target that prompted the retest we had wrongly rejected |
+| 2-node recipe, `bench-miaai.py`, dual-controller HCA insight | [MiaAI-Lab](https://github.com/MiaAI-Lab/DeepSeek-v4-Flash-DSpark-2x-DGX-Spark) | The comparison baseline, and the reason we looked at the upper HCA pair |
+| `dspark-vllm-gx10` runtime image | [Anemll](https://github.com/anemll) | The engine everything runs on; `benchmark_prefill.py` is theirs |
+| Ring topology, switchless NCCL settings | [NVIDIA dgx-spark-playbooks](https://github.com/NVIDIA/dgx-spark-playbooks) | Physical layout and the published bandwidth figures we benchmarked against |
+
+**Our contribution is the controlled comparison, not the stack**: matched arms, a fabric
+gate that catches silent degradation, and a documented trail of what we got wrong.
+Third-party rows in [`benchmarks/measurements.csv`](benchmarks/measurements.csv) carry
+`source=external-published` and are never silently mixed with ours.
+Full detail: [`CREDITS.md`](CREDITS.md).
+
 ## What this project found, in plain terms
 
 Three findings, in order of how much time they cost:
@@ -164,9 +251,11 @@ Evidence: [`results/20260826-decode-depth-2v3/`](results/20260826-decode-depth-2
 | Is `nvfp4_ds_mla` costing us quality? | ✅ **No** — 23/24 cells byte-identical vs `fp8` | [#16](../../issues/16) |
 | Can extra RAM buy a better model? | ✅ **No** — no higher-fidelity checkpoint exists | section above |
 | Was prefill behind the 2-node recipe? | ✅ **Resolved** — it was the degraded node | [#11](../../issues/11) |
-| Does 4-HCA improve *throughput*? | ⏳ **Unmeasured** — soak proved stability, not benefit | [#17](../../issues/17) |
-| Is `MAX_NUM_SEQS=32` viable? | ⏳ **Re-test needed** — rejected against a budget 6.6x too small | [#10](../../issues/10) |
-| Do pre-08-25 benchmarks need re-running? | ⏳ **Partly done** — decode/prefill/deep-concurrency redone | [#14](../../issues/14) |
+| Does 4-HCA improve *throughput*? | ✅ **No** — decode flat vs a matched 2-HCA arm; kept for redundancy | [#17](../../issues/17) |
+| Is `MAX_NUM_SEQS=32` viable? | ✅ **Yes — +46.3% at cc=32**, now the production value | [#10](../../issues/10) |
+| Is prefill degraded by the 3rd node? | ✅ **No** — *faster* below 32K, 6–15% slower past 100K | [`results/20260826-decode-depth-2v3/`](results/20260826-decode-depth-2v3) |
+| Do pre-08-25 benchmarks need re-running? | ⏳ **Mostly done** — decode, prefill, deep-concurrency, seqs=32 redone | [#14](../../issues/14) |
+| Matched `benchmark_prefill.py` above 32K? | ⏳ **Missing** — TTFT corroborates, but no designed run | [`results/20260825-prefill-2v3/`](results/20260825-prefill-2v3) |
 
 **Every ✅ above was measured on healthy fabric with matched arms.** Every ⏳ is named
 rather than quietly assumed.
