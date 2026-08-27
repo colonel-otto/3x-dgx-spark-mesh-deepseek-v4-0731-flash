@@ -23,7 +23,7 @@ previously measure at all. **This repo has measured throughput almost exclusivel
 | Tool battery **7/7** | none committed | ✅ **7/7 PASS** |
 | Deep-context tools **8/8** | none committed | ✅ **8/8 PASS** (32K and 131K) |
 | Garble sweep **CLEAN** | none committed | ✅ **ALL CLEAN**, 8 runs |
-| RULER-lite **8/8** | none committed | ⏳ running |
+| RULER-lite **8/8** | none committed | ✅ **12/12 PASS** (4 task families × 3 depths) |
 
 ### Tool calling — 7/7
 
@@ -38,6 +38,21 @@ previously measure at all. **This repo has measured throughput almost exclusivel
 | 131,072 | ✅ | ✅ | ✅ | ✅ |
 
 **Tool calling does not degrade at 131K on three nodes.**
+
+### RULER-lite — 12/12
+
+Four task families at 8,192 / 32,768 / 131,072, seed 42 (their default):
+
+| task | what it tests | 8K | 32K | 131K |
+|---|---|---|---|---|
+| `sniah` | single-key needle retrieval | ✅ | ✅ | ✅ |
+| `mkniah` | multi-key retrieval, 3 keys | ✅ | ✅ | ✅ |
+| `vartrack` | multi-hop coreference, 4 hops | ✅ | ✅ | ✅ |
+| `cwe` | common-word aggregation | ✅ | ✅ | ✅ |
+
+**Retrieval, multi-hop tracing and aggregation all hold at 131K.** `vartrack` and `cwe`
+are the demanding ones — they need the whole context, not a lucky span. `cwe` at 131K took
+249 s and returned all five gold words.
 
 ### Garble sweep — ALL CLEAN
 

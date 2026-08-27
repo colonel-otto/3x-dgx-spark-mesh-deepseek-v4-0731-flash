@@ -1,0 +1,14 @@
+PASS sniah(key=prairie)             ctx=    8200 (    7s) gold=['24592'] pred='24592'
+PASS mkniah(keys=3,query=river)     ctx=    8204 (   14s) gold=['28289'] pred='28289'
+PASS vartrack(chains=1,hops=4)      ctx=    8204 (   68s) gold=['CTOPA', 'CGPOS', 'SKLHW', 'TEKHF', 'TCJJI'] pred='Based on the chain of assignments:\n\n1. `VAR CTOPA = 44671`  \n2. `VAR CGPOS = VAR CTOPA` → CGPOS = 44'
+PASS cwe(common=5)                  ctx=    8199 (  301s) gold=['quiver', 'anchor', 'needle', 'jungle', 'temple'] pred='Based on the list provided, the 5 most common words are:\n\n1. **temple** (appears 8 times)\n2. **ancho'
+PASS sniah(key=apple)               ctx=   32776 (   26s) gold=['61173'] pred='61173'
+PASS mkniah(keys=3,query=silver)    ctx=   32781 (   14s) gold=['96752'] pred='96752'
+PASS vartrack(chains=1,hops=4)      ctx=   32780 (   20s) gold=['MEFBT', 'BIBMX', 'NBNWB', 'BWKYO', 'PBCRO'] pred='Based on the variable assignments in the text:\n\n1. `VAR MEFBT = 51467`  \n2. `VAR BIBMX = VAR MEFBT` '
+PASS cwe(common=5)                  ctx=   32775 (   48s) gold=['yonder', 'yellow', 'valley', 'mirror', 'kettle'] pred='The top 5 words that appear most often in the list are:  \n1. yellow  \n2. valley  \n3. mirror  \n4. ket'
+PASS sniah(key=utopia)              ctx=  131082 (  205s) gold=['60328'] pred='60328'
+PASS mkniah(keys=3,query=glacier)   ctx=  131084 (   72s) gold=['29342'] pred='29342'
+PASS vartrack(chains=1,hops=4)      ctx=  131084 (   76s) gold=['UFUSM', 'OXDDM', 'NOITL', 'VXLXL', 'EWLTV'] pred='The variables assigned the value 46347 are:\n\n*   VAR UFUSM\n*   VAR OXDDM\n*   VAR NOITL\n*   VAR VXLXL'
+PASS cwe(common=5)                  ctx=  131079 (  249s) gold=['orange', 'xenon', 'quartz', 'candle', 'prairie'] pred='The top 5 words that appear most often in the list are: prairie, orange, candle, quartz, xenon.'
+
+=== RULER-lite: 12/12 passed ===
