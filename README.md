@@ -23,6 +23,19 @@ trail—including the unsuccessful EP and PP paths—is retained in
 
 ## Where this got to — the honest scoreboard
 
+> [!WARNING]
+> **Decode magnitudes below are PROVISIONAL.** Every decode figure in this repo was
+> measured over a **~25-token window** (0.4–0.7 s). `decode_depth_sweep.py` requested
+> 256 tokens, but the prompt ends *"Summarize the above in one sentence"* — so the model
+> stopped early on **all 70 reps**, and nothing asserted the output length. That window is
+> too short to average MTP speculative-decode acceptance: the 131K TP=2 reps span
+> **37.0–64.3 tok/s, a 1.74x swing**, on identical config and prompt.
+>
+> A full re-measurement with a fixed harness and a results index is underway
+> ([#26](../../issues/26)). The **directions** (which configuration wins where) are
+> believed sound — arms were matched, node count the only variable, fabric gated between
+> them. The **sizes** are not. *Do not cite these numbers for a purchasing decision yet.*
+
 **Against our own matched two-Spark baseline, on healthy fabric, node count the only
 variable.** Every row links to raw per-run data.
 
