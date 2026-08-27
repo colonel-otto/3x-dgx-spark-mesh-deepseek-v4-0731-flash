@@ -1,5 +1,7 @@
 # `MAX_NUM_SEQS=32` retest on healthy fabric — 2026-08-26
 
+**Status:** `CURRENT` within the provenance caveats in [`../index.yaml`](../index.yaml).
+
 **The 2026-08-24 rejection is falsified. `seqs=32` does not crash, and it is worth
 +46% aggregate throughput at cc=32.** Answers [#10](../../issues/10).
 

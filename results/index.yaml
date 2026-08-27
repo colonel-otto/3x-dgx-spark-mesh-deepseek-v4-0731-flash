@@ -4,7 +4,8 @@
 # traceable through this file to a committed raw-data file.
 #
 # Generated 2026-08-26 by auditing each directory's committed artifacts.
-# Adversarially re-verified 2026-08-26 (second pass): every row's node count,
+# Updated 2026-08-27 for the corrected decode and quality-suite bundles.
+# Adversarially re-verified 2026-08-27: every row's node count,
 # TP size, rep count and completion-token distribution was independently
 # re-derived from the raw files rather than accepted from the first pass.
 # Fields marked "from-raw" were read out of the raw data, NOT from the README.
@@ -16,6 +17,7 @@
 #   VOID-25-token-window   decode measured over a ~25-token completion window
 #                          instead of the requested 256 (issue #26). Verified by
 #                          grepping completion_tokens in the raw data per directory.
+#   VOID-incomplete-run    an attempted run produced no valid measured samples.
 #   SUPERSEDED-BY-<dir>    a later run replaced it.
 #   CURRENT                healthy fabric AND sound methodology.
 #
@@ -46,8 +48,8 @@
 #   `fabric_gate_note` records why a row is ABSENT when it claims to be gated.
 
 meta:
-  generated: 2026-08-26
-  verified: 2026-08-26           # adversarial second pass, all 22 rows
+  generated: 2026-08-27
+  verified: 2026-08-27           # all 26 result directories represented
   fabric_fix_date: 2026-08-25
   gate_tool: scripts/fabric_gate.sh
   gate_enforced_by: scripts/run_experiment.sh
@@ -57,6 +59,7 @@ meta:
   severity_order:
     - VOID-degraded-fabric
     - VOID-25-token-window
+    - VOID-incomplete-run
     - SUPERSEDED-BY
     - CURRENT
   fabric_gate_values:
@@ -65,11 +68,11 @@ meta:
     - ABSENT
     - PRE-DATES-GATE
   fabric_gate_tally:
-    PRESENT-PASS: 5
+    PRESENT-PASS: 8
     PRESENT-FAIL: 0
-    ABSENT: 12
+    ABSENT: 13
     PRE-DATES-GATE: 5
-    total: 22
+    total: 26
   fabric_gate_tally_detail:
     PRESENT-PASS:
       - 20260825-deep-concurrency        # fabric-gate-full.json 13/13, nccl=full
@@ -77,6 +80,9 @@ meta:
       - 20260825-upper-mesh              # 4 gate files, 26/26 x2 + 21/0 + 24/0
       - 20260826-decode-depth-2v3        # fabric-gate-pre-tp2.txt 33/0
       - 20260826-nccl-controlled         # IS the fabric measurement, exceeds the gate
+      - 20260827-decode-2node-failed     # gate passed; benchmark produced no samples
+      - 20260827-decode-2v3-fixed        # TP=2 stopped gate; TP=3 restore gate skipped NCCL
+      - 20260827-decode-concurrency-2v3-fixed # TP=2 stopped gate; TP=3 restore gate skipped NCCL
     PRESENT-FAIL: []
     ABSENT:
       - 20260824-kv-quality
@@ -88,8 +94,10 @@ meta:
       - 20260826-four-hca-throughput     # cross-referenced to another dir's gate
       - 20260826-harness-window-calibration
       - 20260826-kv-dtype-ab
+      - 20260826-near-ceiling-prefill
       - 20260826-seqs32-retest
       - 20260827-decode-3node-fixed
+      - 20260827-quality-suite-3node
     PRE-DATES-GATE:
       - 20260821T001024Z-2spark-baseline
       - 20260821T031300Z-3spark-ep3
@@ -97,17 +105,20 @@ meta:
       - 20260821T133000Z-3spark-tp3
       - 20260821T142000Z-3spark-tp3-upstream-harness
   fabric_gate_tally_note: >
-    Only 5 of 22 directories commit their own passing gate, and one of those
-    (20260826-decode-depth-2v3) is void for an unrelated reason. The ABSENT
-    list is 12 because every 2026-08-24 directory predates the discipline
-    without predating the tool, and three healthy-fabric 08-25/08-26 rows
-    never committed one. PRE-DATES-GATE is exactly the five 2026-08-21
+    Eight of 26 directories commit their own passing gate or direct fabric
+    measurement. Three newly imported bundles carry a stopped TP=2 gate; their
+    restored TP=3 checks ran with the engine live and therefore skipped NCCL.
+    One passing-gate bundle (20260826-decode-depth-2v3) is void for an unrelated
+    token-window defect, and 20260827-decode-2node-failed is void because the
+    benchmark produced no samples. The ABSENT
+    list includes performance runs, matched A/Bs, and pass/fail quality runs
+    that did not commit a gate artifact. PRE-DATES-GATE is exactly the five 2026-08-21
     directories, all of which are also VOID-degraded-fabric.
   baseline_value_coverage: >
     10 rows carry a baseline_value: the 7 VOID-degraded-fabric rows, the 1
-    VOID-25-token-window row, and both SUPERSEDED rows. That is every non-CURRENT,
-    non-IN-PROGRESS row in the index. CURRENT rows do not need one (their numbers
-    stand on their own); IN-PROGRESS has no numbers yet.
+    VOID-25-token-window row, and both SUPERSEDED rows. That is every non-CURRENT
+    row in the index. CURRENT rows do not need one because their evidence stands
+    within the caveats recorded on each row.
   notes: >
     output_tokens_actual is the measured distribution from the committed raw
     data. Where a directory records only a requested max_tokens and no
@@ -1416,10 +1427,10 @@ directories:
   - dir: 20260827-decode-3node-fixed
     date: 2026-08-27
     description: >
-      IN PROGRESS. Engine-config capture for a 3-node decode re-run with the
-      fixed 256-token harness. No measurement output committed yet.
-    readme_h1: null
-    has_readme: false
+      Corrected 3-node decode depth curve with a forced and verified 256-token
+      window. Supersedes the TP=3 arm of 20260826-decode-depth-2v3.
+    readme_h1: Corrected 3-node decode depth curve (256-token window)
+    has_readme: true
     nodes: 3
     nodes_evidence: >
       engine-config.txt is a LIVE capture (2026-08-27T02:08:15Z, sparkmain PID
@@ -1435,38 +1446,229 @@ directories:
       pool is "not present in any reachable log for the current engine boot"
       and falls back to quoting a 2026-08-24 value (5,382,503) from a
       different boot. That fallback must not be recorded as this run's pool.
-    harness: expected scripts/decode_depth_sweep.py @ c3e8e0d (fixed) — not yet committed here
-    harness_committed: false
-    output_tokens_requested: 256 (expected)
-    output_tokens_actual: none-yet          # no results file exists
+    harness: scripts/decode_depth_sweep.py @ c3e8e0d (fixed)
+    harness_committed: true
+    output_tokens_requested: 256
+    output_tokens_actual: {256: 43}
+    output_tokens_field: completion_tokens (PER-REQUEST)
     output_tokens_note: >
-      No .json/.jsonl output is committed. Nothing to verify yet. When the run
-      lands, assert completion_tokens == 256 on every rep before publishing.
-    reps: not yet run
-    statistic: not yet run
+      from-raw: completion_tokens is 256 on all 43 measured reps. cached_tokens
+      is zero on all 43. The harness raises if the requested window is not met.
+    reps: 7 each at 2K, 8K, 32K and 262K; 15 at 131K; 43 total
+    reps_verified: true
+    statistic: median with sorted per-rep values and min/max spread
     fabric_gate: ABSENT
     fabric_gate_artifact: null
     fabric_gate_evidence: null
     fabric_gate_note: >
-      No gate artifact yet. Take one BEFORE the benchmark, with the engine
-      stopped -- scripts/run_experiment.sh does this automatically and refuses
-      to proceed on failure. This directory is the natural place to prove the
-      workflow. Note the engine was already running at capture time (PID
-      556480, started 2026-08-26 16:26), so a gate taken now would come back
-      nccl_mode "skip" with bandwidth unmeasured; the engine must be stopped
-      for the collective checks to run.
+      No gate artifact was committed. The run used a long-lived engine and
+      captured its live process config, but healthy fabric is assumed rather
+      than proven in this bundle. Absolute timing is therefore ungated.
     fabric_gated: false
     fabric_state: healthy
-    raw_data_committed: false
-    raw_files: [engine-config.txt]
-    status: IN-PROGRESS
+    raw_data_committed: true
+    raw_files:
+      - tp3-fixed-2048.jsonl
+      - tp3-fixed-8192.jsonl
+      - tp3-fixed-32768.jsonl
+      - tp3-fixed-131072.jsonl
+      - tp3-fixed-262144.jsonl
+      - summary.json
+      - engine-config.txt
+    status: CURRENT
     void_reasons: []
     superseded_by: null
     note: >
-      Appeared during this audit (untracked in git). Config confirms the live
-      production profile: TP=3, PP=1, MAX_NUM_SEQS=32, 1M context, MTP=5,
-      nvfp4_ds_mla, gpu-mem 0.80 — the post-seqs32 profile, which differs from
-      20260826-decode-depth-2v3's MAX_NUM_SEQS=16. That difference means this
-      run will NOT be a clean matched replacement for the voided depth sweep
-      unless the seqs value is reconciled or a matched TP=2 arm is taken at
-      the same setting.
+      The corrected medians are 54.72 / 56.02 / 54.28 / 53.06 / 50.66 tok/s.
+      The 131K and 262K distributions contain intermittent slow modes; 262K
+      includes two measured reps at 1.17 and 3.28 tok/s. The old TP=2 arm has
+      the same short-window defect, so this run cannot answer the 2-vs-3
+      question. A matched corrected TP=2 run is still required.
+
+  - dir: 20260827-quality-suite-3node
+    date: 2026-08-27
+    description: >
+      The 2-node repository's quality scripts, vendored unmodified and run on
+      the 3-node TP=3 deployment through 131K context.
+    readme_h1: "Quality suite: the 2-node repo's own tests, run on 3 nodes — 2026-08-27"
+    has_readme: true
+    nodes: 3
+    nodes_evidence: >
+      engine-config.txt captures the live TP=3 process configuration. The
+      result is a single 3-node quality arm, not a 2-vs-3 comparison.
+    tp_size: 3
+    kv_pool_tokens: null
+    kv_pool_source: not applicable to the pass/fail claims
+    harness: vendored upstream tool-battery, deepctx-tool-battery, garble sweep, and ruler-lite scripts
+    harness_committed: true
+    harness_provenance: vendored-SHA256SUMS.txt
+    output_tokens_requested: varies by quality task
+    output_tokens_actual: not a throughput metric
+    output_tokens_note: >
+      This bundle publishes pass/fail correctness and retrieval outcomes, not
+      decode or prefill rates. Runtime is not treated as performance evidence.
+    reps: 7 tool cases; 8 deep-context tool cases; 8 garble runs; 12 RULER-lite cases
+    reps_verified: true
+    statistic: pass count by suite
+    fabric_gate: ABSENT
+    fabric_gate_artifact: null
+    fabric_gate_evidence: null
+    fabric_gate_note: >
+      No fabric gate artifact. The engine was live and serving other work.
+      Fabric speed affects duration but not the published pass/fail claim, so
+      the quality result remains current while all timing remains uncitable.
+    fabric_gated: false
+    fabric_state: healthy
+    raw_data_committed: true
+    raw_files:
+      - ruler-lite.json
+      - ruler.log
+      - tools.log
+      - garble.md
+      - garble.log
+      - engine-config.txt
+      - vendored-SHA256SUMS.txt
+    status: CURRENT
+    void_reasons: []
+    superseded_by: null
+    note: >
+      RULER-lite 12/12, tool battery 7/7, deep-context tools 8/8 at
+      32K and 131K, and garble sweep clean across 2K/8K/32K/131K. The
+      suite stops at 131K and does not establish a performance advantage or a
+      comparison with two nodes.
+
+  - dir: 20260827-decode-2node-failed
+    date: 2026-08-27
+    description: >
+      Failed corrected TP=2 attempt retained because all benchmark requests
+      returned HTTP 404 after the engine passed a live correctness request.
+    readme_h1: Failed corrected TP=2 decode attempt — 2026-08-27
+    has_readme: true
+    nodes: 2
+    nodes_evidence: engine-config.txt records --tensor-parallel-size 2 and --nnodes 2
+    tp_size: 2
+    kv_pool_tokens: null
+    kv_pool_source: not captured
+    harness: scripts/decode_depth_sweep.py fixed-window variant
+    harness_committed: true
+    output_tokens_requested: 256
+    output_tokens_actual: none
+    output_tokens_note: all five JSONL files are empty; there are no measured samples
+    reps: 0 valid
+    reps_verified: true
+    statistic: none
+    fabric_gate: PRESENT-PASS
+    fabric_gate_artifact: fabric-gate-stopped.json
+    fabric_gate_evidence: 15 pass, 0 fail, 2 expected engine skips; 8.87 GB/s
+    fabric_gate_note: The fabric passed; the HTTP failure happened after engine startup.
+    fabric_gated: true
+    fabric_state: healthy
+    raw_data_committed: true
+    raw_files:
+      - orchestration.log
+      - engine-config.txt
+      - fabric-gate-stopped.json
+      - tp2-fixed-2048.jsonl
+      - tp2-fixed-8192.jsonl
+      - tp2-fixed-32768.jsonl
+      - tp2-fixed-131072.jsonl
+      - tp2-fixed-262144.jsonl
+    status: VOID-incomplete-run
+    void_reasons: [no-valid-samples]
+    superseded_by: 20260827-decode-2v3-fixed
+    baseline_value: >
+      Engine-ready and one successful sanity response do not prove that the
+      benchmark endpoint will remain available; preserve orchestration logs.
+
+  - dir: 20260827-decode-2v3-fixed
+    date: 2026-08-27
+    description: >
+      Corrected 256-token matched node-count sweep, seven reps per arm and
+      depth. Three nodes win cc=1 decode by 7.3-16.7% across 2K-262K.
+    readme_h1: Corrected 256-token decode — two nodes versus three — 2026-08-27
+    has_readme: true
+    nodes: [2, 3]
+    nodes_evidence: tp2/engine-config.txt and tp3/engine-config.txt capture live argv
+    tp_size: [2, 3]
+    kv_pool_tokens: null
+    kv_pool_source: not captured for both arms
+    harness: scripts/decode_depth_sweep.py fixed-window variant
+    harness_committed: true
+    output_tokens_requested: 256
+    output_tokens_actual: {256: 70}
+    output_tokens_field: completion_tokens (PER-REQUEST)
+    output_tokens_note: completion_tokens=256 and cached_tokens=0 on all 70 reps
+    reps: 7 per depth and arm; 70 total
+    reps_verified: true
+    statistic: median with full per-rep JSONL retained
+    fabric_gate: PRESENT-PASS
+    fabric_gate_artifact: tp2/fabric-gate-stopped.json
+    fabric_gate_evidence: TP=2 15 pass, 0 fail, 2 skips; 9.21 GB/s
+    fabric_gate_note: >
+      TP=2 has a stopped gate. The restored TP=3 check passed 24 checks but
+      skipped NCCL bandwidth because the engine was live.
+    fabric_gated: partial
+    fabric_state: healthy
+    raw_data_committed: true
+    raw_files:
+      - tp2/*.jsonl
+      - tp2/*-summary.json
+      - tp2/engine-config.txt
+      - tp2/fabric-gate-stopped.json
+      - tp2/fabric-gate-restored-3node.json
+      - tp3/tp3-fixed.jsonl
+      - tp3/tp3-fixed-summary.json
+      - tp3/engine-config.txt
+    status: CURRENT
+    void_reasons: []
+    superseded_by: null
+    note: >
+      TP=2 used MAX_NUM_SEQS=16 while TP=3 used 32. This should not bind at
+      cc=1 but prevents calling configuration identical. Issue #24's 15-rep
+      131K criterion remains open and is folded into issue #25.
+
+  - dir: 20260827-decode-concurrency-2v3-fixed
+    date: 2026-08-27
+    description: >
+      Corrected 256-token concurrency comparison at 8K. TP=3 wins cc=4;
+      TP=2 wins aggregate throughput at cc=8 and cc=16.
+    readme_h1: Corrected 256-token concurrency — two nodes versus three — 2026-08-27
+    has_readme: true
+    nodes: [2, 3]
+    nodes_evidence: orchestration captures verify live TP=2 and restored TP=3 shapes
+    tp_size: [2, 3]
+    kv_pool_tokens: null
+    kv_pool_source: not captured
+    harness: harness/bench_miaai_cc.py
+    harness_committed: true
+    output_tokens_requested: 256 per request
+    output_tokens_actual: asserted 256 per request by harness
+    output_tokens_field: harness assertion plus per-trial max_tokens
+    output_tokens_note: raw logs list 256 for every request in every trial
+    reps: 3 trials per cc=4/8/16 and arm; 18 trials total
+    reps_verified: true
+    statistic: median of trial aggregate throughput
+    fabric_gate: PRESENT-PASS
+    fabric_gate_artifact: tp2/fabric-gate-stopped.json
+    fabric_gate_evidence: TP=2 15 pass, 0 fail, 2 skips; 9.47 GB/s
+    fabric_gate_note: >
+      TP=2 has a stopped gate. The restored TP=3 check passed 24 checks but
+      skipped NCCL bandwidth because the engine was live.
+    fabric_gated: partial
+    fabric_state: healthy
+    raw_data_committed: true
+    raw_files:
+      - tp2/*.jsonl
+      - tp2/orchestration.log
+      - tp2/fabric-gate-stopped.json
+      - tp2/fabric-gate-restored-3node.json
+      - tp3/*.jsonl
+      - tp3/3node-run.log
+      - harness/bench_miaai_cc.py
+      - harness/run_2node_cc_sweep.sh
+    status: CURRENT
+    void_reasons: []
+    superseded_by: null
+    note: >
+      TP=2 used MAX_NUM_SEQS=16 and TP=3 used 32. Three trials establish the
+      crossover direction, not a high-precision magnitude.

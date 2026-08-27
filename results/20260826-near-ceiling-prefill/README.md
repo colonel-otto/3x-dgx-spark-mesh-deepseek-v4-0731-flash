@@ -1,5 +1,7 @@
 # Near-ceiling prefill, single run — 2026-08-26
 
+**Status:** `CURRENT` within the provenance caveats in [`../index.yaml`](../index.yaml).
+
 > [!NOTE]
 > **RECONCILED 2026-08-26 against two independent measurements taken the same day.**
 > The original caveats below were correct and are kept. What changed is that the trend

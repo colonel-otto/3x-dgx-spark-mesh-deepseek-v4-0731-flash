@@ -1,5 +1,7 @@
 # Four-HCA fabric: 2x the bandwidth buys **no measurable decode throughput** — 2026-08-26
 
+**Status:** `CURRENT` within the provenance caveats in [`../index.yaml`](../index.yaml).
+
 Closes the last open branch of [#17](../../issues/17). The soak and correctness gates
 passed on 2026-08-26; this is the throughput question that remained.
 

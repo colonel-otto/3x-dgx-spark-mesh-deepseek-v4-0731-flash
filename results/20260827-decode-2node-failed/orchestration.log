@@ -1,0 +1,139 @@
+[2026-08-27T00:39:52-04:00] === Step 1: stop 3-node cluster (dsv4.service) ===
+[2026-08-27T00:40:34-04:00] === Step 2: fabric gate with engine stopped (2-node) ===
+== fabric gate: 2 nodes from 2spark-live.env ==
+-- ssh liveness
+  [32mPASS[0m  sparkmain -> node0
+  [32mPASS[0m  spark1 -> node1
+-- fabric mesh (all directed pairs) + latency
+  [32mPASS[0m  sparkmain -> spark1 (192.168.100.2) rtt 0.821ms
+  [32mPASS[0m  spark1 -> sparkmain (192.168.200.1) rtt 0.955ms
+-- peer egress device (RDMA/model data must leave via the fabric)
+  [32mPASS[0m  sparkmain: all peer FABRIC routes egress the fabric
+  [32mPASS[0m  spark1: all peer FABRIC routes egress the fabric
+-- fabric addressing (duplicate/overlapping subnets)
+  [32mPASS[0m  sparkmain fabric addressing clean: enp1s0f0np0=192.168.100.1/30 enp1s0f1np1=192.168.101.1/30 enP2p1s0f0np0=192.168.110.1/30 enP2p1s0f1np1=192.168.111.1/30
+  [32mPASS[0m  spark1 fabric addressing clean: enp1s0f0np0=192.168.102.1/30 enp1s0f1np1=192.168.100.2/30 enP2p1s0f0np0=192.168.112.1/30 enP2p1s0f1np1=192.168.110.2/30
+-- fabric arp (peer on correct port)
+  [32mPASS[0m  sparkmain: every fabric peer on its cabled port
+  [32mPASS[0m  spark1: every fabric peer on its cabled port
+-- fabric config persistence (survives reboot?)
+  [32mPASS[0m  sparkmain: fabric addressing persisted and netplan generates
+  [32mPASS[0m  spark1: fabric addressing persisted and netplan generates
+-- engine rdma health (if running)
+  [33mSKIP[0m  sparkmain: no engine running (nothing to check)
+  [33mSKIP[0m  spark1: no engine running (nothing to check)
+-- nccl collective bandwidth
+  [32mPASS[0m  gate-p01 transport: via NET/IB/4 via NET/IB/5 (ndevs=1 ndevs=2)
+  [32mPASS[0m  gate-p01 merged devices: rocep1s0f0 rocep1s0f0+rocep1s0f1 rocep1s0f1 roceP2p1s0f0 roceP2p1s0f0+roceP2p1s0f1 roceP2p1s0f1
+  [32mPASS[0m  gate-p01: 8.87 GB/s @64MiB
+
+== 15 passed, 0 failed, 2 skipped ==
+wrote /home/sparkmain/bench-repo/results/20260827T043952Z-decode-2node-fixed/fabric-gate-stopped.json
+[2026-08-27T00:40:58-04:00] === Step 3: bring up 2-node TP=2 cluster ===
+[2026-08-27T00:40:59-04:00] Config verified identical across both ranks:
+    GPU_MEMORY_UTILIZATION=0.80
+    MAX_MODEL_LEN=1048576
+    MAX_NUM_BATCHED_TOKENS=8192
+    MAX_NUM_SEQS=16
+    MTP_NUM_TOKENS=5
+[2026-08-27T00:40:59-04:00] Starting worker spark1 (rank 1) ...
+ Container dspark-vllm-gx10-vllm-dspark-1 Creating
+ Container dspark-vllm-gx10-vllm-dspark-1 Created
+ Container dspark-vllm-gx10-vllm-dspark-1 Starting
+ Container dspark-vllm-gx10-vllm-dspark-1 Started
+[2026-08-27T00:41:15-04:00] Starting head sparkmain (rank 0) ...
+ Container dspark-vllm-gx10-vllm-dspark-1 Creating
+ Container dspark-vllm-gx10-vllm-dspark-1 Created
+ Container dspark-vllm-gx10-vllm-dspark-1 Starting
+ Container dspark-vllm-gx10-vllm-dspark-1 Started
+[2026-08-27T00:41:15-04:00] Waiting for http://127.0.0.1:8100 (cold start is ~7 min) ...
+[2026-08-27T00:47:26-04:00] READY after ~350s
+--gpu-memory-utilization 0.80
+--max-model-len 1048576
+--max-num-seqs 16
+--tensor-parallel-size 2
+[2026-08-27T00:47:26-04:00] === Step 4: capture live engine config (2-node) ===
+/usr/bin/python3 /usr/local/bin/vllm serve /models/dsv4-abliterated --served-model-name deepseek-v4-flash-0731 --host 0.0.0.0 --port 8100 --trust-remote-code --tensor-parallel-size 2 --pipeline-parallel-size 1 --kv-cache-dtype nvfp4_ds_mla --block-size 256 --max-model-len 1048576 --max-num-seqs 16 --max-num-batched-tokens 8192 --max-cudagraph-capture-size 96 --gpu-memory-utilization 0.80 --enable-prefix-caching --async-scheduling --enable-chunked-prefill --speculative-config {"method":"dspark","num_speculative_tokens":5,"draft_sample_method":"probabilistic"} --tokenizer-mode deepseek_v4 --distributed-executor-backend mp --moe-backend flashinfer_b12x --tool-call-parser deepseek_v4 --enable-auto-tool-choice --reasoning-parser deepseek_v4 --reasoning-config {"reasoning_parser":"deepseek_v4","reasoning_start_str":"<think>","reasoning_end_str":"</think>"} --default-chat-template-kwargs {"thinking":false} --generation-config vllm --enable-flashinfer-autotune --nnodes 2 --node-rank 0 --master-addr 192.168.100.1 --master-port 25000 --jit-monitor-mode warn
+[2026-08-27T00:47:26-04:00] === Step 5: sanity check (correctness) ===
+{"id":"chatcmpl-bf26033e258d0d6c","object":"chat.completion","created":1787806046,"model":"deepseek-v4-flash-0731","choices":[{"index":0,"message":{"role":"assistant","content":"391","refusal":null,"annotations":null,"audio":null,"function_call":null,"reasoning":null},"logprobs":null,"finish_reason":"stop","stop_reason":null,"token_ids":null,"routed_experts":null}],"service_tier":null,"system_fingerprint":"vllm-0.25.2.dev0+g752a3a504.d20260714-tp2-26ea8310","usage":{"prompt_tokens":18,"total_tokens":20,"completion_tokens":2,"prompt_tokens_details":null},"prompt_logprobs":null,"prompt_token_ids":null,"prompt_text":null,"kv_transfer_params":null,"metrics":null}
+[2026-08-27T00:47:26-04:00] === Step 6: corrected decode depth sweep (256-tok window, asserted) ===
+[2026-08-27T00:47:26-04:00] --- depth 2048 ---
+
+=== depth 2048 (tp2-fixed) ===
+  warmup 1 FAILED: HTTP Error 404: Not Found
+  warmup 2 FAILED: HTTP Error 404: Not Found
+  rep 1 FAILED: HTTP Error 404: Not Found
+  rep 2 FAILED: HTTP Error 404: Not Found
+  rep 3 FAILED: HTTP Error 404: Not Found
+  rep 4 FAILED: HTTP Error 404: Not Found
+  rep 5 FAILED: HTTP Error 404: Not Found
+  rep 6 FAILED: HTTP Error 404: Not Found
+  rep 7 FAILED: HTTP Error 404: Not Found
+  NO VALID SAMPLES
+
+=== SUMMARY tp2-fixed ===
+[2026-08-27T00:47:27-04:00] --- depth 8192 ---
+
+=== depth 8192 (tp2-fixed) ===
+  warmup 1 FAILED: HTTP Error 404: Not Found
+  warmup 2 FAILED: HTTP Error 404: Not Found
+  rep 1 FAILED: HTTP Error 404: Not Found
+  rep 2 FAILED: HTTP Error 404: Not Found
+  rep 3 FAILED: HTTP Error 404: Not Found
+  rep 4 FAILED: HTTP Error 404: Not Found
+  rep 5 FAILED: HTTP Error 404: Not Found
+  rep 6 FAILED: HTTP Error 404: Not Found
+  rep 7 FAILED: HTTP Error 404: Not Found
+  NO VALID SAMPLES
+
+=== SUMMARY tp2-fixed ===
+[2026-08-27T00:47:27-04:00] --- depth 32768 ---
+
+=== depth 32768 (tp2-fixed) ===
+  warmup 1 FAILED: HTTP Error 404: Not Found
+  warmup 2 FAILED: HTTP Error 404: Not Found
+  rep 1 FAILED: HTTP Error 404: Not Found
+  rep 2 FAILED: HTTP Error 404: Not Found
+  rep 3 FAILED: HTTP Error 404: Not Found
+  rep 4 FAILED: HTTP Error 404: Not Found
+  rep 5 FAILED: HTTP Error 404: Not Found
+  rep 6 FAILED: HTTP Error 404: Not Found
+  rep 7 FAILED: HTTP Error 404: Not Found
+  NO VALID SAMPLES
+
+=== SUMMARY tp2-fixed ===
+[2026-08-27T00:47:27-04:00] --- depth 131072 ---
+
+=== depth 131072 (tp2-fixed) ===
+  warmup 1 FAILED: HTTP Error 404: Not Found
+  warmup 2 FAILED: HTTP Error 404: Not Found
+  rep 1 FAILED: HTTP Error 404: Not Found
+  rep 2 FAILED: HTTP Error 404: Not Found
+  rep 3 FAILED: HTTP Error 404: Not Found
+  rep 4 FAILED: HTTP Error 404: Not Found
+  rep 5 FAILED: HTTP Error 404: Not Found
+  rep 6 FAILED: HTTP Error 404: Not Found
+  rep 7 FAILED: HTTP Error 404: Not Found
+  NO VALID SAMPLES
+
+=== SUMMARY tp2-fixed ===
+[2026-08-27T00:47:27-04:00] --- depth 262144 ---
+
+=== depth 262144 (tp2-fixed) ===
+  warmup 1 FAILED: HTTP Error 404: Not Found
+  warmup 2 FAILED: HTTP Error 404: Not Found
+  rep 1 FAILED: HTTP Error 404: Not Found
+  rep 2 FAILED: <urlopen error [Errno 104] Connection reset by peer>
+  rep 3 FAILED: <urlopen error [Errno 104] Connection reset by peer>
+  rep 4 FAILED: <urlopen error [Errno 104] Connection reset by peer>
+  rep 5 FAILED: <urlopen error [Errno 104] Connection reset by peer>
+  rep 6 FAILED: <urlopen error [Errno 104] Connection reset by peer>
+  rep 7 FAILED: <urlopen error [Errno 104] Connection reset by peer>
+  NO VALID SAMPLES
+
+=== SUMMARY tp2-fixed ===
+[2026-08-27T00:47:27-04:00] === Step 7: bring down 2-node cluster ===
+[2026-08-27T00:47:27-04:00] Stopping head sparkmain ...
+[2026-08-27T00:47:34-04:00] Stopping worker spark1 ...
+[2026-08-27T00:47:48-04:00] Stopped.
+[2026-08-27T00:47:48-04:00] === Step 8: restore 3-node cluster (dsv4.service) ===

@@ -1,5 +1,7 @@
 # KV-cache dtype A/B: `nvfp4_ds_mla` vs `fp8_ds_mla`
 
+**Status:** `CURRENT` within the provenance caveats in [`../index.yaml`](../index.yaml).
+
 Issue [#16]. Experiment date 2026-08-26 (UTC). 3-node DGX Spark cluster, TP=3.
 
 Answers the gap left by [`docs/KV-QUALITY-LONG-CONTEXT.md`](../../docs/KV-QUALITY-LONG-CONTEXT.md),

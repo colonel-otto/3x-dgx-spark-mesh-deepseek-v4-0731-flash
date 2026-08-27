@@ -77,6 +77,20 @@ Cold and warm are different measurements and must never be mixed.
 
 A comparison is invalid if one side is warm and the other cold.
 
+## Prompt, JIT, and reference-tool discipline
+
+- Record the complete prompt (or its reproducible generator and seed) with every
+  throughput number. On this deployment, prompt shape changed single-stream decode by
+  1.65x through MTP acceptance; numbers from different prompts are not comparable.
+- Warm every prompt length and concurrency shape that will be measured after a restart.
+  JIT work can land on the second request for a new shape and add 5–8 seconds. Keep
+  `JIT_MONITOR_MODE=warn`, discard any affected sweep, and do not use a periodic
+  keep-alive: idle adds only about 22 ms and the ping contaminates measurements.
+- When comparing fabric with a published `nccl-tests` result, build and run the
+  reference binary against the same NCCL library as the engine. Capture its version,
+  `#wrong=0`, and `via NET/IB/*`; a custom workload-shaped collective is not a peak
+  bandwidth comparison.
+
 ## Why we keep results we know are wrong
 
 **Invalid results are retained deliberately, as diagnostic baselines.** They are

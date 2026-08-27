@@ -1,5 +1,8 @@
 # Long-context decode: 2 nodes vs 3 nodes on healthy fabric — 2026-08-26
 
+**Status:** `VOID-25-token-window`; retained only as a diagnostic baseline. See
+[`../index.yaml`](../index.yaml).
+
 The measurement the advertising claim actually needs, and the one that did not exist
 until today.
 

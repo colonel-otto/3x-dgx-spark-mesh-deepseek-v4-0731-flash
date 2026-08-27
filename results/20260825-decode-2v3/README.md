@@ -1,5 +1,7 @@
 # Decode: 2 nodes vs 3 nodes on healthy fabric — 2026-08-25
 
+**Status:** `CURRENT` within the provenance caveats in [`../index.yaml`](../index.yaml).
+
 The measurement the three-node case actually rests on. Everything else — prefill, deep
 concurrency, KV capacity — either ties or favours two nodes. This is where three wins.
 

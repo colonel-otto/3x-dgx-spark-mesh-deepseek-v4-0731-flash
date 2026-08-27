@@ -1,11 +1,11 @@
-# Settled decisions
+# Configuration decisions
 
-One row per knob: the value, the measurement that settled it, and what happens if you
-change it. If a value is not here, it is not settled.
+One row per operational knob: the current value, the evidence behind it, and what happens
+if it changes. This is not a claim that every strategic question is settled; notably, the
+performance case for two versus three nodes remains open.
 
 > [!IMPORTANT]
-> **Every row in this table is now closed by a measurement.** The last open question —
-> the four-HCA **throughput** benefit ([#17](../../issues/17)) — was settled 2026-08-26:
+> The four-HCA **throughput** question ([#17](../../issues/17)) was settled 2026-08-26:
 > **there is none.** Decode is flat against a matched 2-HCA arm. Four-HCA is kept for
 > redundancy and headroom, which is a different justification than the one it was
 > originally adopted under.
@@ -14,9 +14,9 @@ change it. If a value is not here, it is not settled.
 > the "What breaks" column before changing it.
 >
 > **`MAX_NUM_SEQS` moved 16 → 32 on 2026-08-26** ([#10](../../issues/10)) — the first
-> value in this table changed by a retest rather than a first measurement. The old
-> rejection is kept in [`SEQS32-AND-NCCL-FABRIC.md`](SEQS32-AND-NCCL-FABRIC.md) as a
-> degraded-fabric signature, not deleted.
+> value in this table changed by a retest rather than a first measurement. The prior
+> `_ALLGATHER_BASE` timeout is retained as a degraded-fabric signature in the
+> [`degraded-data catalogue`](DEGRADED-DATA-CATALOGUE.md), with its raw bundle preserved.
 
 **Authoritative config:** [`../config/tp3.env.example`](../config/tp3.env.example).
 This page is the *reasoning*; that file is the *artifact*.
@@ -27,24 +27,17 @@ This page is the *reasoning*; that file is the *artifact*.
 
 | Knob | Value | Settled by | If you change it |
 |---|---|---|---|
-| `TP_SIZE` | **3** | Decode at depth: 54.4 → **72.6** tok/s at 131K, 71.5 → 84.4 at 262K (2026-08-26, healthy, matched, 7 reps/depth) | Below 32K it is **parity** — the third node earns nothing there. cc≥16 favours 2 nodes; see the two crossovers below |
+| `TP_SIZE` | **3** operational default | TP=3 passes correctness and quality through 131K, retains the B12X kernel and MTP, and is the currently deployed shape. **Its performance advantage over TP=2 is not settled.** | TP=2 frees one node and is the required comparison arm; use the cluster launcher and re-run the same corrected harness |
 | `PP_SIZE` | **1** | [`PP3-PIPELINE-PARALLEL.md`](PP3-PIPELINE-PARALLEL.md) | ❌ Blocked by MTP + a DSA stride constraint. No PP tok/s exists |
 | expert parallel | **off** | [`EP3-EXPERT-PARALLEL.md`](EP3-EXPERT-PARALLEL.md) | ❌ ~2.5x slower — the B12X kernel refuses EP by an explicit source-code check. Also blocks EPLB, whose prerequisite is EP. ⚠️ The **mechanism** is settled (source check + `ValueError`); the **2.5x** came from a degraded-fabric run over TCP fallback and has never been re-measured on RDMA |
 | TP=3 padding patch | **required** | Correctness 14/14; [`patch.md`](patch.md) | ☠️ **Silently serves fluent nonsense.** Stock vLLM computes `8 // 3 == 2` and drops 6 of 8 attention groups |
 
-**The node-count answer is conditional, on two axes independently.**
-
-- **Concurrency** (2026-08-25, 18-token prompt): the 3-node advantage decays monotonically
-  and crosses over near **cc=16**. Three nodes win per-stream latency, two win batch
-  aggregate.
-- **Context depth** (2026-08-26, cc=1, 7 reps/depth): the 3-node advantage **does not exist
-  below 32K** (+0.8% / +0.3% / −0.9%) and crosses over between **32K and 131K**, reaching
-  **+33.6%** at 131K and +17.9% at 262K.
-  [`../results/20260826-decode-depth-2v3/`](../results/20260826-decode-depth-2v3)
-
-So the third node is justified here by **long-context work**, not by short interactive
-turns. TTFT at depth runs the other way: two nodes reach first token 6–13% sooner, so a
-deep prompt with a short answer is a two-node workload.
+**The node-count performance answer is open.** The former depth comparison returned only
+25–26 completion tokens per request and is now
+[`VOID-25-token-window`](../results/20260826-decode-depth-2v3/). The corrected TP=3 arm
+measures 50.7–56.0 tok/s from 2K–262K, but there is no corrected TP=2 arm. Do not infer a
+winner until that matched run exists. The short-prompt concurrency result remains
+supporting evidence only because its gate artifact and one headline cell are not committed.
 
 ## Engine shape
 
@@ -55,7 +48,7 @@ deep prompt with a short answer is a two-node workload.
 | `GPU_MEMORY_UTILIZATION` | **0.80** | KV pool 4.46M tokens, **0 preemptions in every test ever run** | 0.85 leaves 2–4 GB free per node |
 | `MTP_NUM_TOKENS` | **5** | Matched control 2026-08-24, beats 4 | `0` is **invalid** (vLLM rejects it); `1` collapses decode to ~47 tok/s |
 | `MAX_NUM_BATCHED_TOKENS` | **8192** | A/B: 16384 cost **43% of the KV pool for zero gain** | ⚠️ vLLM's own log suggests 16384. That advice assumes intra-node NVLink. It is a trap here |
-| `--kv-cache-dtype` | `nvfp4_ds_mla` | Speed-identical to `fp8_ds_mla` | ⚠️ **Open** — memory-identical too (shared 584-byte envelope), quality unvalidated ([#16](../../issues/16)) |
+| `--kv-cache-dtype` | `nvfp4_ds_mla` | Tested against `fp8_ds_mla`: speed and memory equivalent; 23/24 matched quality cells byte-identical | No demonstrated benefit from changing; see [`20260826-kv-dtype-ab`](../results/20260826-kv-dtype-ab/) |
 | `JIT_MONITOR_MODE` | **warn** | Surfaces compiles landing inside requests — one measured at 5 s | Leave on. It is how you know a benchmark is contaminated |
 
 **MTP is quality-neutral.** Speculative decoding is lossless by construction; it is a

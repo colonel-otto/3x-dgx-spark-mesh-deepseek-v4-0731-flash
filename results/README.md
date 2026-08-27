@@ -1,69 +1,90 @@
-# Raw run bundles
+# Results catalogue
 
-**Every directory here is frozen.** It records one experiment at the configuration and
-fabric state it was measured under. Do not edit one in place — supersede it with a new
-dated directory and mark the old one superseded in this table.
+Every subdirectory is a frozen experiment or quality bundle. Do not edit an old bundle to
+make a newer claim true; create a new dated bundle and mark the old one `VOID` or
+`SUPERSEDED`.
 
-Directories are named `YYYYMMDD[THHMMSSZ]-<subject>`.
+The machine-readable source of truth is [`index.yaml`](index.yaml). The concise provenance
+view is [`INDEX.md`](INDEX.md).
 
-| Fabric | Meaning |
+## Status key
+
+| Status | Meaning |
 |---|---|
-| 🟢 healthy | Measured after the 2026-08-25 fabric fix. Trustworthy |
-| 🔴 degraded | One node at ~15% collective bandwidth. **See [`../docs/DEGRADED-DATA-CATALOGUE.md`](../docs/DEGRADED-DATA-CATALOGUE.md)** |
-| ⚪ n/a | Not a performance measurement |
+| `CURRENT` | Useful evidence under its stated scope and caveats |
+| `VOID-25-token-window` | Decode window collapsed; keep only as a failure fingerprint |
+| `VOID-degraded-fabric` | Measured before the fabric fix; magnitudes are not citable |
+| `SUPERSEDED` | Replaced by a newer run; retained as decision history |
 
----
+`CURRENT` does not mean “perfect.” Check the gate column and the bundle README. An absent
+fabric gate weakens performance evidence but does not invalidate pass/fail quality results.
 
-## 2026-08-25 — healthy fabric
+## Current and citable within stated scope
 
-| Directory | Fabric | What it holds |
-|---|---|---|
-| [`20260825-fabric-fix/`](20260825-fabric-fix) | ⚪→🟢 | The fix itself: pre/post-reboot prefill and decode. **The before/after pair** |
-| [`20260825-prefill-2v3/`](20260825-prefill-2v3) | 🟢 | Prefill, 2 vs 3 nodes. Result: **parity (±2%)** |
-| [`20260825-decode-2v3/`](20260825-decode-2v3) | 🟢 | Decode, 2 vs 3 nodes at cc=1/4/8/16. **The headline result on the concurrency axis** — 18-token prompt, so it says nothing about context depth; for that see `20260826-decode-depth-2v3/` |
-| [`20260825-deep-concurrency/`](20260825-deep-concurrency) | 🟢 | 4×200K re-run for [#15](../../issues/15). Includes `deepconc.py` and the gate output |
-| [`20260825-upper-mesh/`](20260825-upper-mesh) | 🟢 | **Four-HCA fabric at 2.0x**, gate-clean, **soak PASSED** (408 req, 0 RDMA deltas) — [#17](../../issues/17) |
+| Bundle | Nodes | Gate | What it establishes |
+|---|---:|---|---|
+| [20260827-decode-concurrency-2v3-fixed](20260827-decode-concurrency-2v3-fixed/) | 2/3 | TP=2 present/pass; TP=3 live check | Corrected-window concurrency crossover at 8K |
+| [20260827-decode-2v3-fixed](20260827-decode-2v3-fixed/) | 2/3 | TP=2 present/pass; TP=3 live check | Corrected-window cc=1 node-count sweep; 7 reps per depth and arm |
+| [20260827-decode-3node-fixed](20260827-decode-3node-fixed/) | 3 | Absent | Corrected 256-token depth curve; single arm; intermittent slow mode at 131K/262K |
+| [20260827-quality-suite-3node](20260827-quality-suite-3node/) | 3 | Absent | Quality suite passes through 131K; pass/fail evidence, not timing evidence |
+| [20260826-nccl-controlled](20260826-nccl-controlled/) | 2/3 ranks | Direct measurement | Official `all_gather_perf`; 23.92 GB/s at 16 GiB |
+| [20260826-kv-dtype-ab](20260826-kv-dtype-ab/) | 3 | Absent | NVFP4 vs FP8 KV quality and speed A/B |
+| [20260826-seqs32-retest](20260826-seqs32-retest/) | 3 | Absent; matched control | Sequence-cap A/B; cc=32 aggregate improvement |
+| [20260826-four-hca-throughput](20260826-four-hca-throughput/) | 3 | Absent; cross-reference | Four-HCA throughput null result |
+| [20260826-harness-window-calibration](20260826-harness-window-calibration/) | 3 | Absent; same-engine A/B | Quantifies the short-window benchmark defect |
+| [20260826-near-ceiling-prefill](20260826-near-ceiling-prefill/) | 3 | Absent | Preliminary capability result: 967,286 prompt tokens served |
+| [20260825-upper-mesh](20260825-upper-mesh/) | 3 | Present/pass | Four-HCA mesh and 408-request soak |
+| [20260825-prefill-2v3](20260825-prefill-2v3/) | 2/3 | Present/pass; TP=2 raw elsewhere | Prefill comparison through 32K |
+| [20260825-fabric-fix](20260825-fabric-fix/) | 2/3 | Absent; diagnostic A/B | Before/after reboot characterization of the fabric fault |
+| [20260825-deep-concurrency](20260825-deep-concurrency/) | 2/3 | Present/pass | Four concurrent 200K requests |
+| [20260825-decode-2v3](20260825-decode-2v3/) | 2/3 | Absent | Short-prompt concurrency comparison; one headline cell lacks raw traceability |
 
-## 2026-08-26 — healthy fabric
+## Void: short output window
 
-| Directory | Fabric | What it holds |
-|---|---|---|
-| [`20260826-decode-depth-2v3/`](20260826-decode-depth-2v3) | 🟢 | **Long-context decode, 2 vs 3 nodes, 2K–262K at cc=1. The headline result on the depth axis.** Matched arms, 7 reps per depth, 70 measured runs. Parity below 32K, **+33.6% at 131K**, +17.9% at 262K — supersedes "+8–17% from 2K upward" ([#14](../../issues/14)). TTFT at depth favours **two** nodes |
-| [`20260826-nccl-controlled/`](20260826-nccl-controlled) | 🟢 | **The controlled NCCL reproduction — there was never a bandwidth gap.** 12 runs, official `all_gather_perf`, NCCL 2.30.7. **23.92 GB/s** vs 5.80 on our custom harness, same config. All four hypotheses falsified — [#18](../../issues/18) |
+| Bundle | Why retained |
+|---|---|
+| [20260826-decode-depth-2v3](20260826-decode-depth-2v3/) | All 70 reps returned 25–26 tokens instead of 256. Useful for recognizing 30–40% inflated, high-variance decode results; not valid 2-vs-3 evidence. |
 
-## 2026-08-24 — degraded fabric
+## Void: incomplete run
 
-Conclusions may hold; numbers should not be quoted without a re-run.
+| Bundle | Why retained |
+|---|---|
+| [20260827-decode-2node-failed](20260827-decode-2node-failed/) | The engine passed a live sanity request, then every benchmark request returned HTTP 404 or reset. No valid samples; logs preserve the operational failure. |
 
-| Directory | Fabric | What it holds | Status |
-|---|---|---|---|
-| [`20260824-mtp5-1m/`](20260824-mtp5-1m) | 🔴 | MTP=5 vs 4, 1M context | ✅ Conclusion survives — matched arms, same handicap both sides |
-| [`20260824-prefill/`](20260824-prefill) | 🔴 | 45 files: the long prefill investigation | ⚠️ The ~2x "gap" chased here was **one degraded node** |
-| [`20260824-seqs32-nccl/`](20260824-seqs32-nccl) | 🔴 | `seqs=32` + NCCL sweeps. Includes `agbench.py` | ⚠️ Rejected against a budget **6.6x too small** — [#10](../../issues/10) |
-| [`20260824-kv-quality/`](20260824-kv-quality) | 🔴 | NVFP4 KV quality to 464K. Includes `kvquality.py` | ⚠️ Single-arm, no comparison — [#16](../../issues/16) |
+## Superseded
 
-## 2026-08-21 — degraded fabric, original sharding experiments
+| Bundle | Replaced by |
+|---|---|
+| [20260824-kv-quality](20260824-kv-quality/) | [20260826-kv-dtype-ab](20260826-kv-dtype-ab/) |
+| [20260824-seqs32-nccl](20260824-seqs32-nccl/) | [20260826-seqs32-retest](20260826-seqs32-retest/) |
 
-| Directory | Fabric | What it holds | Status |
-|---|---|---|---|
-| [`20260821T001024Z-2spark-baseline/`](20260821T001024Z-2spark-baseline) | 🔴 | The frozen 2-node reference, 48.23 tok/s | 🧊 Historical |
-| [`20260821T031300Z-3spark-ep3/`](20260821T031300Z-3spark-ep3) | 🔴 | EP=3: per-rank configs + routes | ❌ 2.5x slower; kernel finding stands |
-| [`20260821T133000Z-3spark-pp3/`](20260821T133000Z-3spark-pp3) | 🔴 | PP=3 across several shapes | ❌ Hard block, **not** a perf number — survives |
-| [`20260821T133000Z-3spark-tp3/`](20260821T133000Z-3spark-tp3) | 🔴 | TP=3 rank config + mesh setup | 🧊 Historical |
-| [`20260821T142000Z-3spark-tp3-upstream-harness/`](20260821T142000Z-3spark-tp3-upstream-harness) | 🔴 | Upstream's harness, unmodified. Note `warmup-discarded.json` | 🧊 Historical |
+## Void: degraded fabric
 
----
+| Bundle | Diagnostic value |
+|---|---|
+| [20260824-prefill](20260824-prefill/) | ~1,034 tok/s prefill at 32K versus ~2,095 after reboot fingerprints a degraded link |
+| [20260824-mtp5-1m](20260824-mtp5-1m/) | Older MTP/1M experiment; matched conclusions may survive, magnitudes do not |
+| [20260821T142000Z-3spark-tp3-upstream-harness](20260821T142000Z-3spark-tp3-upstream-harness/) | Older TP=3 upstream-harness signature |
+| [20260821T133000Z-3spark-tp3](20260821T133000Z-3spark-tp3/) | TP=3 setup record; patch requirement survives |
+| [20260821T133000Z-3spark-pp3](20260821T133000Z-3spark-pp3/) | PP hard-block evidence; no performance number exists |
+| [20260821T031300Z-3spark-ep3](20260821T031300Z-3spark-ep3/) | EP/B12X incompatibility signature |
+| [20260821T001024Z-2spark-baseline](20260821T001024Z-2spark-baseline/) | Frozen 2-node baseline with degraded fabric and a 10-token decode window |
 
 ## Adding a run
 
-1. **Gate first:** `make gate-full CONFIG=configs/3spark-live.env`, engine stopped. Save
-   the gate JSON *into the run directory* — it is the provenance for everything else.
-2. **Warm your shapes**, then discard any run whose log contains
-   `JIT compilation during inference`.
-3. Create `YYYYMMDD-<subject>/` with a `README.md` stating **date, fabric state, config,
-   image, and the question the run answers**.
-4. Keep the harness script alongside its output. A result whose harness does not exist as
-   a file cannot be checked — that has bitten us.
-5. Add a row above, and append machine-readable rows to
-   [`../benchmarks/measurements.csv`](../benchmarks/measurements.csv).
-6. Never publish only the best run. Retain the controls that failed.
+1. Name the bundle `YYYYMMDD-<subject>` or `YYYYMMDDTHHMMSSZ-<subject>`.
+2. Add a README header containing status, date, nodes/TP, live config source,
+   harness/version, actual output tokens, reps/statistic, and fabric-gate result.
+3. Run the fabric gate before each performance arm with the engine stopped and commit its
+   artifact. Pass/fail-only quality runs must still state when the gate is absent.
+4. Force the generation window (`min_tokens == max_tokens`, `ignore_eos`) and assert the
+   actual per-request completion count.
+5. Commit raw per-rep data and publish sorted values or an equivalent spread; never retain
+   only the median or only the best run.
+6. Keep the harness beside the output or identify an immutable repository commit.
+7. Add the bundle to `index.yaml` and this catalogue. Append normalized observations to
+   `../benchmarks/measurements.csv` when applicable.
+8. Run the tests and sensitive-data check before publishing.
+
+See the full [benchmark policy](../docs/BENCHMARK-POLICY.md) and
+[repository/data map](../docs/REPOSITORY-MAP.md).

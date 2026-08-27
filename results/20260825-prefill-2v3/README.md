@@ -1,5 +1,7 @@
 # Prefill: 2 nodes vs 3 nodes on healthy fabric — 2026-08-25
 
+**Status:** `CURRENT` within the provenance caveats in [`../index.yaml`](../index.yaml).
+
 The question: now that the fabric is fixed, does the third node make prefill faster?
 
 **Answer: no. They are at parity.**

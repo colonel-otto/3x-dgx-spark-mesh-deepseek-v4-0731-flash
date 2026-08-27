@@ -1,0 +1,3 @@
+{"concurrency": 8, "elapsed_s": 45.312867572996765, "aggregate_tok_s": 45.19687474426054, "median_ttft_s": 21.51786544753122, "median_output_tok_s": 11.44313416627596, "prompt_target": 8192, "max_tokens": 256, "rep": 0}
+{"concurrency": 8, "elapsed_s": 44.23704010102665, "aggregate_tok_s": 46.296045018447565, "median_ttft_s": 21.53645800051163, "median_output_tok_s": 13.25913836147124, "prompt_target": 8192, "max_tokens": 256, "rep": 1}
+{"concurrency": 8, "elapsed_s": 39.41519741603406, "aggregate_tok_s": 51.95965349058167, "median_ttft_s": 22.149306864012033, "median_output_tok_s": 15.797570483976449, "prompt_target": 8192, "max_tokens": 256, "rep": 2}
