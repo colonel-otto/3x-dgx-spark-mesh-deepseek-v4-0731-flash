@@ -37,7 +37,7 @@ Everything above this line was measured with one node at ~15% of its collective 
 |---:|---:|---|---|---|
 | 12 | [#9](../../pull/9) | **Fabric degradation found** | ☠️ spark1 at 0.69 vs 4.6 GB/s — **6.8x**, with every error counter reading 0. A reboot fixed it | [`FABRIC-FIX-PARITY.md`](FABRIC-FIX-PARITY.md) |
 | 13 | [#9](../../pull/9) | Fabric gate | ✅ `scripts/fabric_gate.sh` — 9 checks, each verified by **injecting the real fault** | [`POSTMORTEM-2026-08-25.md`](POSTMORTEM-2026-08-25.md) |
-| 14 | [#9](../../pull/9) | `roceP2p` HCAs | ❌ +56% bandwidth is **real but unusable** — no IPv4. Wedges the cluster while every container reports `running` | [`DECISIONS.md`](DECISIONS.md) |
+| 14 | [#9](../../pull/9) | `roceP2p` HCAs | ⚠️ **OVERTURNED 2026-08-26** — rejected here as "unusable, no IPv4"; the wedge was the degraded fabric, not the HCAs. All four addressed and **now in production**. Bandwidth doubled; decode throughput benefit: **none** | [`../results/20260826-four-hca-throughput/`](../results/20260826-four-hca-throughput) |
 | 15 | [#9](../../pull/9) | `/30` normalization | ✅ All six fabric addresses consistent; netplan persistence gated | [`POSTMORTEM-2026-08-25.md`](POSTMORTEM-2026-08-25.md) |
 | 16 | [#9](../../pull/9) | **2v3 re-run, healthy — concurrency axis** | ✅ 3 nodes +17% at cc=1 (18-token prompt), decaying to a **crossover near cc=16** | [`../README.md`](../README.md#is-the-third-node-worth-it) |
 | 17 | [#9](../../pull/9) | TTFT / warm-up | ✅ JIT is **per-shape, not per-idle**. Warm at startup; do **not** add a keep-alive ping | [`TTFT-AND-WARMUP.md`](TTFT-AND-WARMUP.md) |

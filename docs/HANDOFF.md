@@ -385,8 +385,9 @@ for s in sparkmain spark1 spark2; do for d in sparkmain spark1 spark2; do
 ```
 
 Physical topology, confirmed by MAC: sparkmain-f0 ↔ spark1-f1, spark1-f0 ↔ spark2-f1,
-sparkmain-f1 ↔ spark2-f0. A clean ring. Each node also has **two unused `roceP2p1s0f*`
-ports**, cabled and ACTIVE.
+sparkmain-f1 ↔ spark2-f0. A clean ring. Each node also has **two `roceP2p1s0f*` ports**,
+cabled and ACTIVE — described as "unused" until 2026-08-26, when they were addressed and
+put into the production `NCCL_IB_HCA` list (see §4b).
 
 ## 6. ⚠ Pre-benchmark fabric check — do this before trusting any number
 
