@@ -151,7 +151,7 @@ degraded fabric.
 | KV dtype is not a speed lever | fp8 vs nvfp4 measured identically. Do not switch for throughput. |
 | NVFP4 KV quality to 464K | Clean at every depth, single-request. Concurrency half still open (#12). |
 | Patch 4 (shared expert) | Does not apply to vLLM 0.25.2 — already handled by generic substring mapping. |
-| `NCCL_IB_MERGE_NICS` | ~~No-op~~ **RE-OPENED 2026-08-25** — measured on the degraded fabric, and published 3-Spark results are 5-6x above ours. See §4a. |
+| `NCCL_IB_MERGE_NICS` | ~~No-op~~ ~~RE-OPENED 2026-08-25~~ **RESOLVED 2026-08-26 — confirmed a genuine no-op.** Controlled A/B (merge on vs off, `results/20260826-nccl-controlled/`) measured a 0.4% spread. The "published 3-Spark results are 5-6x above ours" premise was itself a harness artifact — see §4a and [#18](../../issues/18) (closed). |
 | GB10 GPU health | 93.3 TFLOP/s bf16, 236 GB/s memory, 2,470 MHz under load vs a **2,418 MHz application-clock spec** (3,003 MHz is a hardware ceiling, not a target). All healthy. |
 
 ## 4. What is now SUSPECT — issue #14
@@ -220,6 +220,31 @@ three nodes). Harmless with the narrow HCA list, and prerequisite if the `roceP2
 ever addressed properly.
 
 ## 4a. ⚠ Our fabric may STILL be ~5x slower than this hardware does
+
+> **RESOLVED 2026-08-26** (forward pointer only; nothing below is edited). Controlled
+> reproduction with the official `nccl-tests all_gather_perf` (NCCL 2.30.7, engine
+> stopped) found **no bandwidth gap**: the current, unmodified config delivers **23.92
+> GB/s** busbw at 16 GiB on 3 ranks — at or above both published reference points (20.84 /
+> 18.70 GB/s) and at the ~24 GB/s PCIe Gen5 x4 ceiling this hardware was already believed
+> to have. The 3.25 / 5.80 GB/s figures quoted below were produced by our **custom
+> PyTorch harness**, not by the fabric — swapping in the official binary on the identical
+> config raised the same 3-rank ring straight to 23.92 GB/s. The harness was the variable.
+>
+> The cross-port merge hypothesis below was also directly tested, not just reasoned
+> about: disabling `NCCL_IB_MERGE_NICS` (four separate devices instead of two merged
+> virtual ones) changed busbw by 0.4% (23.86 vs 23.94 GB/s) — noise. Bootstrap interface
+> and explicit-vs-auto HCA discovery were equally inert (≤0.4% spread across all
+> variants). **`NCCL_IB_MERGE_NICS` is a genuine no-op here, confirmed, not merely
+> unverified.**
+>
+> **Practical effect: every conclusion below this line that treats the fabric number as
+> open is superseded.** It is not still worth chasing, and no vLLM prefill/parallelism
+> flag should be gated on it — the prefill parity in §2, and the EP=3 / PP=3 / seqs=32
+> assessments, were reached under a communication budget that was in fact never
+> constrained. See [`../results/20260826-nccl-controlled/`](../results/20260826-nccl-controlled)
+> for the full variant matrix and [#18](../../issues/18) (closed).
+
+**Original investigation below, kept for the record:**
 
 **This outranks every tuning question below it.** Independent measurements on the
 **identical 3-Spark ring topology** report far higher NCCL bandwidth than we get:
@@ -360,6 +385,14 @@ LAN passed cleanly all the way through the degradation.
 | **~3.25 GB/s** | healthy 3-rank collective (measured 2026-08-25, post-fix) |
 | **~0.7 GB/s** | **degraded node — reboot it before measuring anything** |
 
+> **Note (2026-08-26):** the "~4.6 / ~3.25 GB/s" figures above are from the same custom
+> PyTorch harness that §4a's controlled reproduction found reads low by ~7x at large
+> transfer sizes (23.92 GB/s via official `nccl-tests` on the identical config). This
+> table's absolute numbers should not be read as the hardware's ceiling — but the harness
+> is still valid **as a relative degraded-vs-healthy check**, since the 0.7 GB/s
+> degraded-node reading was ~6.8x below this same tool's own healthy baseline. Treat this
+> row of thresholds as "is something newly wrong," not "is the fabric fast."
+
 The raw harness underneath is still `results/20260824-seqs32-nccl/agbench.py`, which the
 gate deploys to each node itself; vLLM must be STOPPED for it (live vLLM holds ~119/121
 GiB and there is no room for a second CUDA context).
@@ -400,6 +433,11 @@ Each of these was learned by getting a wrong answer first.
     `--device /dev/infiniband` silently measures socket fallback. Mirror the compose
     service's devices, ulimits and shm_size, and confirm the transport in
     `NCCL_DEBUG=INFO` before trusting a fabric number.
+11. **A custom benchmarking harness is not a validated instrument.** §4a: our own
+    PyTorch-based NCCL harness read ~7x low at large transfer sizes against the official
+    `nccl-tests` binary on the identical config. When a number is surprising and nothing
+    else corroborates it, suspect the measuring tool before the system under test —
+    reproduce with the upstream/official benchmark before writing the number down as fact.
 
 ### The harnesses
 
@@ -408,7 +446,7 @@ Each of these was learned by getting a wrong answer first.
 | `results/20260825-fabric-fix/harness/benchmark_prefill.py` (also `~/results/harness/` on sparkmain) | `Anemll/dspark-vllm-gx10` | **prefill, server-side, token IDs — the authoritative one** |
 | `results/20260824-prefill/pf3–pf8.py` | written here | prefill variants (cache-defeated, TTFT, content types) |
 | `~/results/seqs32/bench_tp3.py` | `localaiguyy/…-3x-DGX-Spark` | decode concurrency sweep |
-| `results/20260824-seqs32-nccl/agbench.py` | written here | **NCCL allgather — the fabric check** |
+| `results/20260824-seqs32-nccl/agbench.py` | written here | NCCL allgather — degraded-vs-healthy relative check only; see §6 note, absolute numbers superseded by `results/20260826-nccl-controlled/` |
 | `results/20260824-mtp5-1m/accept.py` | written here | MTP acceptance counters |
 
 `/tmp` is not durable. Copies of the key ones live under `results/`.
@@ -420,8 +458,10 @@ Each of these was learned by getting a wrong answer first.
 2. **Issue #12** — NVFP4 KV quality under *concurrency*. The single-request half is done
    and clean to 464K; the concurrent half is untested and needs no restart.
 3. ~~**Close #11**~~ — **done.** The prefill gap is resolved by the fabric fix; both original
-   leads (NIC merge, runtime version) were falsified for prefill. The NCCL bandwidth
-   question is now [#18](../../issues/18), which is a separate, still-open investigation.
+   leads (NIC merge, runtime version) were falsified for prefill. ~~The NCCL bandwidth
+   question is now #18, which is a separate, still-open investigation.~~ **#18 is now
+   closed too (2026-08-26) — see §4a: there was no bandwidth gap, the harness was reading
+   low.**
 4. **Close #13** if it duplicates the persistence work already done (§5).
 5. **Investigate why spark1 degraded.** It had been up a long time. If this recurs, a
    periodic fabric check or a documented reboot cadence is warranted.
@@ -438,10 +478,11 @@ Each of these was learned by getting a wrong answer first.
 |---|---|
 | Repo | `github.com/colonel-otto/DeepSeek-V4-Flash-3x-DGX-Spark` |
 | Open PR | [#9](../../pull/9) — open, not merged |
-| Open issues | [#10](../../issues/10) seqs=32 · [#11](../../issues/11) prefill (**resolved, closed**) · [#18](../../issues/18) NCCL reproduction · [#12](../../issues/12) KV quality · [#13](../../issues/13) mesh persistence (done) · [#14](../../issues/14) **re-run suspect benchmarks** |
+| Open issues | [#10](../../issues/10) seqs=32 · [#11](../../issues/11) prefill (**resolved, closed**) · [#18](../../issues/18) NCCL reproduction (**resolved, closed** — no bandwidth gap, see §4a) · [#12](../../issues/12) KV quality · [#13](../../issues/13) mesh persistence (done) · [#14](../../issues/14) **re-run suspect benchmarks** |
 | Parity writeup | [`FABRIC-FIX-PARITY.md`](FABRIC-FIX-PARITY.md) |
 | Prefill investigation | [`PREFILL-MEASURED.md`](PREFILL-MEASURED.md) — 5 addenda, several self-corrections |
 | seqs=32 / NCCL | [`SEQS32-AND-NCCL-FABRIC.md`](SEQS32-AND-NCCL-FABRIC.md) |
+| NCCL controlled reproduction (#18) | [`../results/20260826-nccl-controlled/`](../results/20260826-nccl-controlled) |
 | Post-fix results | `results/20260825-fabric-fix/` |
 | Live config | `~/localai/dspark-vllm-gx10/config/tp3.env` on each of the 3 nodes |
 | Config backups | `tp3.env.bak-*` beside it, timestamped |
@@ -457,13 +498,14 @@ contain internal IPs and hostnames, so this matters.
 
 - **Why did spark1's fabric degrade?** No error indicator of any kind. Unknown.
 - **Is `MAX_NUM_SEQS=32` viable on a healthy fabric?** The rejection is now suspect.
-- ~~**What is the real 3-rank allgather ceiling?**~~ **ANSWERED 2026-08-25: 3.25 GB/s.**
-  Measured with `make gate-full` on the healthy fabric (all three pairs read 4.58–4.60
-  GB/s). The old **0.49 GB/s** figure was taken on the degraded fabric and is **6.6x
-  pessimistic**. That number anchored the "GB10 has no GPUDirect, ~0.5 GB/s is the
-  ceiling" analysis, so **that analysis needs revisiting** — the communication budget is
-  far larger than it assumed, which bears directly on the EP=3 / PP=3 / seqs=32
-  rejections.
+- ~~**What is the real 3-rank allgather ceiling?**~~ ~~**ANSWERED 2026-08-25: 3.25
+  GB/s.**~~ **SUPERSEDED 2026-08-26: that answer was also a harness artifact.** The real
+  ceiling, measured with the official `nccl-tests all_gather_perf`, is **23.92 GB/s** at
+  16 GiB on 3 ranks — matching the ~24 GB/s PCIe Gen5 x4 hardware ceiling, not 6.6x below
+  it. The "GB10 has no GPUDirect, ~0.5 GB/s is the ceiling" analysis this used to anchor
+  does **not** need revisiting on communication-budget grounds — the budget was never
+  actually constrained. See [#18](../../issues/18) and
+  [`../results/20260826-nccl-controlled/`](../results/20260826-nccl-controlled).
 - **Does prefill exceed the reference on a healthy fabric?** We are at 95–99%; nobody has
   tuned *for* prefill since the fix.
 - Does `max_num_seqs=64` continue the trend past 32? Untested by anyone.
