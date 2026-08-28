@@ -31,6 +31,55 @@ This bundle records the Issue #28 experiment trading unneeded KV cache headroom 
 - **Max Event Gap Across All Trials**: 0.341 s
 
 ## Findings
-1. **Decode at Extreme Depth**: 262K decode throughput improved from 46.08 tok/s to **51.39 tok/s (+11.5%)**.
-2. **TTFT Penalty**: Sizing chunk batches to 16,384 increased activation tensor sizes per layer to ~235 MB. On the GB10 unified memory bus (273 GB/s), transferring and reducing 235 MB tensors created memory bus saturation and RoCE serialization, increasing 131K TTFT from 75.7s to 92.5s (+22.1%) and 262K TTFT from 177.3s to 228.6s (+29.0%).
-3. **Conclusion**: `MAX_NUM_BATCHED_TOKENS=8192` remains the optimal chunk size on this hardware topology.
+
+1. **Decode at extreme depth**: 262K median decode was 51.39 tok/s vs Profile B's 46.08
+   (+11.5%). **This sits inside its own run spread** (32.2%: min 37.18, max 53.72, n=7),
+   and Profile B's 262K spread is 16.5%. Treat it as suggestive, not established.
+2. **TTFT penalty**: 131K TTFT rose from 75.7s to 92.5s (+22.1%) and 262K from 177.3s to
+   228.6s (+29.0%). The regression is large, consistent across reps, and **the mechanism is
+   unknown**.
+
+   An earlier version of this document attributed it to ~235 MB per-layer activation
+   tensors saturating the GB10 unified memory bus (273 GB/s) and causing RoCE
+   serialization. **That hypothesis is withdrawn**: streaming 235 MB at 273 GB/s is
+   ~0.86 ms per layer-pass, which cannot account for +16.7 s at 131K even allowing for
+   many passes per layer across 8 chunks. It also sits badly with this repo's four-HCA
+   null result, which found fabric bandwidth is not the binding constraint. It was never
+   measured.
+
+   Untested candidates: chunked-prefill scheduler interaction, attention-kernel behaviour
+   at large chunk sizes, and all-reduce message sizing.
+3. **Conclusion**: `MAX_NUM_BATCHED_TOKENS=8192` remains the choice. 16384 lost deep TTFT,
+   lost the starvation probe, and cost 21% of the KV pool; its single win is inside the
+   noise. That verdict does not depend on knowing the mechanism.
+
+   `32768` was **not tested**. A previous extrapolation ("~470 MB activations would be
+   worse") inherited the withdrawn hypothesis and is removed.
+
+## Configuration correction (recorded 2026-08-27 during review)
+
+The Configuration section above lists this arm as it was *intended*. The captured
+artifacts — which govern, per `docs/BENCHMARK-POLICY.md` "config comes from the live
+process" — show two of those entries never took effect:
+
+- **`NCCL_BUFFSIZE=16777216` was never applied.** It appears nowhere in
+  `container-env.json` for either arm, though 15 other `NCCL_*` variables were captured.
+  `scripts/configure_speed_profile.py` writes it to `<repo>/config/tp3.env`; it did not
+  reach the running container.
+- **`GPU_MEMORY_UTILIZATION` was not a variable.** Both arms ran
+  `gpu-memory-utilization 0.835`.
+
+`diff` of the two arms' engine command lines differs by exactly two tokens:
+
+```
+--max-model-len            1048576 -> 460800
+--max-num-batched-tokens      8192 -> 16384
+```
+
+So this A/B was **cleaner than originally written** (one confound, not three), but
+`MAX_MODEL_LEN` remains uncontrolled and the TTFT delta cannot be attributed to
+`MAX_NUM_BATCHED_TOKENS` alone. `docs/DECISIONS.md` separately states "nothing gained by
+lowering" `MAX_MODEL_LEN`, so its effect here is unquantified rather than known-zero.
+
+A single-variable re-run (both arms at `MAX_MODEL_LEN=1048576`) is the prerequisite for
+any mechanism work.
