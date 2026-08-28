@@ -8,6 +8,6 @@ for PY in python3 py python; do
     exec "$PY" "$ROOT/scripts/check_no_sensitive.py" --staged
   fi
 done
-echo "pre-commit: no working Python interpreter found; skipping leak scan" >&2
-echo "            run 'make check-sensitive' manually before pushing" >&2
-exit 0
+echo "pre-commit: no working Python interpreter found; blocking commit" >&2
+echo "            install Python or run the scanner from another environment" >&2
+exit 1
