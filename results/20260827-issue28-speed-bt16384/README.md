@@ -62,10 +62,16 @@ The Configuration section above lists this arm as it was *intended*. The capture
 artifacts — which govern, per `docs/BENCHMARK-POLICY.md` "config comes from the live
 process" — show two of those entries never took effect:
 
-- **`NCCL_BUFFSIZE=16777216` was never applied.** It appears nowhere in
-  `container-env.json` for either arm, though 15 other `NCCL_*` variables were captured.
-  `scripts/configure_speed_profile.py` writes it to `<repo>/config/tp3.env`; it did not
-  reach the running container.
+- **`NCCL_BUFFSIZE=16777216` was never applied**, and cannot be by that route.
+  `scripts/configure_speed_profile.py` did write it into `config/tp3.env` on all three
+  nodes, where it remains (`tp3.env:65`). But `docker-compose.yml` lists NCCL variables
+  **individually** in an explicit `environment:` block and never references
+  `NCCL_BUFFSIZE`; there is no `env_file:` directive. A value in `tp3.env` reaches the
+  container only if compose forwards it by name, and this one is not forwarded.
+
+  Confirmed against the live cluster: `docker exec ... env | grep -i buffsize` returns
+  nothing, while `env | grep -c '^NCCL_'` returns 15 — matching the 15 `NCCL_*` entries in
+  `container-env.json` for both arms. The setting has never been in effect.
 - **`GPU_MEMORY_UTILIZATION` was not a variable.** Both arms ran
   `gpu-memory-utilization 0.835`.
 
