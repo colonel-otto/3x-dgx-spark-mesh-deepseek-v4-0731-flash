@@ -37,17 +37,20 @@ reference test inside a container with the serving RDMA devices, memory-lock lim
 memory size, host network, and NCCL environment. Stop the engine before a 16 GiB test.
 Record the runtime NCCL version, `#wrong=0`, and `via NET/IB/*` with the result.
 
-## 3. Obtain the TP=3 patch at a pinned revision
+## 3. Build the hermetic container image (`dsv4-3spark:0.1.1`)
+
+All required patches are tracked directly in this repository under [`patches/`](../patches/):
+- `apply_tp3_patch.py`: Pads 8 attention groups to 9 for even 3-node sharding, trimming after gather.
+- `hotfix-dsv4-issue26-hybrid-swa-min.py`: Fixes sliding window attention minimum block sizing.
+- `hotfix-dsv4-issue27-partial-prefill-concurrency.py`: Fixes concurrent partial prefill scheduling.
+
+Build the hermetic image across all three nodes using [`docker/Dockerfile.runtime`](../docker/Dockerfile.runtime):
 
 ```bash
-git clone https://github.com/localaiguyy/DeepSeek-V4-Flash-DSpark-3x-DGX-Spark.git
-cd DeepSeek-V4-Flash-DSpark-3x-DGX-Spark
-git checkout 496c6a146a383f1b7c3f5991f4f1930091420720
-sha256sum patches/tp3/apply_tp3_patch.py
+docker build -f docker/Dockerfile.runtime -t dsv4-3spark:0.1.1 .
 ```
 
-Follow that repository's patch instructions against the same immutable container image
-on all three nodes. Save the image digest and patch checksum in the run manifest.
+The Dockerfile executes `apply_tp3_patch.py --check` at build time to guarantee patch application and verify that no runtime monkey-patches or host bind-mounts are needed.
 
 ## 4. Create per-rank environment files
 
@@ -79,12 +82,10 @@ grep -E 'SUBNET_AWARE|NCCL_NET|NCCL_IB_HCA|MAX_MODEL_LEN|MAX_NUM_SEQS' rendered.
 ## 6. Start workers before the head
 
 Start rank 2 and rank 1, then rank 0. Use the serving project's launch command while
-passing the corresponding env file. Cold startup can take approximately six minutes.
+passing the corresponding env file. Cold startup takes approximately 6–7 minutes.
 
 The current production model arguments must resolve to the following. Read them from the
-live process after every start; do not infer them from an environment file. The evidence
-capture is in
-[`20260827-decode-3node-fixed/engine-config.txt`](../results/20260827-decode-3node-fixed/engine-config.txt).
+live process after every start; do not infer them from an environment file:
 
 ```text
 --tensor-parallel-size 3
@@ -96,12 +97,9 @@ capture is in
 --max-model-len 1048576
 --max-num-seqs 32
 --max-num-batched-tokens 8192
---gpu-memory-utilization 0.80
---speculative-config {method: dspark, num_speculative_tokens: 5, ...}
+--gpu-memory-utilization 0.835
+--speculative-config {"method":"dspark","num_speculative_tokens":2,"draft_sample_method":"probabilistic"}
 ```
-
-The older `460800` / `seqs=16` / `gpu-memory-utilization=0.85` profile appears in frozen
-results and historical docs. It is evidence provenance, not the current default.
 
 ## 7. Validate before benchmarking
 
@@ -109,7 +107,7 @@ Require all of the following:
 
 - all three ranks joined;
 - startup reports `B12X_MXFP4`;
-- startup reports the DSpark MTP speculator with five speculative tokens;
+- startup reports the DSpark MTP speculator with two speculative tokens;
 - NCCL INFO log reports `NET/IB`, not only `NET/Socket`;
 - `/v1/models` reports a 1,048,576-token model limit;
 - the correctness suite passes;

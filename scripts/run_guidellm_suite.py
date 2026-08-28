@@ -40,7 +40,7 @@ def run_guidellm_benchmark(
         "--profile", f"kind={profile}",
         "--override", "profile.streams", streams,
         "--data", f"kind=synthetic_text,prompt_tokens={prompt_tokens},output_tokens={output_tokens}",
-        "--constraint", f"kind=max_duration,duration={max_duration}",
+        "--constraint", f"kind=max_duration,seconds={max_duration}",
         "--output", "kind=console",
         "--output", f"kind=json,path={p_out / 'report.json'}",
         "--output", f"kind=html,path={p_out / 'report.html'}",

@@ -8,7 +8,7 @@ the provenance index before quoting any benchmark.
 
 | Document | Purpose |
 |---|---|
-| [Current handoff](HANDOFF-2026-08-27.md) | Current cluster, corrected results, benchmark defect, and next work |
+| [Current handoff](HANDOFF-2026-08-28.md) | Current cluster, verified findings, APC warm path, and closed issues #28–#34 |
 | [Repository and data map](REPOSITORY-MAP.md) | What belongs on GitHub, what remains local, and where each artifact goes |
 | [Results index](../results/README.md) | Readable catalogue of every frozen run bundle |
 | [Provenance index](../results/INDEX.md) | Which evidence is current, void, superseded, gated, or ungated |

@@ -24,19 +24,20 @@ Nine groups divide evenly across three ranks. The extra group is padding and is 
 from the model-visible result. Preserving eight heads per group maintains the output
 projection contract required by the checkpoint.
 
-## Provenance and pinning
+## Provenance and Hermetic Build
 
-Implementation:
-[`localaiguyy/DeepSeek-V4-Flash-DSpark-3x-DGX-Spark`](https://github.com/localaiguyy/DeepSeek-V4-Flash-DSpark-3x-DGX-Spark)
+The required patches are audited, version-controlled, and tracked directly in this repository under [`patches/`](../patches/):
+- `apply_tp3_patch.py`: Pads 8 attention groups to 9 for sharding, trims after gather.
+- `hotfix-dsv4-issue26-hybrid-swa-min.py`: Fixes sliding window attention minimum block sizing.
+- `hotfix-dsv4-issue27-partial-prefill-concurrency.py`: Fixes concurrent partial prefill scheduling.
 
-Pinned publication revision:
+To apply and verify these patches hermetically without runtime monkey-patching:
 
-```text
-496c6a146a383f1b7c3f5991f4f1930091420720
+```bash
+docker build -f docker/Dockerfile.runtime -t dsv4-3spark:0.1.1 .
 ```
 
-Do not curl and execute the moving `main` branch. Clone it, check out the pinned commit,
-review the patch, record its SHA-256 and apply it identically to every rank.
+The build executes `apply_tp3_patch.py --check` at image build time to assert patch application.
 
 ## Acceptance tests
 
