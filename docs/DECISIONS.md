@@ -45,9 +45,9 @@ supporting evidence only because its gate artifact and one headline cell are not
 |---|---|---|---|
 | `MAX_MODEL_LEN` | **1048576** | 1M is free: memory-bound, not comms-bound | Nothing gained by lowering |
 | `MAX_NUM_SEQS` | **32** | Retest 2026-08-26 on healthy fabric: **+46.3% at cc=32** (685.9 vs 468.8), parity below it, 70/70 requests OK, zero crash signatures. Supersedes the 08-24 rejection, which died on an `_ALLGATHER_BASE` timeout at a 6.6x-too-small budget with a 600 s watchdog ([#10](../../issues/10)) | Costs 0.92 GiB more graph capture and 1.8% of KV. Nothing below cc=32 |
-| `GPU_MEMORY_UTILIZATION` | **0.80** | KV pool 4.46M tokens, **0 preemptions in every test ever run** | 0.85 leaves 2–4 GB free per node |
+| `GPU_MEMORY_UTILIZATION` | **0.835** | Winning Profile B ([#25](../../issues/25)): expands KV pool to ~2.49M tokens with 0 preemptions, zero OOMs, and improves starvation TTFT by -10.7% | 0.85 leaves minimal headroom; 0.80 leaves 35% KV capacity on the table |
 | `MTP_NUM_TOKENS` | **5** | Matched control 2026-08-24, beats 4 | `0` is **invalid** (vLLM rejects it); `1` collapses decode to ~47 tok/s |
-| `MAX_NUM_BATCHED_TOKENS` | **8192** | A/B: 16384 cost **43% of the KV pool for zero gain** | ⚠️ vLLM's own log suggests 16384. That advice assumes intra-node NVLink. It is a trap here |
+| `MAX_NUM_BATCHED_TOKENS` | **8192** | Evaluated in Issue [#28](../../issues/28) ([`20260827-issue28-speed-bt16384`](../results/20260827-issue28-speed-bt16384/)): 16384 yields +11.5% decode at 262K (51.4 tok/s), but **degrades deep TTFT by +22% at 131K (92.5s vs 75.7s)** and **+29% at 262K (228.6s vs 177.3s)** due to 235 MB activation tensor saturation on the GB10 unified memory bus (273 GB/s). 8192 is the measured sweet spot | ⚠️ vLLM's log suggests 16384. That advice assumes intra-node NVLink. On unified memory and multi-node RoCE it slows prefill |
 | `--kv-cache-dtype` | `nvfp4_ds_mla` | Tested against `fp8_ds_mla`: speed and memory equivalent; 23/24 matched quality cells byte-identical | No demonstrated benefit from changing; see [`20260826-kv-dtype-ab`](../results/20260826-kv-dtype-ab/) |
 | `JIT_MONITOR_MODE` | **warn** | Surfaces compiles landing inside requests — one measured at 5 s | Leave on. It is how you know a benchmark is contaminated |
 
