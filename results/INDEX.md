@@ -11,11 +11,11 @@ and diagnostic baseline values.
 
 | Item | Count |
 |---|---:|
-| Result bundles | 29 |
-| `CURRENT` | 17 |
+| Result bundles | 30 |
+| `CURRENT` | 18 |
 | `VOID` | 9 |
 | `SUPERSEDED` | 3 |
-| Own passing fabric gate | 11 |
+| Own passing fabric gate | 12 |
 | Gate absent | 13 |
 | Predates the gate | 5 |
 
@@ -44,6 +44,7 @@ quality evidence or a methodology-only control.
 | [20260827-decode-concurrency-2v3-fixed](20260827-decode-concurrency-2v3-fixed/) | 2026-08-27 | [2, 3] / [2, 3] | `PRESENT-PASS` | Corrected 256-token concurrency comparison at 8K. TP=3 wins cc=4; TP=2 wins aggregate throughput at cc=8 and cc=16. |
 | [20260827-issue25-profile-b](20260827-issue25-profile-b/) | 2026-08-27 | 3 / 3 | `PRESENT-PASS` | Profile B evaluation for issue #25 applying published recipe deltas: GPU_MEMORY_UTILIZATION=0.835, LONG_PREFILL_TOKEN_THRESHOLD=1024, DSPARK_MAX_INFLIGHT_PREFILLS=2, VLLM_PREFIX_CACHE_RETENTION_INTERVAL=4096, and concurrency hotfixes. |
 | [20260827-tp3-131k-15rep](20260827-tp3-131k-15rep/) | 2026-08-27 | 3 / 3 | `PRESENT-PASS` | 15-repetition single-stream decode and TTFT evaluation at 131K on TP=3 (Profile B) with live restoration completion check for issue #24. |
+| [20260827-issue28-speed-bt16384](20260827-issue28-speed-bt16384/) | 2026-08-27 | 3 / 3 | `PRESENT-PASS` | Speed profile sweep testing MAX_NUM_BATCHED_TOKENS=16384 on 3-node TP=3 for Issue #28. 7 reps per depth from 2K to 262K with 256 tokens asserted and 5 starvation trials. Shows +11.5% decode speedup at 262K (51.39 tok/s) but degrades 131K and 262K TTFT (+22-29%) due to 235 MB activation tensor memory bus saturation on GB10. |
 
 ## Superseded evidence
 

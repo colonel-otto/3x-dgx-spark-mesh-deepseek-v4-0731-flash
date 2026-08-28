@@ -1,0 +1,13 @@
+trial 0: decoder ttft=162.94s decode=47.89 tok/s max_gap=0.20s
+trial 1: decoder ttft=151.47s decode=46.28 tok/s max_gap=0.10s
+trial 2: decoder ttft=144.64s decode=42.68 tok/s max_gap=0.11s
+trial 3: decoder ttft=149.32s decode=47.92 tok/s max_gap=0.11s
+trial 4: decoder ttft=137.06s decode=38.47 tok/s max_gap=0.34s
+{
+  "label": "speed-bt16384",
+  "trials": 5,
+  "median_decoder_ttft_s": 149.31697257899214,
+  "median_decoder_decode_tok_s": 46.27859357098983,
+  "median_decoder_max_event_gap_s": 0.10702942498028278,
+  "max_decoder_event_gap_s": 0.3413457509595901
+}

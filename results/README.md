@@ -23,6 +23,7 @@ fabric gate weakens performance evidence but does not invalidate pass/fail quali
 
 | Bundle | Nodes | Gate | What it establishes |
 |---|---:|---|---|
+| [20260827-issue28-speed-bt16384](20260827-issue28-speed-bt16384/) | 3 | Present/pass | Speed profile tuning with MAX_NUM_BATCHED_TOKENS=16384 for issue #28 |
 | [20260827-tp3-131k-15rep](20260827-tp3-131k-15rep/) | 3 | Present/pass | 15-rep 131K single-stream evaluation for issue #24; 51.04 tok/s median |
 | [20260827-issue25-profile-b](20260827-issue25-profile-b/) | 3 | Present/pass | Winning Profile B tuning bundle for issue #25; starvation resistance & depth sweep |
 | [20260827-decode-concurrency-2v3-fixed](20260827-decode-concurrency-2v3-fixed/) | 2/3 | TP=2 present/pass; TP=3 live check | Corrected-window concurrency crossover at 8K |

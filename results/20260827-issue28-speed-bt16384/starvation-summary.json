@@ -1,0 +1,8 @@
+{
+  "label": "speed-bt16384",
+  "trials": 5,
+  "median_decoder_ttft_s": 149.31697257899214,
+  "median_decoder_decode_tok_s": 46.27859357098983,
+  "median_decoder_max_event_gap_s": 0.10702942498028278,
+  "max_decoder_event_gap_s": 0.3413457509595901
+}

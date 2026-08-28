@@ -68,11 +68,11 @@ meta:
     - ABSENT
     - PRE-DATES-GATE
   fabric_gate_tally:
-    PRESENT-PASS: 11
+    PRESENT-PASS: 12
     PRESENT-FAIL: 0
     ABSENT: 13
     PRE-DATES-GATE: 5
-    total: 29
+    total: 30
   fabric_gate_tally_detail:
     PRESENT-PASS:
       - 20260825-deep-concurrency        # fabric-gate-full.json 13/13, nccl=full
@@ -86,6 +86,7 @@ meta:
       - 20260827-issue25-profile-a       # stopped fabric gate passed (9.29 GB/s NCCL)
       - 20260827-issue25-profile-b       # stopped fabric gate passed (9.50 GB/s NCCL)
       - 20260827-tp3-131k-15rep          # restored fabric gate passed + live completion
+      - 20260827-issue28-speed-bt16384   # stopped fabric gate passed (9.16-9.53 GB/s NCCL)
     PRESENT-FAIL: []
     ABSENT:
       - 20260824-kv-quality
@@ -1823,4 +1824,55 @@ directories:
       Median TTFT: 79.00 s. Full sorted distributions committed. Confirms TP=3
       +15% decode advantage over TP=2 (51.04 vs 44.40 tok/s) and explains TTFT gap
       as intrinsic chunked-prefill all-reduce communication cost.
+
+  - dir: 20260827-issue28-speed-bt16384
+    description: >
+      Speed profile sweep testing MAX_NUM_BATCHED_TOKENS=16384 on 3-node TP=3 for
+      Issue #28. 7 reps per depth from 2K to 262K with 256 tokens asserted and 5 starvation
+      trials. Shows +11.5% decode speedup at 262K (51.39 tok/s) but degrades 131K and 262K
+      TTFT (+22-29%) due to 235 MB activation tensor memory bus saturation on GB10.
+    date: 2026-08-27
+    harness_type: decode_depth_sweep.py + benchmark_prefill_starvation.py
+    nodes: 3
+    nodes_evidence: models.json, container-env.json, and engine-config.txt confirm 3-node TP=3
+    tp_size: 3
+    kv_pool_tokens: 1954299
+    kv_pool_source: vLLM engine log (33.44 GiB available KV cache per GPU)
+    harness: scripts/decode_depth_sweep.py + scripts/benchmark_prefill_starvation.py
+    harness_committed: true
+    output_tokens_requested: 256
+    output_tokens_actual: {256: 35}
+    output_tokens_field: completion_tokens (PER-REQUEST)
+    output_tokens_note: completion_tokens=256 and cached_tokens=0 on all 35 measured reps
+    reps: 7 reps per depth (5 depths) + 5 starvation trials
+    reps_verified: true
+    statistic: median
+    fabric_gate: PRESENT-PASS
+    fabric_gate_artifact: fabric-gate-stopped.json
+    fabric_gate_evidence: 30 pass, 0 fail, 3 expected skips (engine stopped); pairwise NCCL 9.16-9.53 GB/s
+    fabric_gate_note: stopped fabric gate passed before speed profile startup
+    fabric_gated: true
+    fabric_state: healthy
+    raw_data_committed: true
+    raw_files:
+      - depth.jsonl
+      - depth.log
+      - depth-summary.json
+      - starvation.jsonl
+      - starvation.log
+      - starvation-summary.json
+      - fabric-gate-stopped.json
+      - models.json
+      - container-env.json
+      - engine-config.txt
+      - orchestration.log
+    status: CURRENT
+    void_reasons: []
+    superseded_by: null
+    note: >
+      Issue #28 experiment trading KV cache (1.95M tokens) for speed. 262K decode
+      improved to 51.39 tok/s (+11.5%), but 131K and 262K TTFT degraded to 92.5s and 228.6s
+      due to 235 MB activation tensor saturation on GB10 unified memory. Confirms bt8192 is the
+      sweet spot for prefill.
+
 

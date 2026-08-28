@@ -1,0 +1,62 @@
+[
+  {
+    "label": "speed-bt16384",
+    "target_depth": 2048,
+    "actual_prompt_tokens": 2037,
+    "n": 7,
+    "median_decode_tok_s": 52.9,
+    "min": 46.77,
+    "max": 62.09,
+    "spread_pct": 29.0,
+    "cache_hits": 0,
+    "median_ttft_s": 1.09
+  },
+  {
+    "label": "speed-bt16384",
+    "target_depth": 8192,
+    "actual_prompt_tokens": 8083,
+    "n": 7,
+    "median_decode_tok_s": 55.98,
+    "min": 49.42,
+    "max": 58.74,
+    "spread_pct": 16.6,
+    "cache_hits": 0,
+    "median_ttft_s": 4.17
+  },
+  {
+    "label": "speed-bt16384",
+    "target_depth": 32768,
+    "actual_prompt_tokens": 32271,
+    "n": 7,
+    "median_decode_tok_s": 54.91,
+    "min": 51.08,
+    "max": 57.98,
+    "spread_pct": 12.6,
+    "cache_hits": 0,
+    "median_ttft_s": 18.46
+  },
+  {
+    "label": "speed-bt16384",
+    "target_depth": 131072,
+    "actual_prompt_tokens": 129007,
+    "n": 7,
+    "median_decode_tok_s": 51.18,
+    "min": 43.21,
+    "max": 56.85,
+    "spread_pct": 26.6,
+    "cache_hits": 0,
+    "median_ttft_s": 92.46
+  },
+  {
+    "label": "speed-bt16384",
+    "target_depth": 262144,
+    "actual_prompt_tokens": 257995,
+    "n": 7,
+    "median_decode_tok_s": 51.39,
+    "min": 37.18,
+    "max": 53.72,
+    "spread_pct": 32.2,
+    "cache_hits": 0,
+    "median_ttft_s": 228.64
+  }
+]
