@@ -23,6 +23,7 @@ fabric gate weakens performance evidence but does not invalidate pass/fail quali
 
 | Bundle | Nodes | Gate | What it establishes |
 |---|---:|---|---|
+| [20260828-issue29-apc-warm-path](20260828-issue29-apc-warm-path/) | 3 | Absent | Multi-turn prefix caching (APC) warm-path benchmark (106.8x TTFT speedup at 131K) |
 | [20260827-issue28-speed-bt16384](20260827-issue28-speed-bt16384/) | 3 | Present/pass | Speed profile tuning with MAX_NUM_BATCHED_TOKENS=16384 for issue #28 |
 | [20260827-tp3-131k-15rep](20260827-tp3-131k-15rep/) | 3 | Present/pass | 15-rep 131K single-stream evaluation for issue #24; 51.04 tok/s median |
 | [20260827-issue25-profile-b](20260827-issue25-profile-b/) | 3 | Present/pass | Winning Profile B tuning bundle for issue #25; starvation resistance & depth sweep |

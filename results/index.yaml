@@ -70,9 +70,9 @@ meta:
   fabric_gate_tally:
     PRESENT-PASS: 12
     PRESENT-FAIL: 0
-    ABSENT: 13
+    ABSENT: 14
     PRE-DATES-GATE: 5
-    total: 30
+    total: 31
   fabric_gate_tally_detail:
     PRESENT-PASS:
       - 20260825-deep-concurrency        # fabric-gate-full.json 13/13, nccl=full
@@ -102,6 +102,7 @@ meta:
       - 20260826-seqs32-retest
       - 20260827-decode-3node-fixed
       - 20260827-quality-suite-3node
+      - 20260828-issue29-apc-warm-path
     PRE-DATES-GATE:
       - 20260821T001024Z-2spark-baseline
       - 20260821T031300Z-3spark-ep3
@@ -1878,5 +1879,54 @@ directories:
       infeasible, never measured) and the arm was confounded by MAX_MODEL_LEN=460800 vs 1048576.
       The +11.5% decode sits inside a 32.2% run spread. Confirms bt8192 is the
       sweet spot for prefill.
+
+  - dir: 20260828-issue29-apc-warm-path
+    description: >
+      Issue #29 multi-turn prefix caching (APC) warm-path benchmark (8K/32K/131K contexts, 0s/30s/120s gaps).
+      Demonstrates 106.8x TTFT speedup at 131K (78.09s cold -> 0.731s warm, 99.8% hit ratio)
+      and 37.3x at 32K (16.97s cold -> 0.455s warm). Prefix retention confirmed across
+      30s and 120s think-time gaps with zero degradation under Profile B.
+    date: 2026-08-28
+    harness_type: multiturn_apc.py
+    nodes: 3
+    nodes_evidence: models.json, container-env.json, and engine-config.txt confirm 3-node TP=3
+    tp_size: 3
+    kv_pool_tokens: 5033960
+    kv_pool_source: vLLM engine log (Profile B, 0.835 util)
+    harness: scripts/multiturn_apc.py
+    harness_committed: true
+    output_tokens_requested: 256
+    output_tokens_actual: {256: 66}
+    output_tokens_field: completion_tokens (PER-REQUEST)
+    output_tokens_note: completion_tokens=256 on all 66 turns across gap-0/30/120 sessions
+    reps: 63 warm turns across 8K/32K/131K depths and 0/30/120s gaps
+    reps_verified: true
+    statistic: median
+    fabric_gate: ABSENT
+    fabric_gate_artifact: null
+    fabric_gate_evidence: null
+    fabric_gate_note: live serving run; cache hit TTFT not collective-bound
+    fabric_gated: false
+    fabric_state: healthy
+    raw_data_committed: true
+    raw_files:
+      - apc-gap0.jsonl
+      - apc-gap0.log
+      - apc-gap0-summary.json
+      - apc-gap30.jsonl
+      - apc-gap30.log
+      - apc-gap30-summary.json
+      - apc-gap120.jsonl
+      - apc-gap120.log
+      - apc-gap120-summary.json
+      - README.md
+    status: CURRENT
+    void_reasons: []
+    superseded_by: null
+    note: >
+      First quantified measurement of the warm multi-turn path under APC.
+      Demonstrates 106.8x TTFT speedup at 131K (78.09s cold -> 0.731s warm, 99.8% hit ratio)
+      and 37.3x at 32K (16.97s cold -> 0.455s warm). Prefix retention confirmed across
+      30s and 120s think-time gaps with zero degradation.
 
 

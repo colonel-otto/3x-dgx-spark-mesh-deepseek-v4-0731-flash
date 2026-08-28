@@ -1,0 +1,11 @@
+
+=== depth 32768 session 0 (gap 30s, tp3-apc-g30-s0-32768-1787889772) ===
+  turn 1 [cold]: ttft=18.330s hit=0/32274 (0.0%) decode=52.7 tok/s
+  turn 2 [warm]: ttft=0.422s hit=32256/32552 (99.1%) decode=52.6 tok/s
+  turn 3 [warm]: ttft=0.441s hit=32512/32826 (99.0%) decode=54.1 tok/s
+  turn 4 [warm]: ttft=0.442s hit=32768/33105 (99.0%) decode=46.5 tok/s
+  turn 5 [warm]: ttft=0.450s hit=33024/33383 (98.9%) decode=46.5 tok/s
+  turn 6 [warm]: ttft=0.423s hit=33280/33659 (98.9%) decode=45.1 tok/s
+
+=== SUMMARY tp3-apc (gap 30s) ===
+    32768 tok: cold   18.33s -> warm  0.441s (41.6x, hit 99.0%)

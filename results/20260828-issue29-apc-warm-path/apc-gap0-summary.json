@@ -1,0 +1,38 @@
+[
+  {
+    "label": "tp3-apc",
+    "target_depth": 8192,
+    "gap_s": 0.0,
+    "sessions": 3,
+    "warm_turns": 15,
+    "cold_ttft_median_s": 4.142,
+    "warm_ttft_median_s": 0.417,
+    "warm_ttft_max_s": 5.16,
+    "speedup_x": 9.9,
+    "warm_hit_ratio_median": 0.9472
+  },
+  {
+    "label": "tp3-apc",
+    "target_depth": 32768,
+    "gap_s": 0.0,
+    "sessions": 3,
+    "warm_turns": 15,
+    "cold_ttft_median_s": 16.971,
+    "warm_ttft_median_s": 0.455,
+    "warm_ttft_max_s": 5.134,
+    "speedup_x": 37.3,
+    "warm_hit_ratio_median": 0.9898
+  },
+  {
+    "label": "tp3-apc",
+    "target_depth": 131072,
+    "gap_s": 0.0,
+    "sessions": 3,
+    "warm_turns": 15,
+    "cold_ttft_median_s": 78.093,
+    "warm_ttft_median_s": 0.731,
+    "warm_ttft_max_s": 1.245,
+    "speedup_x": 106.8,
+    "warm_hit_ratio_median": 0.9975
+  }
+]

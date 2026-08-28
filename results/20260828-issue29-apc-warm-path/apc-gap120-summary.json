@@ -1,0 +1,14 @@
+[
+  {
+    "label": "tp3-apc",
+    "target_depth": 32768,
+    "gap_s": 120.0,
+    "sessions": 1,
+    "warm_turns": 5,
+    "cold_ttft_median_s": 18.329,
+    "warm_ttft_median_s": 0.426,
+    "warm_ttft_max_s": 0.447,
+    "speedup_x": 43.0,
+    "warm_hit_ratio_median": 0.9899
+  }
+]

@@ -1,0 +1,77 @@
+
+=== depth 8192 session 0 (gap 0s, tp3-apc-g0-s0-8192-1787889161) ===
+  turn 1 [cold]: ttft=4.126s hit=0/8088 (0.0%) decode=46.2 tok/s
+  turn 2 [warm]: ttft=0.394s hit=7936/8366 (94.9%) decode=57.7 tok/s
+  turn 3 [warm]: ttft=0.406s hit=8192/8640 (94.8%) decode=73.1 tok/s
+  turn 4 [warm]: ttft=0.411s hit=8448/8918 (94.7%) decode=60.2 tok/s
+  turn 5 [warm]: ttft=0.540s hit=8704/9197 (94.6%) decode=48.2 tok/s
+  turn 6 [warm]: ttft=5.160s hit=8960/9473 (94.6%) decode=48.9 tok/s
+
+=== depth 8192 session 1 (gap 0s, tp3-apc-g0-s1-8192-1787889201) ===
+  turn 1 [cold]: ttft=4.797s hit=0/8088 (0.0%) decode=48.5 tok/s
+  turn 2 [warm]: ttft=0.398s hit=7936/8366 (94.9%) decode=48.6 tok/s
+  turn 3 [warm]: ttft=0.545s hit=8192/8641 (94.8%) decode=50.7 tok/s
+  turn 4 [warm]: ttft=0.417s hit=8448/8921 (94.7%) decode=57.1 tok/s
+  turn 5 [warm]: ttft=0.419s hit=8704/9200 (94.6%) decode=53.4 tok/s
+  turn 6 [warm]: ttft=0.448s hit=8960/9476 (94.5%) decode=48.3 tok/s
+
+=== depth 8192 session 2 (gap 0s, tp3-apc-g0-s2-8192-1787889238) ===
+  turn 1 [cold]: ttft=4.142s hit=0/8088 (0.0%) decode=63.6 tok/s
+  turn 2 [warm]: ttft=0.414s hit=7936/8366 (94.9%) decode=59.2 tok/s
+  turn 3 [warm]: ttft=0.412s hit=8192/8640 (94.8%) decode=58.6 tok/s
+  turn 4 [warm]: ttft=0.424s hit=8448/8919 (94.7%) decode=58.3 tok/s
+  turn 5 [warm]: ttft=0.410s hit=8704/9196 (94.7%) decode=41.3 tok/s
+  turn 6 [warm]: ttft=0.435s hit=8960/9470 (94.6%) decode=51.3 tok/s
+
+=== depth 32768 session 0 (gap 0s, tp3-apc-g0-s0-32768-1787889273) ===
+  turn 1 [cold]: ttft=16.971s hit=0/32275 (0.0%) decode=60.1 tok/s
+  turn 2 [warm]: ttft=5.134s hit=32256/32553 (99.1%) decode=47.9 tok/s
+  turn 3 [warm]: ttft=0.455s hit=32512/32828 (99.0%) decode=64.5 tok/s
+  turn 4 [warm]: ttft=0.519s hit=32768/33108 (99.0%) decode=55.4 tok/s
+  turn 5 [warm]: ttft=0.448s hit=33024/33387 (98.9%) decode=50.5 tok/s
+  turn 6 [warm]: ttft=0.431s hit=33280/33663 (98.9%) decode=46.4 tok/s
+
+=== depth 32768 session 1 (gap 0s, tp3-apc-g0-s1-32768-1787889326) ===
+  turn 1 [cold]: ttft=16.970s hit=0/32275 (0.0%) decode=52.0 tok/s
+  turn 2 [warm]: ttft=0.433s hit=32256/32553 (99.1%) decode=56.6 tok/s
+  turn 3 [warm]: ttft=0.459s hit=32512/32827 (99.0%) decode=69.4 tok/s
+  turn 4 [warm]: ttft=0.474s hit=32768/33106 (99.0%) decode=60.9 tok/s
+  turn 5 [warm]: ttft=0.439s hit=33024/33383 (98.9%) decode=42.1 tok/s
+  turn 6 [warm]: ttft=0.506s hit=33280/33659 (98.9%) decode=48.9 tok/s
+
+=== depth 32768 session 2 (gap 0s, tp3-apc-g0-s2-32768-1787889374) ===
+  turn 1 [cold]: ttft=17.038s hit=0/32275 (0.0%) decode=55.9 tok/s
+  turn 2 [warm]: ttft=0.445s hit=32256/32553 (99.1%) decode=70.5 tok/s
+  turn 3 [warm]: ttft=0.434s hit=32512/32826 (99.0%) decode=62.4 tok/s
+  turn 4 [warm]: ttft=0.474s hit=32768/33106 (99.0%) decode=65.4 tok/s
+  turn 5 [warm]: ttft=0.446s hit=33024/33384 (98.9%) decode=54.1 tok/s
+  turn 6 [warm]: ttft=0.463s hit=33280/33660 (98.9%) decode=52.3 tok/s
+
+=== depth 131072 session 0 (gap 0s, tp3-apc-g0-s0-131072-1787889419) ===
+  turn 1 [cold]: ttft=78.093s hit=0/129012 (0.0%) decode=51.0 tok/s
+  turn 2 [warm]: ttft=0.785s hit=128768/129290 (99.6%) decode=47.1 tok/s
+  turn 3 [warm]: ttft=1.245s hit=129280/129565 (99.8%) decode=57.1 tok/s
+  turn 4 [warm]: ttft=0.731s hit=129536/129844 (99.8%) decode=50.8 tok/s
+  turn 5 [warm]: ttft=0.731s hit=129792/130122 (99.8%) decode=46.0 tok/s
+  turn 6 [warm]: ttft=0.728s hit=130048/130397 (99.7%) decode=46.7 tok/s
+
+=== depth 131072 session 1 (gap 0s, tp3-apc-g0-s1-131072-1787889532) ===
+  turn 1 [cold]: ttft=77.808s hit=0/129012 (0.0%) decode=48.2 tok/s
+  turn 2 [warm]: ttft=1.186s hit=128768/129290 (99.6%) decode=46.6 tok/s
+  turn 3 [warm]: ttft=0.712s hit=129280/129564 (99.8%) decode=62.8 tok/s
+  turn 4 [warm]: ttft=0.740s hit=129536/129843 (99.8%) decode=62.5 tok/s
+  turn 5 [warm]: ttft=0.737s hit=129792/130122 (99.8%) decode=47.6 tok/s
+  turn 6 [warm]: ttft=0.715s hit=130048/130398 (99.7%) decode=48.0 tok/s
+
+=== depth 131072 session 2 (gap 0s, tp3-apc-g0-s2-131072-1787889644) ===
+  turn 1 [cold]: ttft=92.127s hit=0/129012 (0.0%) decode=52.8 tok/s
+  turn 2 [warm]: ttft=0.761s hit=128768/129290 (99.6%) decode=34.6 tok/s
+  turn 3 [warm]: ttft=0.670s hit=129280/129565 (99.8%) decode=53.8 tok/s
+  turn 4 [warm]: ttft=0.706s hit=129536/129844 (99.8%) decode=61.1 tok/s
+  turn 5 [warm]: ttft=0.705s hit=129792/130122 (99.8%) decode=47.6 tok/s
+  turn 6 [warm]: ttft=0.675s hit=130048/130398 (99.7%) decode=46.8 tok/s
+
+=== SUMMARY tp3-apc (gap 0s) ===
+     8192 tok: cold    4.14s -> warm  0.417s (9.9x, hit 94.7%)
+    32768 tok: cold   16.97s -> warm  0.455s (37.3x, hit 99.0%)
+   131072 tok: cold   78.09s -> warm  0.731s (106.8x, hit 99.8%)
