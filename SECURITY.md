@@ -35,13 +35,15 @@ Operators may reuse the fabric ranges only when they do not overlap an existing 
 `scripts/check_no_sensitive.py` runs as a pre-commit hook (`make install-hooks`) and
 fails the commit on serials, real emails, personal names, management-network addresses,
 MAC addresses, IPv6 link-local addresses, real DGX hostnames, username-bearing home
-paths, and credential-shaped strings.
+paths, and credential-shaped strings. The hook scans the exact blobs staged in Git,
+not potentially different working-tree copies, and blocks the commit if no Python
+interpreter is available to perform the scan.
 
-The hook checks the working tree, not history. **A redaction commit does not remove a
-secret that is already published** — the pre-redaction blob remains an ancestor and is
-still fetchable. If a secret reaches a public branch, rewrite history, force-push, and
-ask GitHub Support to purge the unreferenced objects; treat the value as disclosed and
-rotate it where rotation is possible.
+The hook checks the staged snapshot, not history. **A redaction commit does not remove
+a secret that is already published** — the pre-redaction blob remains an ancestor and
+is still fetchable. If a secret reaches a public branch, rewrite history, force-push,
+and ask GitHub Support to purge the unreferenced objects; treat the value as disclosed
+and rotate it where rotation is possible.
 
 Do not publish an unfiltered `docker inspect`, full process environment, `ip addr`, LLDP
 dump or firmware inventory. Use the collection scripts as a starting point and inspect

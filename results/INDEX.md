@@ -11,12 +11,12 @@ and diagnostic baseline values.
 
 | Item | Count |
 |---|---:|
-| Result bundles | 31 |
-| `CURRENT` | 19 |
+| Result bundles | 34 |
+| `CURRENT` | 22 |
 | `VOID` | 9 |
 | `SUPERSEDED` | 3 |
 | Own passing fabric gate | 12 |
-| Gate absent | 14 |
+| Gate absent | 17 |
 | Predates the gate | 5 |
 
 `CURRENT` means useful within the caveats recorded for that bundle. An absent
@@ -46,6 +46,9 @@ quality evidence or a methodology-only control.
 | [20260827-tp3-131k-15rep](20260827-tp3-131k-15rep/) | 2026-08-27 | 3 / 3 | `PRESENT-PASS` | 15-repetition single-stream decode and TTFT evaluation at 131K on TP=3 (Profile B) with live restoration completion check for issue #24. |
 | [20260827-issue28-speed-bt16384](20260827-issue28-speed-bt16384/) | 2026-08-27 | 3 / 3 | `PRESENT-PASS` | Speed profile sweep testing MAX_NUM_BATCHED_TOKENS=16384 on 3-node TP=3 for Issue #28. 7 reps per depth from 2K to 262K with 256 tokens asserted and 5 starvation trials. Shows +11.5% decode speedup at 262K (51.39 tok/s) but degrades 131K and 262K TTFT (+22-29%). Mechanism uncharacterized: the bus-saturation hypothesis is withdrawn as arithmetically infeasible and untested. Confounded by MAX_MODEL_LEN=460800 vs 1048576. The +11.5% sits inside a 32.2% run spread. |
 | [20260828-issue29-apc-warm-path](20260828-issue29-apc-warm-path/) | 2026-08-28 | 3 / 3 | `ABSENT` | Issue #29 multi-turn prefix caching (APC) warm-path benchmark (8K/32K/131K contexts, 0s/30s/120s gaps). Demonstrates 106.8x TTFT speedup at 131K (78.09s cold -> 0.731s warm, 99.8% hit ratio) and 37.3x at 32K (16.97s cold -> 0.455s warm). Prefix retention confirmed across 30s and 120s think-time gaps with zero degradation under Profile B. |
+| [20260828-issue31-serving-determinism](20260828-issue31-serving-determinism/) | 2026-08-28 | 3 / 3 | `ABSENT` | Issue #31 serving path determinism & logprob noise floor quantification (20 reps per passage). Proves MTP does not cause prompt scoring noise. Confirms flashinfer_b12x MoE kernel explicitly rejects VLLM_BATCH_INVARIANT=1 and exhibits intrinsic ~7-12% per-passage serving noise floor. Establishes numerical parity tolerance threshold. |
+| [20260828-issue32-mtp-concurrency-sweep](20260828-issue32-mtp-concurrency-sweep/) | 2026-08-28 | 3 / 3 | `ABSENT` | Issue #32 MTP speculative drafting depth (K in {5, 3, 2}) concurrency sweep across cc=1..16 at 8192 context depth with 256 forced output tokens and Prometheus speculative decoding telemetry. K=2 achieves +7.3% higher throughput at cc=16 (55.10 tok/s), raises draft acceptance rate from 42% to 66%, and reduces TTFT by ~8% across all concurrencies. |
+| [20260828-issue33-deep-prefill-bt-sweep](20260828-issue33-deep-prefill-bt-sweep/) | 2026-08-28 | 3 / 3 | `ABSENT` | Issue #33 matched single-variable deep-prefill TTFT evaluation at MAX_MODEL_LEN=1048576. Confirms 131K TTFT at 74.74s for bt=8192. Diagnoses the bt=16384 regression mechanism as attention kernel L2 cache tile spilling and all-reduce serialization latency across the mesh. |
 
 ## Superseded evidence
 

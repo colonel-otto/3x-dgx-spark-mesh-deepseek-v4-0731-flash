@@ -19,7 +19,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--repo", default="/home/sparkmain/localai/dspark-vllm-gx10")
     parser.add_argument("--batched-tokens", type=int, default=16384)
-    parser.add_argument("--max-model-len", type=int, default=460800)
+    parser.add_argument("--max-model-len", type=int, default=1048576)
     parser.add_argument("--nccl-buffsize", type=int, default=16777216)
     parser.add_argument("--gpu-mem", type=float, default=0.835)
     args = parser.parse_args()

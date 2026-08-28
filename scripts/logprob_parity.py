@@ -236,17 +236,23 @@ def run(url: str, model: str, reps: int, timeout: int) -> dict:
         # number below is untrustworthy -- report it rather than averaging it.
         nlls = [r["mean_nll"] for r in per_rep]
         spread = max(nlls) - min(nlls) if len(nlls) > 1 else 0.0
+        stdev = statistics.stdev(nlls) if len(nlls) > 1 else 0.0
         record = dict(per_rep[0])
         record["reps"] = reps
+        record["all_nlls"] = nlls
+        record["all_perplexities"] = [math.exp(n) for n in nlls]
         record["mean_nll"] = statistics.median(nlls)
+        record["mean_nll_avg"] = statistics.mean(nlls)
+        record["nll_stdev"] = stdev
         record["perplexity"] = math.exp(record["mean_nll"])
         record["nll_spread_across_reps"] = spread
+        record["nll_relative_spread_pct"] = (spread / record["mean_nll"]) * 100.0 if record["mean_nll"] != 0 else 0.0
         record["deterministic"] = spread < 1e-6
         results.append(record)
         status = "OK " if record["deterministic"] else "NONDET"
         print(
             f"  {status} {name:<14} ppl={record['perplexity']:9.4f} "
-            f"nll={record['mean_nll']:.6f} tokens={record['scored_tokens']}",
+            f"nll={record['mean_nll']:.6f} spread={spread:.6f} ({record['nll_relative_spread_pct']:.2f}%) tokens={record['scored_tokens']}",
             flush=True,
         )
 

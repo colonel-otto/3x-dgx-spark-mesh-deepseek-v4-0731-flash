@@ -81,6 +81,18 @@ Raised from `create_speculative_config` → the **draft** model's
 DSv4-Flash is served by the `deepseek_v2` architecture, which supports PP fine. The
 DSpark MTP speculator does not, and the check does not exempt draft models.
 
+> [!NOTE]
+> **UPDATE 2026-08-28 — this blocker is a wrong question, not a wall.** A public patch
+> set ([allover326/deepseek-v4-cmp170hx](https://github.com/allover326/deepseek-v4-cmp170hx),
+> pinned `3dd2d88`) runs DSpark speculation under PP on 4x sm_80 by observing that the
+> draft is built on the **last PP rank only** and runs whole there — it is a `pp_size=1`
+> model regardless of the target's split, so it never needed `SupportsPP`. Their fix is a
+> one-line `draft_parallel_config.pipeline_parallel_size = 1` plus a draft-token broadcast
+> to non-last ranks (without which acceptance ~0 and output is silently garbage). Unported
+> and unrun on GB10/B12X. Verification anchors and caveats:
+> [`HANDOFF-ENGINE-CLONE-REVIEW-2026-08-28.md`](HANDOFF-ENGINE-CLONE-REVIEW-2026-08-28.md).
+> Blocker two (`state_cache.strides[0]`) is untouched by this and remains the gating item.
+
 **Consequence for the test matrix:** any PP configuration must run with speculation
 disabled. PP therefore cannot be compared like-for-like against the MTP-on production
 baseline. The honest comparison is PP-without-MTP against TP2-without-MTP — which is
@@ -129,7 +141,11 @@ sweep is the obvious next experiment.** It is one flag.
 
 **Established:**
 - B12X loads under PP=3 on three nodes. Verified live and in source.
-- MTP and PP are mutually exclusive in this runtime, by class hierarchy.
+- ~~MTP and PP are mutually exclusive in this runtime, by class hierarchy.~~
+  **Corrected 2026-08-28:** the *error* was real but the *conclusion* over-reached. The
+  class-hierarchy check asks the wrong question — the draft runs whole on the last rank
+  and never needed `SupportsPP`. A three-patch exemption exists publicly (see the update
+  note in §2); what remains established is only that **stock vLLM refuses the combination**.
 - The stride failure is independent of node count and layer partition.
 
 **Not established:**

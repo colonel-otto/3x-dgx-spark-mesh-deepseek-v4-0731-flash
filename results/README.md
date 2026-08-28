@@ -23,6 +23,9 @@ fabric gate weakens performance evidence but does not invalidate pass/fail quali
 
 | Bundle | Nodes | Gate | What it establishes |
 |---|---:|---|---|
+| [20260828-issue33-deep-prefill-bt-sweep](20260828-issue33-deep-prefill-bt-sweep/) | 3 | Absent | Single-variable deep-prefill TTFT evaluation confirming bt=8192 sweet spot at MAX_MODEL_LEN=1M |
+| [20260828-issue32-mtp-concurrency-sweep](20260828-issue32-mtp-concurrency-sweep/) | 3 | Absent | MTP K in {5,3,2} concurrency sweep; K=2 delivers +7.3% at cc=16 with 66.3% draft acceptance |
+| [20260828-issue31-serving-determinism](20260828-issue31-serving-determinism/) | 3 | Absent | Serving path determinism & logprob noise floor quantification; established numerical parity gate tolerance |
 | [20260828-issue29-apc-warm-path](20260828-issue29-apc-warm-path/) | 3 | Absent | Multi-turn prefix caching (APC) warm-path benchmark (106.8x TTFT speedup at 131K) |
 | [20260827-issue28-speed-bt16384](20260827-issue28-speed-bt16384/) | 3 | Present/pass | Speed profile tuning with MAX_NUM_BATCHED_TOKENS=16384 for issue #28 |
 | [20260827-tp3-131k-15rep](20260827-tp3-131k-15rep/) | 3 | Present/pass | 15-rep 131K single-stream evaluation for issue #24; 51.04 tok/s median |

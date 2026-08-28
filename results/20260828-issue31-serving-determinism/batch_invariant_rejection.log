@@ -1,0 +1,6 @@
+[rank0]:[W828 08:28:35.796627857 ProcessGroupNCCL.cpp:1575] Warning: WARNING: destroy_process_group() was not called before program exit, which can leak resources.
+(Worker_TP0 pid=236) ERROR 08-28 08:28:35 [multiproc_executor.py:898]   File "/usr/local/lib/python3.12/dist-packages/vllm/model_executor/layers/fused_moe/oracle/mxfp4.py", line 599, in select_deepseek_v4_mxfp4_moe_backend
+(Worker_TP0 pid=236) ERROR 08-28 08:28:35 [multiproc_executor.py:898]     return _return_or_raise(
+(Worker_TP0 pid=236) ERROR 08-28 08:28:35 [multiproc_executor.py:898]   File "/usr/local/lib/python3.12/dist-packages/vllm/model_executor/layers/fused_moe/oracle/mxfp4.py", line 428, in _return_or_raise
+(Worker_TP0 pid=236) ERROR 08-28 08:28:35 [multiproc_executor.py:898]     raise ValueError(_make_log_unsupported(backend, reason))
+(Worker_TP0 pid=236) ERROR 08-28 08:28:35 [multiproc_executor.py:898] ValueError: Mxfp4 MoE backend 'B12X_MXFP4' does not support the deployment configuration since kernel does not support batch invariance.

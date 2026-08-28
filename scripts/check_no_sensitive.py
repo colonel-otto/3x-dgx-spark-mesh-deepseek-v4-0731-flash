@@ -28,7 +28,8 @@ import sys
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-# Substrings that make a line exempt. Keep these NARROW and justified.
+# Exact substrings that may make the matching value exempt. These never exempt
+# the rest of a line: a placeholder beside a real credential must still fail.
 ALLOW = (
     "users.noreply.github.com",   # GitHub's own anonymised address form
     "noreply@anthropic.com",      # tool co-author trailer
@@ -62,6 +63,11 @@ RULES = [
     ("personal name",
      re.compile(r"\b(benjiconner|benjamin\s+conner|benjamin)\b", re.I),
      "Replace with the GitHub handle or a generic role name"),
+
+    ("username assignment",
+     re.compile(r"\b(?:ssh_user|user(?:name)?|login(?:_user)?)\s*[=:]\s*"
+                r"[\"']?([A-Za-z][A-Za-z0-9._-]{2,})", re.I),
+     "Replace the account name with a documented placeholder"),
 
     # --- management network / hardware identity ---
     ("management-network address",
@@ -123,25 +129,52 @@ def is_binary(path):
         return True
 
 
-def scan_files(paths):
+def staged_content(path):
+    """Return the exact blob that Git would commit, not the working-tree copy."""
+    result = subprocess.run(
+        ["git", "-C", REPO, "show", ":%s" % path],
+        capture_output=True,
+    )
+    return result.stdout if result.returncode == 0 else None
+
+
+def allowed_match(label, value):
+    """Apply narrow, rule-specific exceptions to one regex match."""
+    if label == "real email address":
+        return any(allowed.lower() in value.lower() for allowed in ALLOW)
+    if label == "credential-shaped string":
+        return any(allowed.lower() in value.lower() for allowed in
+                   ("REDACTED", "<redacted>", "placeholder"))
+    if label == "username assignment":
+        username = re.split(r"[=:]", value, maxsplit=1)[-1].strip(" \t\"'").lower()
+        return username in {"youruser", "username", "sparkmain", "spark1", "spark2"}
+    return False
+
+
+def scan_files(paths, staged=False):
     findings = []
     for rel in paths:
         if rel in SKIP_PATHS:
             continue
-        full = os.path.join(REPO, rel)
-        if not os.path.isfile(full) or is_binary(full):
-            continue
-        try:
-            with open(full, encoding="utf-8", errors="replace") as fh:
-                lines = fh.readlines()
-        except OSError:
-            continue
-        for n, line in enumerate(lines, 1):
-            if any(a in line for a in ALLOW):
+        if staged:
+            data = staged_content(rel)
+            if data is None or b"\0" in data[:4096]:
                 continue
+            lines = data.decode("utf-8", errors="replace").splitlines()
+        else:
+            full = os.path.join(REPO, rel)
+            if not os.path.isfile(full) or is_binary(full):
+                continue
+            try:
+                with open(full, encoding="utf-8", errors="replace") as fh:
+                    lines = fh.readlines()
+            except OSError:
+                continue
+        for n, line in enumerate(lines, 1):
             for label, pattern, fix in RULES:
-                hit = pattern.search(line)
-                if hit:
+                for hit in pattern.finditer(line):
+                    if allowed_match(label, hit.group(0)):
+                        continue
                     findings.append((rel, n, label, hit.group(0)[:70], fix))
     return findings
 
@@ -154,10 +187,11 @@ def scan_identity():
                              capture_output=True, text=True).stdout.strip()
         if not val:
             continue
-        if any(a in val for a in ALLOW):
-            continue
         for label, pattern, fix in RULES:
-            if label in ("real email address", "personal name") and pattern.search(val):
+            if label not in ("real email address", "personal name"):
+                continue
+            hit = pattern.search(val)
+            if hit and not allowed_match(label, hit.group(0)):
                 findings.append(("git config " + key, 0, label, val, fix))
     return findings
 
@@ -172,9 +206,9 @@ for PY in python3 py python; do
     exec "$PY" "$ROOT/scripts/check_no_sensitive.py" --staged
   fi
 done
-echo "pre-commit: no working Python interpreter found; skipping leak scan" >&2
-echo "            run 'make check-sensitive' manually before pushing" >&2
-exit 0
+echo "pre-commit: no working Python interpreter found; blocking commit" >&2
+echo "            install Python or run the scanner from another environment" >&2
+exit 1
 """
 
 
@@ -203,7 +237,7 @@ def main():
         return install_hook()
 
     paths = staged_files() if args.staged else tracked_files()
-    findings = scan_files(paths) + scan_identity()
+    findings = scan_files(paths, staged=args.staged) + scan_identity()
 
     if not findings:
         scope = "staged files" if args.staged else "%d tracked files" % len(paths)

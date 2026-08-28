@@ -16,6 +16,10 @@ SCANNER = os.path.join(REPO, "scripts", "check_no_sensitive.py")
 
 
 class TestNoSensitiveData(unittest.TestCase):
+    def run_scanner(self, *args):
+        return subprocess.run([sys.executable, SCANNER, *args],
+                              capture_output=True, text=True, cwd=REPO)
+
     def test_repo_is_clean(self):
         result = subprocess.run([sys.executable, SCANNER],
                                 capture_output=True, text=True, cwd=REPO)
@@ -40,7 +44,64 @@ class TestNoSensitiveData(unittest.TestCase):
                              "scanner did not flag a planted serial number")
             self.assertIn("hardware serial", result.stdout)
         finally:
-            subprocess.run(["git", "-C", REPO, "rm", "-q", "--cached", probe],
+            subprocess.run(["git", "-C", REPO, "rm", "-q", "-f", "--cached", probe],
+                           capture_output=True)
+            if os.path.exists(probe):
+                os.remove(probe)
+
+    def test_allowed_email_does_not_exempt_real_email_on_same_line(self):
+        probe = os.path.join(REPO, "_sensitive_email_probe.tmp")
+        # Assemble the private address so the repository-wide scanner does not
+        # flag this test's own source.
+        leaked = "person" + chr(64) + "private.invalid"
+        with open(probe, "w", encoding="utf-8") as fh:
+            fh.write("safe@example.com and " + leaked + "\n")
+        try:
+            subprocess.run(["git", "-C", REPO, "add", "-N", probe],
+                           capture_output=True)
+            result = self.run_scanner()
+            self.assertEqual(result.returncode, 1)
+            self.assertIn("real email address", result.stdout)
+        finally:
+            subprocess.run(["git", "-C", REPO, "rm", "-q", "-f", "--cached", probe],
+                           capture_output=True)
+            if os.path.exists(probe):
+                os.remove(probe)
+
+    def test_staged_scan_reads_index_blob(self):
+        probe = os.path.join(REPO, "_sensitive_staged_probe.tmp")
+        leaked = "person" + chr(64) + "private.invalid"
+        with open(probe, "w", encoding="utf-8") as fh:
+            fh.write(leaked + "\n")
+        try:
+            subprocess.run(["git", "-C", REPO, "add", probe], check=True,
+                           capture_output=True)
+            # A safe working-tree replacement must not hide the staged leak.
+            with open(probe, "w", encoding="utf-8") as fh:
+                fh.write("REDACTED\n")
+            result = self.run_scanner("--staged")
+            self.assertEqual(result.returncode, 1)
+            self.assertIn("real email address", result.stdout)
+        finally:
+            subprocess.run(["git", "-C", REPO, "rm", "-q", "-f", "--cached", probe],
+                           capture_output=True)
+            if os.path.exists(probe):
+                os.remove(probe)
+
+    def test_scanner_detects_bare_username_assignment(self):
+        probe = os.path.join(REPO, "_sensitive_username_probe.tmp")
+        # Assemble the label so this test does not flag its own source.
+        label = "USER" + "NAME"
+        with open(probe, "w", encoding="utf-8") as fh:
+            fh.write(label + "=privateoperator\n")
+        try:
+            subprocess.run(["git", "-C", REPO, "add", "-N", probe],
+                           capture_output=True)
+            result = self.run_scanner()
+            self.assertEqual(result.returncode, 1)
+            self.assertIn("username assignment", result.stdout)
+        finally:
+            subprocess.run(["git", "-C", REPO, "rm", "-q", "-f", "--cached", probe],
                            capture_output=True)
             if os.path.exists(probe):
                 os.remove(probe)

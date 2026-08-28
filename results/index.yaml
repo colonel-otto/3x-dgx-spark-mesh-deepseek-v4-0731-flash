@@ -70,9 +70,9 @@ meta:
   fabric_gate_tally:
     PRESENT-PASS: 12
     PRESENT-FAIL: 0
-    ABSENT: 14
+    ABSENT: 17
     PRE-DATES-GATE: 5
-    total: 31
+    total: 34
   fabric_gate_tally_detail:
     PRESENT-PASS:
       - 20260825-deep-concurrency        # fabric-gate-full.json 13/13, nccl=full
@@ -103,6 +103,9 @@ meta:
       - 20260827-decode-3node-fixed
       - 20260827-quality-suite-3node
       - 20260828-issue29-apc-warm-path
+      - 20260828-issue31-serving-determinism
+      - 20260828-issue32-mtp-concurrency-sweep
+      - 20260828-issue33-deep-prefill-bt-sweep
     PRE-DATES-GATE:
       - 20260821T001024Z-2spark-baseline
       - 20260821T031300Z-3spark-ep3
@@ -1928,5 +1931,126 @@ directories:
       Demonstrates 106.8x TTFT speedup at 131K (78.09s cold -> 0.731s warm, 99.8% hit ratio)
       and 37.3x at 32K (16.97s cold -> 0.455s warm). Prefix retention confirmed across
       30s and 120s think-time gaps with zero degradation.
+
+  - dir: 20260828-issue31-serving-determinism
+    description: >
+      Issue #31 serving path determinism & logprob noise floor quantification (20 reps per passage).
+      Proves MTP does not cause prompt scoring noise. Confirms flashinfer_b12x MoE kernel explicitly
+      rejects VLLM_BATCH_INVARIANT=1 and exhibits intrinsic ~7-12% per-passage serving noise floor.
+      Establishes numerical parity tolerance threshold.
+    date: 2026-08-28
+    harness_type: logprob_parity.py
+    nodes: 3
+    nodes_evidence: live cluster process inspection confirms 3-node TP=3
+    tp_size: 3
+    kv_pool_tokens: 5033960
+    kv_pool_source: vLLM engine log
+    harness: scripts/logprob_parity.py
+    harness_committed: true
+    output_tokens_requested: 1
+    output_tokens_actual: {1: 200}
+    output_tokens_field: completion_tokens
+    output_tokens_note: prompt_logprobs teacher-forced scoring
+    reps: 20 per passage across 5 passages
+    reps_verified: true
+    statistic: median
+    fabric_gate: ABSENT
+    fabric_gate_artifact: null
+    fabric_gate_evidence: null
+    fabric_gate_note: live zero-temperature scoring run
+    fabric_gated: false
+    fabric_state: healthy
+    raw_data_committed: true
+    raw_files:
+      - baseline_profile_b_20reps.json
+      - nomtp_profile_b_20reps.json
+      - batch_invariant_rejection.log
+      - SUMMARY.md
+    status: CURRENT
+    void_reasons: []
+    superseded_by: null
+    note: >
+      Quantified prompt-scoring noise floor (6.6-11.7% per passage). Ruled out MTP interaction.
+      Identified B12X MoE non-deterministic reduction as the root mechanism and established
+      numerical parity gate tolerance (12.0% per passage, 5.0% aggregate).
+
+  - dir: 20260828-issue32-mtp-concurrency-sweep
+    description: >
+      Issue #32 MTP speculative drafting depth (K in {5, 3, 2}) concurrency sweep across cc=1..16
+      at 8192 context depth with 256 forced output tokens and Prometheus speculative decoding telemetry.
+      K=2 achieves +7.3% higher throughput at cc=16 (55.10 tok/s), raises draft acceptance rate from 42% to 66%,
+      and reduces TTFT by ~8% across all concurrencies.
+    date: 2026-08-28
+    harness_type: benchmark_mtp_concurrency.py
+    nodes: 3
+    nodes_evidence: live cluster process inspection confirms 3-node TP=3
+    tp_size: 3
+    kv_pool_tokens: 5033960
+    kv_pool_source: vLLM engine log
+    harness: scripts/benchmark_mtp_concurrency.py
+    harness_committed: true
+    output_tokens_requested: 256
+    output_tokens_actual: {256: 60}
+    output_tokens_field: completion_tokens (PER-REQUEST)
+    output_tokens_note: completion_tokens=256 asserted on every request
+    reps: 5 reps per cell across cc=1,4,8,16 and K=5,3,2
+    reps_verified: true
+    statistic: median
+    fabric_gate: ABSENT
+    fabric_gate_artifact: null
+    fabric_gate_evidence: null
+    fabric_gate_note: live serving sweep
+    fabric_gated: false
+    fabric_state: healthy
+    raw_data_committed: true
+    raw_files:
+      - mtp5_8k_concurrency.json
+      - mtp3_8k_concurrency.json
+      - mtp2_8k_concurrency.json
+      - SUMMARY.md
+    status: CURRENT
+    void_reasons: []
+    superseded_by: null
+    note: >
+      Settles MTP_NUM_TOKENS=2 as the cluster operational default. Confirms verification compute
+      overhead (batch x K) at high concurrency as the mechanism behind TP=3's previous gap vs TP=2.
+
+  - dir: 20260828-issue33-deep-prefill-bt-sweep
+    description: >
+      Issue #33 matched single-variable deep-prefill TTFT evaluation at MAX_MODEL_LEN=1048576.
+      Confirms 131K TTFT at 74.74s for bt=8192. Diagnoses the bt=16384 regression mechanism as
+      attention kernel L2 cache tile spilling and all-reduce serialization latency across the mesh.
+    date: 2026-08-28
+    harness_type: benchmark_prefill_depth.py
+    nodes: 3
+    nodes_evidence: live cluster process inspection confirms 3-node TP=3
+    tp_size: 3
+    kv_pool_tokens: 5033960
+    kv_pool_source: vLLM engine log
+    harness: scripts/benchmark_prefill_depth.py
+    harness_committed: true
+    output_tokens_requested: 256
+    output_tokens_actual: {256: 10}
+    output_tokens_field: completion_tokens (PER-REQUEST)
+    output_tokens_note: completion_tokens=256 asserted on every request
+    reps: 5 reps per depth
+    reps_verified: true
+    statistic: median
+    fabric_gate: ABSENT
+    fabric_gate_artifact: null
+    fabric_gate_evidence: null
+    fabric_gate_note: live prefill sweep
+    fabric_gated: false
+    fabric_state: healthy
+    raw_data_committed: true
+    raw_files:
+      - bt8192_matched_measurements.json
+      - SUMMARY.md
+    status: CURRENT
+    void_reasons: []
+    superseded_by: null
+    note: >
+      Confirms MAX_NUM_BATCHED_TOKENS=8192 as optimal operating point under unified memory and
+      multi-node RoCE. Fixes MAX_MODEL_LEN=1M default in configure_speed_profile.py.
 
 

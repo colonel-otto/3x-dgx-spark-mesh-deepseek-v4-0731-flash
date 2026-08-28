@@ -116,6 +116,8 @@ services:
       # issue25-profile-b
       VLLM_PREFIX_CACHE_RETENTION_INTERVAL: "${VLLM_PREFIX_CACHE_RETENTION_INTERVAL:-}"
       DSPARK_MAX_INFLIGHT_PREFILLS: "${DSPARK_MAX_INFLIGHT_PREFILLS:-}"
+      VLLM_BATCH_INVARIANT: "${VLLM_BATCH_INVARIANT:-0}"
+      NCCL_BUFFSIZE: "${NCCL_BUFFSIZE:-16777216}"
 
     command:
       - bash
@@ -126,7 +128,11 @@ services:
         export CUDA_PATH="$${CUDA_PATH:-$${CUDA_HOME}}";
         export CUDAToolkit_ROOT="$${CUDAToolkit_ROOT:-$${CUDA_HOME}}";
         export LD_LIBRARY_PATH="/usr/local/cuda/lib64:$${LD_LIBRARY_PATH:-}";
-        SPECULATIVE_CONFIG="{\"method\":\"dspark\",\"num_speculative_tokens\":${MTP_NUM_TOKENS:-3},\"draft_sample_method\":\"probabilistic\"}";
+        if [ "${MTP_NUM_TOKENS:-0}" -gt 0 ] 2>/dev/null; then
+          SPEC_CLI="--speculative-config {\"method\":\"dspark\",\"num_speculative_tokens\":${MTP_NUM_TOKENS},\"draft_sample_method\":\"probabilistic\"}";
+        else
+          SPEC_CLI="";
+        fi;
         ${VLLM_PP_LAYER_PARTITION:+export VLLM_PP_LAYER_PARTITION=${VLLM_PP_LAYER_PARTITION};}
         exec /usr/local/bin/vllm serve ${DSPARK_MODEL:-/models/dsv4-abliterated}
         --served-model-name ${SERVED_MODEL_NAME:-deepseek-v4-flash-dspark-abliterated}
@@ -141,12 +147,12 @@ services:
         --max-num-seqs ${MAX_NUM_SEQS:-6}
         --max-num-batched-tokens ${MAX_NUM_BATCHED_TOKENS:-8192}
         --long-prefill-token-threshold ${LONG_PREFILL_TOKEN_THRESHOLD:-0}
-        --max-cudagraph-capture-size $$(( ${MAX_NUM_SEQS:-6} * (${MTP_NUM_TOKENS:-3} + 1) ))
+        --max-cudagraph-capture-size $$(( ${MAX_NUM_SEQS:-6} * (${MTP_NUM_TOKENS:-0} > 0 ? (${MTP_NUM_TOKENS} + 1) : 1) ))
         --gpu-memory-utilization ${GPU_MEMORY_UTILIZATION:-0.80}
         --enable-prefix-caching
         --async-scheduling
         --enable-chunked-prefill
-        ${SPEC_ARGS---speculative-config "$${SPECULATIVE_CONFIG}"}
+        $$SPEC_CLI
         --tokenizer-mode deepseek_v4
         --distributed-executor-backend mp
         --moe-backend ${MOE_BACKEND:-flashinfer_b12x}

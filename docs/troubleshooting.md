@@ -44,6 +44,16 @@ This can be severe unified-memory exhaustion rather than a network problem. A si
 unsharded copy of this checkpoint does not fit safely on one Spark. Calculate weights
 per node before changing TP/PP settings; do not launch TP=1 for this checkpoint.
 
+## Relaunch after a crash driver-OOMs at boot (external report, unverified)
+
+A community TP=4 recipe ([tonyd2wild](https://github.com/tonyd2wild/Deepseek-V4-Flash-TP4-4x-DGX-Spark),
+TROUBLESHOOTING §6) reports the GB10 driver can hold ~100 GiB of unified memory after a
+crash, so an immediate relaunch driver-OOMs at boot despite `nvidia-smi` looking idle.
+Their fix: `sync; echo 3 > /proc/sys/vm/drop_caches` and a fresh `docker run` (never
+`docker restart`, never `--rm` — a crash then leaves no logs). **We have not reproduced
+this**; it is recorded because it rhymes with our wedge patterns. If a relaunch OOMs
+where the first launch fit, try `drop_caches` before concluding the config regressed.
+
 ## Avoid interpreting experimental dead ends as requirements
 
 - A 200 GbE switch is not required for the proven three-node ring.
