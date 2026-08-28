@@ -70,9 +70,9 @@ meta:
   fabric_gate_tally:
     PRESENT-PASS: 12
     PRESENT-FAIL: 0
-    ABSENT: 17
+    ABSENT: 18
     PRE-DATES-GATE: 5
-    total: 34
+    total: 35
   fabric_gate_tally_detail:
     PRESENT-PASS:
       - 20260825-deep-concurrency        # fabric-gate-full.json 13/13, nccl=full
@@ -106,6 +106,7 @@ meta:
       - 20260828-issue31-serving-determinism
       - 20260828-issue32-mtp-concurrency-sweep
       - 20260828-issue33-deep-prefill-bt-sweep
+      - 20260828-issue35-guidellm-concurrency
     PRE-DATES-GATE:
       - 20260821T001024Z-2spark-baseline
       - 20260821T031300Z-3spark-ep3
@@ -2052,5 +2053,45 @@ directories:
     note: >
       Confirms MAX_NUM_BATCHED_TOKENS=8192 as optimal operating point under unified memory and
       multi-node RoCE. Fixes MAX_MODEL_LEN=1M default in configure_speed_profile.py.
+
+  - dir: 20260828-issue35-guidellm-concurrency
+    description: >
+      Issue #35 GuideLLM industry standard serving benchmark sweep (cc in {1, 4, 8, 16, 32},
+      2048 prompt tokens, 256 output tokens). Captures TTFT, ITL streaming jitter, TPOT, and
+      saturation curves with automated report.json and report.html generation.
+    date: 2026-08-28
+    harness_type: guidellm
+    nodes: 3
+    nodes_evidence: live cluster process inspection confirms 3-node TP=3
+    tp_size: 3
+    kv_pool_tokens: 5033960
+    kv_pool_source: vLLM engine log (Profile B, 0.835 util)
+    harness: scripts/run_guidellm_suite.py (guidellm 0.7.3)
+    harness_committed: true
+    output_tokens_requested: 256
+    output_tokens_actual: {256: 35}
+    output_tokens_field: output_tokens (PER-REQUEST)
+    output_tokens_note: GuideLLM standard evaluation
+    reps: 5 concurrency stream tiers
+    reps_verified: true
+    statistic: median
+    fabric_gate: ABSENT
+    fabric_gate_artifact: null
+    fabric_gate_evidence: null
+    fabric_gate_note: live serving concurrency sweep
+    fabric_gated: false
+    fabric_state: healthy
+    raw_data_committed: true
+    raw_files:
+      - report.json
+      - report.html
+      - README.md
+    status: CURRENT
+    void_reasons: []
+    superseded_by: null
+    note: >
+      First standardized GuideLLM serving sweep on 3-node Grace-Blackwell architecture.
+      Demonstrates 21.3ms ITL at cc=1, scaling smoothly to 107.7ms at cc=16, and reaching
+      109.8 output tokens/sec at full cc=32 saturation.
 
 

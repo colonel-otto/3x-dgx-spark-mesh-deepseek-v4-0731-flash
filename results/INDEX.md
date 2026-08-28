@@ -11,12 +11,12 @@ and diagnostic baseline values.
 
 | Item | Count |
 |---|---:|
-| Result bundles | 34 |
-| `CURRENT` | 22 |
+| Result bundles | 35 |
+| `CURRENT` | 23 |
 | `VOID` | 9 |
 | `SUPERSEDED` | 3 |
 | Own passing fabric gate | 12 |
-| Gate absent | 17 |
+| Gate absent | 18 |
 | Predates the gate | 5 |
 
 `CURRENT` means useful within the caveats recorded for that bundle. An absent
@@ -49,6 +49,7 @@ quality evidence or a methodology-only control.
 | [20260828-issue31-serving-determinism](20260828-issue31-serving-determinism/) | 2026-08-28 | 3 / 3 | `ABSENT` | Issue #31 serving path determinism & logprob noise floor quantification (20 reps per passage). Proves MTP does not cause prompt scoring noise. Confirms flashinfer_b12x MoE kernel explicitly rejects VLLM_BATCH_INVARIANT=1 and exhibits intrinsic ~7-12% per-passage serving noise floor. Establishes numerical parity tolerance threshold. |
 | [20260828-issue32-mtp-concurrency-sweep](20260828-issue32-mtp-concurrency-sweep/) | 2026-08-28 | 3 / 3 | `ABSENT` | Issue #32 MTP speculative drafting depth (K in {5, 3, 2}) concurrency sweep across cc=1..16 at 8192 context depth with 256 forced output tokens and Prometheus speculative decoding telemetry. K=2 achieves +7.3% higher throughput at cc=16 (55.10 tok/s), raises draft acceptance rate from 42% to 66%, and reduces TTFT by ~8% across all concurrencies. |
 | [20260828-issue33-deep-prefill-bt-sweep](20260828-issue33-deep-prefill-bt-sweep/) | 2026-08-28 | 3 / 3 | `ABSENT` | Issue #33 matched single-variable deep-prefill TTFT evaluation at MAX_MODEL_LEN=1048576. Confirms 131K TTFT at 74.74s for bt=8192. Diagnoses the bt=16384 regression mechanism as attention kernel L2 cache tile spilling and all-reduce serialization latency across the mesh. |
+| [20260828-issue35-guidellm-concurrency](20260828-issue35-guidellm-concurrency/) | 2026-08-28 | 3 / 3 | `ABSENT` | Issue #35 GuideLLM industry standard serving benchmark sweep (cc in {1, 4, 8, 16, 32}, 2048 prompt tokens, 256 output tokens). Captures TTFT, ITL streaming jitter, TPOT, and saturation curves with automated report.json and report.html generation. |
 
 ## Superseded evidence
 

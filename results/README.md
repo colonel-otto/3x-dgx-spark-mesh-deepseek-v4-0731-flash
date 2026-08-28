@@ -23,6 +23,7 @@ fabric gate weakens performance evidence but does not invalidate pass/fail quali
 
 | Bundle | Nodes | Gate | What it establishes |
 |---|---:|---|---|
+| [20260828-issue35-guidellm-concurrency](20260828-issue35-guidellm-concurrency/) | 3 | Absent | GuideLLM industry standard concurrency and latency sweep across cc=1..32 |
 | [20260828-issue33-deep-prefill-bt-sweep](20260828-issue33-deep-prefill-bt-sweep/) | 3 | Absent | Single-variable deep-prefill TTFT evaluation confirming bt=8192 sweet spot at MAX_MODEL_LEN=1M |
 | [20260828-issue32-mtp-concurrency-sweep](20260828-issue32-mtp-concurrency-sweep/) | 3 | Absent | MTP K in {5,3,2} concurrency sweep; K=2 delivers +7.3% at cc=16 with 66.3% draft acceptance |
 | [20260828-issue31-serving-determinism](20260828-issue31-serving-determinism/) | 3 | Absent | Serving path determinism & logprob noise floor quantification; established numerical parity gate tolerance |
