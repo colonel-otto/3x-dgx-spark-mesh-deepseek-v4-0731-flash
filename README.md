@@ -46,9 +46,26 @@ configuration-identical and were not run on the same day**: the TP=2 arm ran
 shape is `MAX_NUM_SEQS=32` with `MTP_NUM_TOKENS=2`. Rows are marked accordingly. Where
 no 2-node measurement exists, the cell says so rather than estimating.
 
+> **Two further caveats, added 2026-08-29 — a corrected replacement is being measured now.**
+>
+> 1. **There is a third confound**, not previously disclosed here or in `DECISIONS.md`:
+>    the arms also differ in `GPU_MEMORY_UTILIZATION` (**0.80** on the TP=2 arm vs
+>    **0.835** on TP=3), read from the live env files and the running engine. Per Issue
+>    #25 that knob alone is worth ~35 % of the KV pool and −10.7 % starvation TTFT.
+> 2. **No run in this repository had controlled GPU clocks.** GB10 does not honour
+>    `nvidia-smi -lgc`; clock floats with a package power budget and varies per node with
+>    thermal state ([`GPU-CLOCKS-NOT-LOCKABLE.md`](docs/GPU-CLOCKS-NOT-LOCKABLE.md)).
+>    Measured impact when uncontrolled: per-cell spread reached **17.3 %** against a noise
+>    floor of 6.6–11.7 %, which cannot resolve the 7–17 % deltas in this very table.
+>
+> A configuration-identical, same-session, thermally-equalised comparison with continuous
+> clock telemetry is in progress; its hypotheses and tie band were fixed in advance in
+> [`PREREGISTRATION-2V3-MATCHED.md`](docs/PREREGISTRATION-2V3-MATCHED.md). **Treat the
+> deltas below as provisional until it lands.**
+
 | Capability / Metric | 3-Node (`TP=3`) | 2-Node (`TP=2`) | Delta | Source bundle |
 |---|:---:|:---:|:---:|---|
-| **KV cache capacity** | 4,457,627 tokens | 1,711,307 tokens | **+160% (2.6x)** — but never binds in any measured workload | [`20260825-decode-2v3`](results/20260825-decode-2v3/) (matched pair) |
+| **KV cache capacity** (init log) | 4,457,627 tokens | 1,711,307 tokens | **+160% (2.6x)** — but never binds in any measured workload. Absolute values are **instrument-dependent**: `/metrics` reports a lower, group-aware figure for the same engine ([`KV-INSTRUMENT-RECONCILIATION.md`](docs/KV-INSTRUMENT-RECONCILIATION.md)). The ratio is the defensible part | [`20260825-decode-2v3`](results/20260825-decode-2v3/) (matched pair) |
 | **Single-stream decode, 131K** | **47.65 tok/s** | 44.40 tok/s | **+7.3%** | [`20260827-decode-2v3-fixed`](results/20260827-decode-2v3-fixed/) |
 | **Single-stream decode, 2K–32K** | **51.98 – 54.30 tok/s** | 46.29 – 46.81 tok/s | **+11.0% to +16.7%** | [`20260827-decode-2v3-fixed`](results/20260827-decode-2v3-fixed/) |
 | **Cold deep prefill, 131K** | 92.73 s TTFT | **70.43 s TTFT** | **2-node wins by 22.3 s** | [`20260827-decode-2v3-fixed`](results/20260827-decode-2v3-fixed/) |
