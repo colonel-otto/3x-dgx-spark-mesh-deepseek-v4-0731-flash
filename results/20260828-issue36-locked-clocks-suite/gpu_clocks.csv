@@ -1,0 +1,2 @@
+name, clocks.current.graphics [MHz], clocks.max.graphics [MHz], temperature.gpu, power.draw [W]
+NVIDIA GB10, 2522 MHz, 3003 MHz, 50, 15.57 W

@@ -1,0 +1,38 @@
+[
+  {
+    "label": "locked-clocks-apc",
+    "target_depth": 8192,
+    "gap_s": 5.0,
+    "sessions": 2,
+    "warm_turns": 8,
+    "cold_ttft_median_s": 4.216,
+    "warm_ttft_median_s": 0.462,
+    "warm_ttft_max_s": 0.571,
+    "speedup_x": 9.1,
+    "warm_hit_ratio_median": 0.9476
+  },
+  {
+    "label": "locked-clocks-apc",
+    "target_depth": 32768,
+    "gap_s": 5.0,
+    "sessions": 2,
+    "warm_turns": 8,
+    "cold_ttft_median_s": 17.057,
+    "warm_ttft_median_s": 0.479,
+    "warm_ttft_max_s": 0.535,
+    "speedup_x": 35.6,
+    "warm_hit_ratio_median": 0.9901
+  },
+  {
+    "label": "locked-clocks-apc",
+    "target_depth": 131072,
+    "gap_s": 5.0,
+    "sessions": 2,
+    "warm_turns": 8,
+    "cold_ttft_median_s": 74.038,
+    "warm_ttft_median_s": 0.76,
+    "warm_ttft_max_s": 0.86,
+    "speedup_x": 97.4,
+    "warm_hit_ratio_median": 0.9976
+  }
+]

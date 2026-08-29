@@ -72,7 +72,7 @@ meta:
     PRESENT-FAIL: 0
     ABSENT: 18
     PRE-DATES-GATE: 5
-    total: 35
+    total: 36
   fabric_gate_tally_detail:
     PRESENT-PASS:
       - 20260825-deep-concurrency        # fabric-gate-full.json 13/13, nccl=full
@@ -2095,3 +2095,44 @@ directories:
       109.8 output tokens/sec at full cc=32 saturation.
 
 
+  - dir: 20260828-issue36-locked-clocks-suite
+    description: >
+      Issue #36 comprehensive master benchmark suite under locked 3003 MHz GPU clocks and verified
+      PCIe Gen5 x4 ConnectX-7 links. Covers logprob parity (all <=7.5% spread), MTP K=2 concurrency
+      (54.3 tok/s at cc=16 with 65.8% draft acceptance), prefill depth (2K-131K), and multi-turn APC (0.76s at 131K).
+    date: 2026-08-28
+    harness_type: run_cluster_benchmark_suite.sh
+    nodes: 3
+    nodes_evidence: live cluster process inspection confirms 3-node TP=3
+    tp_size: 3
+    kv_pool_tokens: 5033960
+    kv_pool_source: vLLM engine log (Profile B, 0.835 util)
+    harness: scripts/run_cluster_benchmark_suite.sh
+    harness_committed: true
+    output_tokens_requested: 256
+    output_tokens_actual: {256: 37}
+    output_tokens_field: completion_tokens (PER-REQUEST)
+    output_tokens_note: completion_tokens=256 asserted across all decode reps
+    reps: 3 to 5 reps per evaluation tier
+    reps_verified: true
+    statistic: median
+    fabric_gate: ABSENT
+    fabric_gate_artifact: null
+    fabric_gate_evidence: null
+    fabric_gate_note: live serving sweep under locked 3003 MHz clocks
+    fabric_gated: false
+    fabric_state: healthy
+    raw_data_committed: true
+    raw_files:
+      - gpu_clocks.csv
+      - logprob_parity.json
+      - mtp_k2_concurrency.json
+      - prefill_depth.json
+      - apc_warm_path.json
+      - README.md
+    status: CURRENT
+    void_reasons: []
+    superseded_by: null
+    note: >
+      Validates 3003 MHz clock-locked serving stability. Confirms MTP K=2 Pareto-optimality,
+      70% single-stream draft acceptance, and 97.4x APC speedup at 131K context.
