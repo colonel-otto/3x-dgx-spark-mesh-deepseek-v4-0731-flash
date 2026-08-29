@@ -4,7 +4,7 @@ Every invalidated result in this repository failed one of the rules below, and
 each rule exists because we published something wrong. This page is the standard
 for any new benchmark, ours or a contributor's.
 
-## The four hard requirements
+## The five hard requirements
 
 ### 1. A fabric gate must run, and its artifact must be committed
 
@@ -62,6 +62,24 @@ what is running.
 
 **Why:** config files drift from reality, and a matched comparison is only
 matched if both arms were verified while running.
+
+### 5. The engine must be exclusively ours for the duration
+
+**Rule:** before the first measured request, assert `vllm:num_requests_running == 0`
+and `vllm:num_requests_waiting == 0`. Record `vllm:request_success_total` at start
+and end; the delta must equal the number of requests the harness itself issued.
+A larger delta means another client was served during the measurement window and
+the run is **void**, not slow.
+
+Commit the observed values in the bundle as `exclusivity.json`. Harnesses must
+call `scripts/exclusivity.py` (or implement identical checks) and fail loudly on
+foreign traffic rather than measuring through it.
+
+**Why:** on 2026-08-29, an uncoordinated foreign client holding four concurrent
+streams against port 8100 caused single-stream decode to drop from ~55 tok/s to
+14 tok/s (a 3.5x false regression) with a very tight rep-to-rep spread. Low
+variance under steady background load mimics high confidence; only verifying
+request-count deltas unmasks it.
 
 ## Cold vs warm
 

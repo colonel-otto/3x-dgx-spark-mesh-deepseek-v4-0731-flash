@@ -98,7 +98,20 @@ def run_generation_probe(prompt: str, max_tokens: int, url: str = CHAT_URL) -> d
 def main():
     parser = argparse.ArgumentParser(description="Probe DSpark acceptance rate across generation horizons.")
     parser.add_argument("--lengths", type=str, default="256,512,1024,1536", help="Comma-separated max_tokens horizons.")
+    parser.add_argument("--out-exclusivity", type=str, default=None, help="Path to write exclusivity.json")
+    parser.add_argument("--allow-foreign", action="store_true", help="Warn instead of error on foreign traffic")
     args = parser.parse_args()
+
+    # Issue #37: Exclusivity pre-flight gate
+    try:
+        from exclusivity import assert_idle, verify_exclusivity
+    except ImportError:
+        import sys
+        from pathlib import Path
+        sys.path.insert(0, str(Path(__file__).parent))
+        from exclusivity import assert_idle, verify_exclusivity
+
+    start_success = assert_idle(allow_foreign=args.allow_foreign)
     
     horizons = [int(x.strip()) for x in args.lengths.split(",") if x.strip()]
     prompt = (
@@ -123,6 +136,14 @@ def main():
     print("-" * 79)
     for r in results:
         print(f"{r['max_tokens_target']:<15}{r['completion_tokens']:<15}{r['elapsed_sec']:<12}{r['tok_per_sec']:<10}{r['acceptance_rate']*100:<15.1f}{r['mean_accepted_per_step']:<12.3f}")
+
+    # Issue #37: Exclusivity post-flight verification
+    verify_exclusivity(
+        start_success,
+        expected_requests=len(horizons),
+        output_file=args.out_exclusivity,
+        allow_foreign=args.allow_foreign
+    )
 
 if __name__ == "__main__":
     main()

@@ -23,6 +23,10 @@ echo "Run Dir   : $RUN_DIR"
 echo "Python    : $PY"
 echo "================================================================="
 
+# 0. Assert cluster exclusivity & idle state (Issue #37)
+echo "[0/5] Checking cluster idle & exclusivity pre-flight gate..."
+$PY "$HERE/exclusivity.py" --check-idle --url "http://127.0.0.1:8100/metrics" --timeout 30.0
+
 # 1. Snapshot hardware clocks & environment
 echo "[1/5] Capturing environment & GPU clocks..."
 nvidia-smi --query-gpu=name,clocks.current.graphics,clocks.max.graphics,temperature.gpu,power.draw --format=csv > "$RUN_DIR/gpu_clocks.csv" 2>&1 || true
