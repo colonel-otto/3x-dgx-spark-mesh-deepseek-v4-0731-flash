@@ -4,7 +4,7 @@ This page answers two questions: where each kind of document or benchmark belong
 which material in the surrounding workstation should remain local.
 
 The canonical GitHub repository is
-[`colonel-otto/3spark-dsv4`](https://github.com/colonel-otto/3spark-dsv4). Only the
+[`colonel-otto/DeepSeek-V4-Flash-3x-DGX-Spark`](https://github.com/colonel-otto/DeepSeek-V4-Flash-3x-DGX-Spark). Only the
 `3spark-dsv4/` checkout is repository content. Sibling checkouts and the workspace-level
 `docs/`, `configs/`, and scripts are not staging folders for this repository.
 

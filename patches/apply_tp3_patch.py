@@ -570,6 +570,23 @@ EDITS = [
         head_rank_end = min(head_rank_start + n_local_head, n_head)""",
         "model.py: attn_sink loader window",
     ),
+    (
+        "v1/worker/gpu_worker.py",
+        """                    self.profiler = TorchProfilerWrapper(
+                        self.profiler_config,
+                        worker_name=trace_name,
+                        local_rank=self.local_rank,
+                        activities=["CPU", "CUDA"],
+                    )""",
+        """                    {MARK} profile CUDA only to prevent CPU profiler memory bloat and OOM
+                    self.profiler = TorchProfilerWrapper(
+                        self.profiler_config,
+                        worker_name=trace_name,
+                        local_rank=self.local_rank,
+                        activities=["CUDA"],
+                    )""",
+        "gpu_worker.py: profile CUDA only to prevent CPU profiler memory bloat",
+    ),
 ]
 
 # The two other attn_sink loaders use the same idiom with a different receiver.

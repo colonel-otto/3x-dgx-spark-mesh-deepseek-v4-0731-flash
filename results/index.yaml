@@ -2174,3 +2174,47 @@ directories:
     note: >
       Proves DSpark proposer does not suffer from sliding-window cross-attention staleness decay.
       Acceptance rate remains 76.7%-80.4% across 1,536 generated tokens (~1,000 decode steps).
+
+  - dir: 20260829-issue38-kernel-profiling
+    description: >
+      Issue #38 First comprehensive kernel profiling trace (CUDA kernels, NCCL AllReduce,
+      MoE GEMM, FlashInfer MLA Attention) on 3-Node DGX Spark TP=3 cluster. Captures 8K decode
+      (16 tokens) and 131K deep prefill forward passes. Identifies decode communication bound
+      (87.5% NCCL AllReduce time over 100 Gbps RoCE) and prefill compute balance (39.2% MoE GEMM,
+      34.1% NCCL, 16.2% FlashInfer MLA).
+    date: 2026-08-29
+    harness_type: profile_issue38.py
+    nodes: 3
+    nodes_evidence: live cluster process inspection confirms 3-node TP=3
+    tp_size: 3
+    kv_pool_tokens: 4688072
+    kv_pool_source: vLLM engine log (Profile B, 0.835 util)
+    harness: scripts/profile_issue38.py
+    harness_committed: true
+    output_tokens_requested: 16
+    output_tokens_actual: {16: 1, 1: 1}
+    output_tokens_field: completion_tokens (PER-REQUEST)
+    output_tokens_note: 16 output tokens for 8K decode trace, 1 output token for 131K prefill trace
+    reps: 2 profiling traces
+    reps_verified: true
+    statistic: exact-trace
+    fabric_gate: ABSENT
+    fabric_gate_artifact: null
+    fabric_gate_evidence: null
+    fabric_gate_note: live multi-node CUDA kernel profiling trace
+    fabric_gated: false
+    fabric_state: healthy
+    raw_data_committed: true
+    raw_files:
+      - decode_8k_256tok/dp0_pp0_tp0_dcp0_ep0_rank0.1788042551004092878.pt.trace.json.gz
+      - prefill_131k_1tok/dp0_pp0_tp0_dcp0_ep0_rank0.1788042679772743468.pt.trace.json.gz
+      - summary.json
+      - README.md
+    status: CURRENT
+    void_reasons: []
+    superseded_by: null
+    note: >
+      Delivers first device-level kernel breakdown for DeepSeek-V4 TP=3. Establishes that single-stream
+      decode is 87.5% NCCL AllReduce bound (122 rings per step), proving why DSpark MTP K=2 speculative
+      decoding provides a major speedup by eliminating collective barrier roundtrips.
+

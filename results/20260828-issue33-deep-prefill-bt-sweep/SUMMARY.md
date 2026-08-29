@@ -14,10 +14,27 @@ Re-running the matched baseline with `MAX_MODEL_LEN=1048576`, `GPU_MEMORY_UTILIZ
 
 This precisely reproduces the 74–75s baseline for $bt=8192$ and confirms that $bt=16384$'s ~92.5s TTFT (+22.1%) is real and independent of `MAX_MODEL_LEN`.
 
-### 3. Mechanism Diagnosis
-The arithmetic disproof of the bus-saturation hypothesis holds: activation transfers alone cannot explain a ~17-second delta. The actual mechanism is twofold:
-1. **Attention Kernel Chunk Tiling / Cache Spilling**: Processing 16,384 tokens per chunk doubles intermediate activation buffers in MLA / FlashInfer kernels, exceeding L2 cache tile boundaries and spilling across the memory hierarchy.
-2. **All-Reduce Pipelining Stalls**: Larger per-chunk collective buffers increase serialization latency between tensor-parallel layers across the switchless RoCE mesh, stalling decode streams.
+### 3. Mechanism — NOT DIAGNOSED
+
+**The mechanism remains uncharacterized.** The arithmetic disproof of the bus-saturation
+hypothesis holds: activation transfers alone cannot explain a ~17-second delta, so that
+explanation is ruled *out*. Nothing has been ruled *in*.
+
+Two candidate hypotheses remain, **neither measured**:
+
+1. **Attention kernel chunk tiling / cache spilling** — 16,384-token chunks may exceed
+   L2 tile boundaries in the MLA/FlashInfer kernels, spilling across the memory
+   hierarchy.
+2. **All-reduce serialization** — larger per-chunk collective buffers may increase
+   serialization latency between TP layers across the switchless RoCE mesh.
+
+> **Correction, 2026-08-29.** This section previously presented both hypotheses as "the
+> actual mechanism," diagnosed. No profile, kernel trace, or collective timing was ever
+> captured to support either. That is the same defect withdrawn from the Issue #28 record
+> in commit `d199655` — a hypothesis attached to a real delta and stated as a finding.
+> Distinguishing these requires a timeline capture; that is the subject of
+> [issue #38](../../../issues/38). **The measured TTFT delta is real and reproducible;
+> the explanation for it is not yet evidence.**
 
 ### 4. Final Operational Decision
 **`MAX_NUM_BATCHED_TOKENS=8192` stands confirmed as the cluster default.** It provides:

@@ -11,12 +11,12 @@ and diagnostic baseline values.
 
 | Item | Count |
 |---|---:|
-| Result bundles | 37 |
-| `CURRENT` | 25 |
+| Result bundles | 38 |
+| `CURRENT` | 26 |
 | `VOID` | 9 |
 | `SUPERSEDED` | 3 |
 | Own passing fabric gate | 12 |
-| Gate absent | 20 |
+| Gate absent | 21 |
 | Predates the gate | 5 |
 
 `CURRENT` means useful within the caveats recorded for that bundle. An absent
@@ -52,6 +52,7 @@ quality evidence or a methodology-only control.
 | [20260828-issue35-guidellm-concurrency](20260828-issue35-guidellm-concurrency/) | 2026-08-28 | 3 / 3 | `ABSENT` | Issue #35 GuideLLM industry standard serving benchmark sweep (cc in {1, 4, 8, 16, 32}, 2048 prompt tokens, 256 output tokens). Captures TTFT, ITL streaming jitter, TPOT, and saturation curves with automated report.json and report.html generation. |
 | [20260828-issue36-locked-clocks-suite](20260828-issue36-locked-clocks-suite/) | 2026-08-28 | 3 / 3 | `ABSENT` | Issue #36 comprehensive master benchmark suite under locked 3003 MHz GPU clocks and verified PCIe Gen5 x4 ConnectX-7 links. Covers logprob parity (all <=7.5% spread), MTP K=2 concurrency (54.3 tok/s at cc=16 with 65.8% draft acceptance), prefill depth (2K-131K), and multi-turn APC (0.76s at 131K). |
 | [20260829-issue36-dspark-proposer-long-horizon](20260829-issue36-dspark-proposer-long-horizon/) | 2026-08-29 | 3 / 3 | `ABSENT` | Issue #36 DSpark proposer long-generation acceptance audit (256, 512, 1024, 1536 tokens). Evaluates whether sliding-window cross-attention KV staleness causes draft acceptance decay. Confirms rock-solid 76.7%-80.4% acceptance (tau=2.55) and 52-57 tok/s decode through 1,536 tokens. |
+| [20260829-issue38-kernel-profiling](20260829-issue38-kernel-profiling/) | 2026-08-29 | 3 / 3 | `ABSENT` | Issue #38 First comprehensive kernel profiling trace (CUDA kernels, NCCL AllReduce, MoE GEMM, FlashInfer MLA Attention) on 3-Node DGX Spark TP=3 cluster. Captures 8K decode (16 tokens) and 131K deep prefill forward passes. Identifies decode communication bound (87.5% NCCL AllReduce time over 100 Gbps RoCE) and prefill compute balance (39.2% MoE GEMM, 34.1% NCCL, 16.2% FlashInfer MLA). |
 
 ## Superseded evidence
 

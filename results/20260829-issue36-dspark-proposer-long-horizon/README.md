@@ -36,3 +36,25 @@ Single-stream generation with `temperature=0.0` on an architectural specificatio
    - Sustained decode speed holds steady at **52.3–57.2 tok/s** through 1,536 generated tokens (~1,000 decode steps).
 3. **Proposer Implementation Verified Clean**:
    - `_insert_context_kv` in `dspark.py` properly updates the sliding-window attention cache at `context_slots` for all verified tokens in the batch.
+
+---
+
+## 4. What this run does and does not establish
+
+**Establishes:** the community-reported staleness bug is not present in
+`dsv4-3spark:0.1.1`. Both the source-level check and the measured acceptance are
+consistent, and acceptance *rises* from 69.0% to ~80% as horizons lengthen — the
+opposite of the reported collapse. Had the bug been present, the 1,024- and
+1,536-token horizons would have shown materially lower acceptance than the 512.
+
+**Does not establish:** a per-step decay curve. Each row is a **separate generation**,
+and its acceptance figure is the **cumulative average over that whole generation**, not
+a measurement of the final decode steps. A late-onset decay — acceptance falling only
+after, say, step 800 — would be diluted by the earlier high-acceptance steps and could
+survive this test. Detecting that requires bucketing acceptance *within* one long
+generation (e.g. per 100 steps), which this harness does not do.
+
+**The 256-token row is not comparable to the others.** Its 19.30 tok/s includes TTFT in
+the denominator, and its 69.0% acceptance is measured over the fewest steps (108 drafts,
+vs 393 at 1,024). It is a warm-up artifact, not evidence of low acceptance at short
+horizons.

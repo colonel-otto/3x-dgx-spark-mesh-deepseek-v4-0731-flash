@@ -32,12 +32,25 @@ This page is the *reasoning*; that file is the *artifact*.
 | expert parallel | **off** | [`EP3-EXPERT-PARALLEL.md`](EP3-EXPERT-PARALLEL.md) | ❌ ~2.5x slower — the B12X kernel refuses EP by an explicit source-code check. Also blocks EPLB, whose prerequisite is EP. ⚠️ The **mechanism** is settled (source check + `ValueError`); the **2.5x** came from a degraded-fabric run over TCP fallback and has never been re-measured on RDMA |
 | TP=3 padding patch | **required** | Correctness 14/14; [`patch.md`](patch.md) | ☠️ **Silently serves fluent nonsense.** Stock vLLM computes `8 // 3 == 2` and drops 6 of 8 attention groups |
 
-**The node-count performance answer is open.** The former depth comparison returned only
-25–26 completion tokens per request and is now
-[`VOID-25-token-window`](../results/20260826-decode-depth-2v3/). The corrected TP=3 arm
-measures 50.7–56.0 tok/s from 2K–262K, but there is no corrected TP=2 arm. Do not infer a
-winner until that matched run exists. The short-prompt concurrency result remains
-supporting evidence only because its gate artifact and one headline cell are not committed.
+**The node-count answer is workload-dependent, and partially settled.** The former depth
+comparison returned only 25–26 completion tokens per request and is now
+[`VOID-25-token-window`](../results/20260826-decode-depth-2v3/). A **corrected TP=2 arm
+now exists** ([`20260827-decode-2v3-fixed`](../results/20260827-decode-2v3-fixed/), 7
+matched reps per depth, 256 tokens asserted on all 70 reps), so the older wording here —
+"there is no corrected TP=2 arm" — is withdrawn as of 2026-08-29. What it shows:
+
+| Workload | Winner | Margin |
+|---|---|---|
+| Single-stream decode, 2K–262K | **TP=3** | +7.3% to +16.7% |
+| Cold prefill TTFT past ~100K | **TP=2** | 22.3 s sooner at 131K |
+| Aggregate throughput at `cc=8`/`cc=16` | **TP=2** | +6.5% at `cc=16` (both arms `MTP=5`) |
+
+**What is still open** is a *configuration-identical* comparison. The TP=2 arm ran
+`MAX_NUM_SEQS=16` and `MTP_NUM_TOKENS=5`; production TP=3 is now `32` / `MTP=2`. The
+`MTP=2` sweep raised 3-node `cc=16` aggregate from 51.37 to 55.10 tok/s against its own
+`MTP=5` arm, which likely narrows or closes the concurrency gap — but **no 2-node arm has
+been run at `MTP=2`**, so that remains untested rather than won. See the
+[advantage matrix](../README.md#3-node-vs-2-node-advantage-matrix) for per-row sourcing.
 
 ## Engine shape
 
@@ -49,7 +62,7 @@ supporting evidence only because its gate artifact and one headline cell are not
 | `LONG_PREFILL_TOKEN_THRESHOLD` | **1024** | Part of the winning Profile B ([#25](../../issues/25)); improves starvation TTFT by -10.7% alongside `DSPARK_MAX_INFLIGHT_PREFILLS=2` | Not independently A/B'd — the two moved together with `GPU_MEMORY_UTILIZATION` in the Profile B arm |
 | `DSPARK_MAX_INFLIGHT_PREFILLS` | **2** | Part of the winning Profile B ([#25](../../issues/25)); caps concurrent long prefills so a decode stream is not starved | Not independently A/B'd; see the note above |
 | `MTP_NUM_TOKENS` | **2** | Issue [#32](../../issues/32) concurrency sweep ([`20260828-issue32-mtp-concurrency-sweep`](../results/20260828-issue32-mtp-concurrency-sweep/)): **+7.3% throughput at cc=16 (55.10 tok/s)**, draft acceptance rate jumps from 42% to **66.3%**, TTFT reduced by ~8% across all concurrencies, single-stream decode parity maintained (55.2 vs 54.3 tok/s) | `0` disables speculative decoding; `5` wastes verification compute at high batch sizes |
-| `MAX_NUM_BATCHED_TOKENS` | **8192** | Evaluated in Issues [#28](../../issues/28) and [#33](../../issues/33) ([`20260828-issue33-deep-prefill-bt-sweep`](../results/20260828-issue33-deep-prefill-bt-sweep/)): 16384 yields +11.5% decode at 262K but **degrades deep TTFT by +22% at 131K (92.5s vs 74.7s)** and **+29% at 262K (228.6s vs 177.3s)**. Confirmed single-variable with `MAX_MODEL_LEN=1048576`. Mechanism: 16K chunks exceed MLA/FlashInfer L2 cache tile boundaries and double tensor-parallel all-reduce serialization stalls across the mesh. 8192 stands as the optimal floor and ceiling | ⚠️ vLLM's log suggests 16384. That advice assumes intra-node NVLink. On unified memory and multi-node RoCE it slows prefill. **Lowering** is warned against externally too: MiaAI-Lab's One-Spark repo reports the value also locks the b12x compressed-MLA workspace at warmup, and a lowered value boots then crashes later on a warm prefix-cache turn (`Workspace is locked ... growth is not allowed`). Likely inert for us — that path is `_run_compressed_mla`, and every captured env sets `VLLM_DSV4_B12X_COMPRESSED_MLA=0` — but untested from below; treat 8192 as a floor as well as a ceiling |
+| `MAX_NUM_BATCHED_TOKENS` | **8192** | Evaluated in Issues [#28](../../issues/28) and [#33](../../issues/33) ([`20260828-issue33-deep-prefill-bt-sweep`](../results/20260828-issue33-deep-prefill-bt-sweep/)): 16384 yields +11.5% decode at 262K but **degrades deep TTFT by +22% at 131K (92.5s vs 74.7s)** and **+29% at 262K (228.6s vs 177.3s)**. Confirmed single-variable with `MAX_MODEL_LEN=1048576`. **Mechanism uncharacterized** — the bus-saturation explanation was disproved arithmetically, and the two remaining candidates (L2 tile spilling; all-reduce serialization) are unmeasured hypotheses pending a profile ([#38](../../issues/38)). The *effect* is reproducible; the *cause* is not established. 8192 stands as the optimal floor and ceiling | ⚠️ vLLM's log suggests 16384. That advice assumes intra-node NVLink. On unified memory and multi-node RoCE it slows prefill. **Lowering** is warned against externally too: MiaAI-Lab's One-Spark repo reports the value also locks the b12x compressed-MLA workspace at warmup, and a lowered value boots then crashes later on a warm prefix-cache turn (`Workspace is locked ... growth is not allowed`). Likely inert for us — that path is `_run_compressed_mla`, and every captured env sets `VLLM_DSV4_B12X_COMPRESSED_MLA=0` — but untested from below; treat 8192 as a floor as well as a ceiling |
 | `--kv-cache-dtype` | `nvfp4_ds_mla` | Tested against `fp8_ds_mla`: speed and memory equivalent; 23/24 matched quality cells byte-identical | No demonstrated benefit from changing; see [`20260826-kv-dtype-ab`](../results/20260826-kv-dtype-ab/) |
 | `JIT_MONITOR_MODE` | **warn** | Surfaces compiles landing inside requests — one measured at 5 s | Leave on. It is how you know a benchmark is contaminated |
 

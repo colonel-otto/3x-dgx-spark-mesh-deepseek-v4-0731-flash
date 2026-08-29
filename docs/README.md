@@ -8,6 +8,7 @@ the provenance index before quoting any benchmark.
 
 | Document | Purpose |
 |---|---|
+| [3-Node vs 2-Node Benchmark](BENCHMARK-2V3-NODES.md) | Comprehensive performance matrix, context scaling, and architectural analysis |
 | [Current handoff](HANDOFF-2026-08-28.md) | Current cluster, verified findings, APC warm path, and closed issues #28–#34 |
 | [Repository and data map](REPOSITORY-MAP.md) | What belongs on GitHub, what remains local, and where each artifact goes |
 | [Results index](../results/README.md) | Readable catalogue of every frozen run bundle |
