@@ -79,6 +79,15 @@ and they are the two most likely to move.
 Noise floor from Issue #31 is **6.6%–11.7%** per-passage. Any delta inside that band is
 declared a **tie**, decided before seeing data.
 
+> **Observed in-run, logged before any delta was computed (2026-08-29).** The TP=3 arm's
+> 8K cell measured a **12.2%** per-rep spread (47.7–53.9 tok/s, n=7), marginally above the
+> Issue #31 ceiling. TTFT was flat across all seven reps (4.1–4.7 s), so this is B12X MoE
+> non-determinism, not JIT contamination or a stall. **The tie band is NOT being widened
+> to accommodate it** — that would be exactly the post-hoc adjustment this document exists
+> to prevent. It is recorded here so that if a final delta lands between 11.7% and 12.2%,
+> the reader knows the per-rep spread was already that wide before the comparison was made,
+> and can discount the result accordingly.
+
 ### 5a. Single-stream decode, cc=1 (tok/s, median of 7, spread published)
 
 | Depth | TP=3 (32/MTP=2/0.835) | TP=2 (32/MTP=2/0.835) | Delta | Verdict |
