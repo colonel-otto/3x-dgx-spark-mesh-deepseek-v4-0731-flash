@@ -32,7 +32,7 @@ mkdir -p "$RUN_DIR"/{tp3,tp2}
 LOG="$RUN_DIR/orchestration.log"
 
 log() { echo "[$(date -Iseconds)] $*" | tee -a "$LOG"; }
-die() { log "FATAL: $*"; restore_webui; exit 1; }
+die() { log "FATAL: $*"; exit 1; }   # cleanup runs via the EXIT trap
 
 API="http://127.0.0.1:8100"
 METRICS="$API/metrics"
@@ -46,7 +46,52 @@ M_SEQS=32
 M_MTP=2
 M_GPUMEM=0.835
 
+# Thermal equalisation between arms. 70C is reachable from idle on all three
+# nodes; the cap keeps a hot node from stalling the run indefinitely.
+COOL_TARGET_C=70
+COOL_MAX_S=900
+
 WEBUI_STOPPED=0
+TELEM_PIDS=""
+
+# --- clock/thermal telemetry -------------------------------------------
+# GB10 does NOT honour nvidia-smi -lgc (docs/GPU-CLOCKS-NOT-LOCKABLE.md): the
+# clock floats against a package power budget and varies per node with thermal
+# state. It cannot be controlled, so it must be RECORDED -- continuously, not
+# once. The Issue #36 bundle claimed locked clocks on the strength of a single
+# idle sample; this samples every 5s for the life of each arm.
+telem_start() { # $1 = arm dir
+  local dir="$1" h
+  for h in sparkmain spark1 spark2; do
+    ssh -n "$h" "nvidia-smi --query-gpu=timestamp,clocks.sm,temperature.gpu,power.draw,utilization.gpu \
+      --format=csv,noheader -l 5" > "$dir/clocks-$h.csv" 2>/dev/null &
+    TELEM_PIDS="$TELEM_PIDS $!"
+  done
+  log "telemetry started -> $dir/clocks-*.csv"
+}
+telem_stop() {
+  [[ -n "$TELEM_PIDS" ]] && kill $TELEM_PIDS 2>/dev/null
+  TELEM_PIDS=""
+}
+
+# Equalise thermal state before an arm so a cool 2-node arm is not compared
+# against a heat-soaked 3-node one. Capped so it cannot stall the run forever.
+cooldown() { # $1 = target degC, $2 = max wait seconds
+  local target="$1" maxw="$2" waited=0 hot t h
+  log "cooldown: waiting for all nodes <= ${target}C (max ${maxw}s)"
+  while (( waited < maxw )); do
+    hot=0
+    for h in sparkmain spark1 spark2; do
+      t=$(ssh -n "$h" "nvidia-smi --query-gpu=temperature.gpu --format=csv,noheader" 2>/dev/null | tr -dc '0-9')
+      [[ -z "$t" ]] && continue
+      (( t > target )) && hot=1
+    done
+    (( hot == 0 )) && { log "cooldown: all nodes <= ${target}C after ${waited}s"; return 0; }
+    sleep 30; waited=$((waited+30))
+  done
+  log "cooldown: TIMEOUT after ${maxw}s -- proceeding; temps are in clocks-*.csv"
+}
+
 restore_webui() {
   if [[ $WEBUI_STOPPED -eq 1 ]]; then
     log "Restoring open-webui ..."
@@ -54,7 +99,8 @@ restore_webui() {
     WEBUI_STOPPED=0
   fi
 }
-trap restore_webui EXIT
+cleanup() { telem_stop; restore_webui; }
+trap cleanup EXIT
 
 # --- exclusivity helpers (Requirement 5) ---------------------------------
 excl_start() {  # echoes start total, or empty on failure
@@ -98,6 +144,10 @@ measure_arm() { # $1 = label (tp3|tp2), $2 = arm dir
   log "=== MEASURE [$label]: exclusivity + config capture ==="
   capture_cfg "$dir"
   sanity
+  # Both arms start from a comparable thermal state (clock is uncontrollable
+  # on GB10, so equalise the thing that drives it).
+  cooldown "$COOL_TARGET_C" "$COOL_MAX_S"
+  telem_start "$dir"
 
   local start_total
   start_total=$(excl_start)
@@ -127,6 +177,17 @@ measure_arm() { # $1 = label (tp3|tp2), $2 = arm dir
   [[ ${PIPESTATUS[0]} -ne 0 ]] && log "WARN: [$label] concurrency sweep exited non-zero"
 
   excl_verify "$dir" "$start_total" "$issued" || log "WARN: [$label] exclusivity delta mismatch -- see exclusivity.json"
+  telem_stop
+  # Publish the clock/thermal envelope this arm actually ran under, so the
+  # reader can see whether the two arms were comparable.
+  for h in sparkmain spark1 spark2; do
+    [[ -s "$dir/clocks-$h.csv" ]] || continue
+    awk -F', *' '{gsub(/ MHz/,"",$2); gsub(/ W/,"",$4);
+                  if($2+0>0){n++; s+=$2; if($2+0>mx||n==1)mx=$2+0; if($2+0<mn||n==1)mn=$2+0;
+                             ts+=$3; if($3+0>tmx||n==1)tmx=$3+0}}
+      END{if(n)printf "  %s: clock mean %.0f MHz (min %d, max %d), temp mean %.0f C (max %d), n=%d\n",
+                       H, s/n, mn, mx, ts/n, tmx, n}' H="$h" "$dir/clocks-$h.csv" | tee -a "$LOG"
+  done
   log "=== [$label] arm complete ==="
 }
 

@@ -50,6 +50,17 @@ cat results/nohup-runs/<timestamp>_<command>.exit
 
 ### A. Persistent GPU Clock Locking (Eliminating Wake Jitter)
 
+> ⚠️ **This procedure does NOT work on GB10 (verified 2026-08-29).** `nvidia-smi -lgc`
+> returns `GPU clocks set to "(gpuClkMin 3003, gpuClkMax 3003)" ... All done.` and then
+> pins nothing: GB10 is an integrated SoC reporting `Supported Clocks: N/A` and no
+> settable power limit. Sustained clock under MoE decode is **~2420–2520 MHz**, governed
+> by SW power capping, and it varies per node with thermal state.
+>
+> Keep `-pm 1` (persistence mode is real and does help wake jitter), but **do not claim
+> locked clocks**, and do not treat clock as a controlled variable. Sample it throughout
+> the run and publish it with per-node temperature.
+> See [`GPU-CLOCKS-NOT-LOCKABLE.md`](GPU-CLOCKS-NOT-LOCKABLE.md).
+
 Run on all three nodes (`sparkmain`, `spark1`, `spark2`):
 
 ```bash

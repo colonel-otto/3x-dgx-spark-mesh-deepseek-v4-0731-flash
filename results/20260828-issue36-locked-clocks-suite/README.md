@@ -2,13 +2,26 @@
 
 **Status:** `CURRENT` · **Nodes:** 3 · **TP:** 3 · **Fabric gate:** `ABSENT`
 
-Evidence bundle evaluating serving determinism, MTP $K=2$ concurrency, prefill depth, and Automatic Prefix Caching (APC) under hardware-locked 3003 MHz GPU clocks and verified PCIe Gen5 x4 ConnectX-7 interconnects.
+Evidence bundle evaluating serving determinism, MTP $K=2$ concurrency, prefill depth, and Automatic Prefix Caching (APC) under verified PCIe Gen5 x4 ConnectX-7 interconnects.
+
+> ⚠️ **The "locked 3003 MHz" claim in this bundle is WITHDRAWN (2026-08-29).**
+> GB10 does not honour `nvidia-smi -lgc`: it reports `Supported Clocks: N/A` and no
+> settable power limit, so the command returns success and pins nothing. **This bundle's
+> own `gpu_clocks.csv` shows it** — a single row reading **2522 MHz**, not 3003, sampled
+> at 50 °C / 15.57 W (idle, before the run) despite being described below as telemetry
+> "during execution". The measurements here still stand as measurements; what is
+> withdrawn is the claim that they were taken under controlled clock conditions. Full
+> analysis: [`../../docs/GPU-CLOCKS-NOT-LOCKABLE.md`](../../docs/GPU-CLOCKS-NOT-LOCKABLE.md).
 
 ---
 
 ## 1. Hardware Configuration
 - **Cluster**: 3x NVIDIA DGX Spark (Grace-Blackwell GB10 SoC).
-- **GPU Clocks**: Locked to `(min: 3003 MHz, max: 3003 MHz)` via `sudo nvidia-smi -lgc 3003,3003` with persistence mode enabled.
+- **GPU Clocks**: `sudo nvidia-smi -lgc 3003,3003` was issued with persistence mode
+  enabled and **reported success, but did not take effect** — see the withdrawal notice
+  above. Actual clock during this suite is unmeasured; the one committed sample reads
+  2522 MHz at idle. Sustained clock on GB10 under MoE decode settles around 2420–2520 MHz,
+  governed by SW power capping (cumulative ~3 h) rather than thermal slowdown (~1.2 s).
 - **Interconnect**: Switchless 3-node ring over dual 200 GbE ConnectX-7 links. All 12 controllers verified at PCIe Gen5 x4 (`Speed 32GT/s, Width x4`).
 - **Engine**: `dsv4-3spark:0.1.1` hermetic image, `TP=3`, `PP=1`, `MAX_MODEL_LEN=1048576`, `MAX_NUM_BATCHED_TOKENS=8192`, `MTP_NUM_TOKENS=2`, `GPU_MEMORY_UTILIZATION=0.835`.
 
