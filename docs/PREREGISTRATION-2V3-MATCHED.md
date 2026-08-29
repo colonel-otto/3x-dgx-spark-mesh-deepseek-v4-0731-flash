@@ -135,6 +135,34 @@ declared a **tie**, decided before seeing data.
 | KV pool (`/metrics`, if it disagrees) | | |
 | Max concurrency | | |
 
+## 5e. Outlier handling — fixed 2026-08-29, mid-TP=3-arm, before the TP=2 arm ran
+
+The TP=3 131K cell produced one extreme high rep. Per-rep decode, in issue order:
+
+```
+46.40  47.95  45.75  45.05  49.40  46.87  59.37 tok/s      (spread 30.6%)
+```
+
+Rep 7 is **7.8 robust standard deviations** above the other six (MAD of the rest = 1.10),
+and it is the only rep with a different TTFT (78.07 s against a flat 74.34–74.61 s). All
+seven completed exactly 256 tokens with `cached_tokens: 0`, so this is neither a window
+collapse nor APC contamination. Engine-wide MTP counters at the time read 66.3 %
+acceptance / 1.325 mean accepted length — matching Issue #32 — so the most likely cause is
+an unusually favourable speculative-acceptance run, an intrinsic property of the workload.
+
+**The rule, fixed before the TP=2 arm and applied identically to both:**
+
+1. **No rep is ever discarded.** All seven values are published for every cell.
+2. **The median is the reported statistic**, as it already is. It is robust here: the cell
+   reads **46.87** with the outlier and **46.63** without — a **0.5 %** difference.
+3. **Spread is reported as measured (30.6 %), not cleaned.** Where a single rep drives it,
+   the trimmed spread is reported *beside* it, never instead of it: 30.6 % as measured,
+   **9.3 %** excluding the single extreme rep.
+4. **A cell whose spread exceeds the noise floor cannot adjudicate a sub-20 % difference**
+   even when its median is stable. Such cells are marked and excluded from any verdict.
+
+This exists so the choice cannot be made after seeing which arm it favours.
+
 ## 6. Stopping rule
 
 The run completes all cells in 5a–5d, or it reports which cells are missing and why. A
