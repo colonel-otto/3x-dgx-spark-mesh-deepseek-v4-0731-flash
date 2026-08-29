@@ -79,6 +79,20 @@ and they are the two most likely to move.
 Noise floor from Issue #31 is **6.6%–11.7%** per-passage. Any delta inside that band is
 declared a **tie**, decided before seeing data.
 
+> **Run 1 was ABORTED and is not the result. Recorded here so the restart is part of the
+> pre-registered record, not an undocumented do-over.** Eight minutes in, three of ten
+> cells done, per-cell spread was growing with depth and elapsed time — 5.0 % (2K),
+> 12.2 % (8K), 17.3 % (32K) — and the 32K cell declined monotonically across its seven
+> reps (54.9 → 53.8 → 52.8 → 50.8 → 46.0 → 51.4 → 46.9 tok/s) with TTFT falling in
+> lockstep. Cause established mid-run: GB10 does not honour `nvidia-smi -lgc`, so GPU
+> clock floats with a package power budget and diverged per node as the workers heat-soaked
+> (83–86 °C on spark1/spark2 against 75 °C on sparkmain) — see
+> [`GPU-CLOCKS-NOT-LOCKABLE.md`](GPU-CLOCKS-NOT-LOCKABLE.md). A 17.3 % spread cannot
+> resolve a 7–17 % effect, so the run was stopped rather than carried to a conclusion it
+> could not support. **No run-1 number is used anywhere.** Run 2 adds continuous
+> clock/temp/power telemetry on all three nodes and a ≤70 °C cooldown before each arm.
+> Hypotheses, tie band, and tables below are unchanged from before run 1.
+
 > **Observed in-run, logged before any delta was computed (2026-08-29).** The TP=3 arm's
 > 8K cell measured a **12.2%** per-rep spread (47.7–53.9 tok/s, n=7), marginally above the
 > Issue #31 ceiling. TTFT was flat across all seven reps (4.1–4.7 s), so this is B12X MoE
