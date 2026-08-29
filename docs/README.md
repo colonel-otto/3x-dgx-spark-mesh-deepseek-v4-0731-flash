@@ -40,6 +40,7 @@ claim is withdrawn until a corrected two-node arm is measured.
 | [TP=3 patch](patch.md) | Required attention-group padding; stock TP=3 can serve wrong output |
 | [Troubleshooting](troubleshooting.md) | Operational symptom-to-cause guide |
 | [Degraded-data catalogue](DEGRADED-DATA-CATALOGUE.md) | Failure fingerprints from known-bad runs |
+| [Detached execution](DETACHED-EXECUTION-AND-VERIFICATION.md) | Standardized background (nohup) runs and verification protocol |
 | [Current handoff](HANDOFF-2026-08-27.md) | Dated operational state; the old handoff is now a redirect only |
 
 ## Measure and interpret
