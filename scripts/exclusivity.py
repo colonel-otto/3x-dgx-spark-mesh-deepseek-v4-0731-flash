@@ -16,6 +16,10 @@ from typing import Any
 
 DEFAULT_METRICS_URL = "http://127.0.0.1:8100/metrics"
 
+# Counters vLLM splits across label sets; their series must be summed, not
+# overwritten, to get the engine-wide total. Gauges are deliberately absent.
+_SUMMED_COUNTERS = frozenset({"vllm:request_success_total"})
+
 def get_engine_metrics(metrics_url: str = DEFAULT_METRICS_URL) -> dict[str, float]:
     """Scrapes and parses Prometheus metrics from vLLM engine."""
     try:
@@ -32,7 +36,18 @@ def get_engine_metrics(metrics_url: str = DEFAULT_METRICS_URL) -> dict[str, floa
         m = re.match(r"^([a-zA-Z0-9_:]+)(?:\{[^}]*\})?\s+([0-9.eE+-]+)", line)
         if m:
             name, val = m.group(1), float(m.group(2))
-            metrics[name] = val
+            # vLLM exposes counters split across label sets -- notably
+            # request_success_total, which carries one series per finish reason
+            # (stop / length / abort / error / repetition). Assigning here would
+            # keep only the LAST series and silently discard the rest: a sweep
+            # whose requests all finish as "length" (the ignore_eos window we
+            # assert) would read a delta of 0 and the gate would pass or fail
+            # for entirely the wrong reason. Counters must be summed across
+            # labels; gauges (running/waiting) must not be, so they are assigned.
+            if name in _SUMMED_COUNTERS:
+                metrics[name] = metrics.get(name, 0.0) + val
+            else:
+                metrics[name] = val
     return metrics
 
 def assert_idle(

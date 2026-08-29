@@ -43,11 +43,23 @@ def scrape_metrics(metrics_url: str) -> dict[str, float]:
         with urllib.request.urlopen(metrics_url, timeout=10) as resp:
             for raw in resp:
                 line = raw.decode("utf-8", "replace").strip()
-                if line.startswith("vllm:spec_decode_num_accepted_tokens_total"):
+                # Match on the metric NAME, not a bare prefix: this build also
+                # exposes *_created siblings (e.g. num_drafts_total vs
+                # num_drafts_created) and *_per_pos_total variants, and a
+                # startswith() match would capture a unix-timestamp-valued
+                # series instead of the counter.
+                name = line.split("{", 1)[0].split(" ", 1)[0]
+                if name == "vllm:spec_decode_num_accepted_tokens_total":
                     accepted = float(line.rsplit(" ", 1)[1])
-                elif line.startswith("vllm:spec_decode_num_draft_tokens_total"):
+                elif name == "vllm:spec_decode_num_draft_tokens_total":
                     draft = float(line.rsplit(" ", 1)[1])
-                elif line.startswith("vllm:spec_decode_draft_iterations_total"):
+                # This build exposes the per-step draft counter as
+                # spec_decode_num_drafts_total; spec_decode_draft_iterations_total
+                # does not exist here, so the original name left draft_iters at 0
+                # and reported mean accepted length as a silent 0.00. Accept the
+                # legacy name too, in case another build does emit it.
+                elif name in ("vllm:spec_decode_num_drafts_total",
+                              "vllm:spec_decode_draft_iterations_total"):
                     draft_iters = float(line.rsplit(" ", 1)[1])
     except Exception:
         pass
@@ -151,20 +163,31 @@ def run_concurrency_batch(url: str, model: str, cc: int, depth: int,
 
 
 def run_sweep(url: str, metrics_url: str, model: str, ktok: int, depth: int,
-              concurrencies: list[int], reps: int, max_tokens: int) -> dict:
+              concurrencies: list[int], reps: int, max_tokens: int,
+              warmups: int = 2) -> dict:
     cells = []
     print(f"\n=======================================================")
     print(f"Starting MTP={ktok} Sweep: Context={depth}, Concurrencies={concurrencies}, Reps={reps}")
     print(f"=======================================================\n")
 
-    # Warmup
-    print("Running warmup request...")
-    send_request(url, model, build_prompt(depth, f"warmup-k{ktok}"), max_tokens)
-    print("Warmup complete.\n")
+    # Warmup. BENCHMARK-POLICY.md requires >=2 warm requests PER PROMPT SHAPE,
+    # and a concurrent batch is a different shape from a single stream: a lone
+    # single-stream warmup left cc=4 reading 15.10 tok/s against 37.57 once
+    # actually warm (2026-08-29 smoke test) -- a 2.5x error from JIT landing
+    # inside the measured window. Warm each concurrency at its own shape.
+    print(f"Running {warmups} single-stream warmup request(s)...")
+    for w in range(warmups):
+        send_request(url, model, build_prompt(depth, f"warmup-k{ktok}-{w}"), max_tokens)
+    print("Single-stream warmup complete.\n")
 
     for cc in concurrencies:
         print(f"--- Concurrency cc={cc} (Reps={reps}) ---")
+        print(f"  Warming cc={cc} shape ({warmups} batches, discarded) ...")
+        for w in range(warmups):
+            run_concurrency_batch(url, model, cc, depth, max_tokens,
+                                  f"warm-k{ktok}-cc{cc}-{w}-{int(time.time())}")
         rep_results = []
+        # Scrape AFTER warming so acceptance stats cover measured reps only.
         m_before = scrape_metrics(metrics_url)
 
         for rep in range(reps):
@@ -212,6 +235,7 @@ def run_sweep(url: str, metrics_url: str, model: str, ktok: int, depth: int,
         "mtp_k": ktok,
         "depth": depth,
         "model": model,
+        "warmups_per_shape": warmups,
         "cells": cells,
     }
 
@@ -226,12 +250,15 @@ def main() -> int:
     parser.add_argument("--concurrencies", default="1,4,8,16")
     parser.add_argument("--reps", type=int, default=5)
     parser.add_argument("--max-tokens", type=int, default=256)
+    parser.add_argument("--warmups", type=int, default=2,
+                        help="Warm requests per prompt shape, discarded (policy minimum: 2)")
     parser.add_argument("--out", required=True, help="Output JSON path")
     args = parser.parse_args()
 
     ccs = [int(x.strip()) for x in args.concurrencies.split(",")]
     result = run_sweep(args.url, args.metrics_url, args.model, args.mtp_k,
-                       args.depth, ccs, args.reps, args.max_tokens)
+                       args.depth, ccs, args.reps, args.max_tokens,
+                       warmups=args.warmups)
 
     with open(args.out, "w", encoding="utf-8") as f:
         json.dump(result, f, indent=2)
