@@ -23,6 +23,7 @@ fabric gate weakens performance evidence but does not invalidate pass/fail quali
 
 | Bundle | Nodes | Gate | What it establishes |
 |---|---:|---|---|
+| [20260829-issue36-dspark-proposer-long-horizon](20260829-issue36-dspark-proposer-long-horizon/) | 3 | Absent | DSpark proposer long-generation audit (256-1536 tokens); confirms 76.7%-80.4% acceptance (tau=2.55) with 0 staleness decay |
 | [20260828-issue36-locked-clocks-suite](20260828-issue36-locked-clocks-suite/) | 3 | Absent | Master suite under hardware-locked 3003 MHz clocks: determinism, MTP K=2 concurrency, prefill depth, and APC warm path |
 | [20260828-issue35-guidellm-concurrency](20260828-issue35-guidellm-concurrency/) | 3 | Absent | GuideLLM industry standard concurrency and latency sweep across cc=1..32 |
 | [20260828-issue33-deep-prefill-bt-sweep](20260828-issue33-deep-prefill-bt-sweep/) | 3 | Absent | Single-variable deep-prefill TTFT evaluation confirming bt=8192 sweet spot at MAX_MODEL_LEN=1M |

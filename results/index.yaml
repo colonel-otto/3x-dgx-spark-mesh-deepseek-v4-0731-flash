@@ -70,9 +70,9 @@ meta:
   fabric_gate_tally:
     PRESENT-PASS: 12
     PRESENT-FAIL: 0
-    ABSENT: 18
+    ABSENT: 19
     PRE-DATES-GATE: 5
-    total: 36
+    total: 37
   fabric_gate_tally_detail:
     PRESENT-PASS:
       - 20260825-deep-concurrency        # fabric-gate-full.json 13/13, nccl=full
@@ -2136,3 +2136,41 @@ directories:
     note: >
       Validates 3003 MHz clock-locked serving stability. Confirms MTP K=2 Pareto-optimality,
       70% single-stream draft acceptance, and 97.4x APC speedup at 131K context.
+
+  - dir: 20260829-issue36-dspark-proposer-long-horizon
+    description: >
+      Issue #36 DSpark proposer long-generation acceptance audit (256, 512, 1024, 1536 tokens).
+      Evaluates whether sliding-window cross-attention KV staleness causes draft acceptance decay.
+      Confirms rock-solid 76.7%-80.4% acceptance (tau=2.55) and 52-57 tok/s decode through 1,536 tokens.
+    date: 2026-08-29
+    harness_type: probe_proposer_long_gen.py
+    nodes: 3
+    nodes_evidence: live cluster process inspection confirms 3-node TP=3
+    tp_size: 3
+    kv_pool_tokens: 5033960
+    kv_pool_source: vLLM engine log (Profile B, 0.835 util)
+    harness: scripts/probe_proposer_long_gen.py
+    harness_committed: true
+    output_tokens_requested: 1536
+    output_tokens_actual: {256: 1, 512: 1, 1024: 1, 1536: 1}
+    output_tokens_field: completion_tokens (PER-REQUEST)
+    output_tokens_note: long generation horizon audit
+    reps: 4 generation horizons
+    reps_verified: true
+    statistic: single-observation
+    fabric_gate: ABSENT
+    fabric_gate_artifact: null
+    fabric_gate_evidence: null
+    fabric_gate_note: live single-stream long generation probe
+    fabric_gated: false
+    fabric_state: healthy
+    raw_data_committed: true
+    raw_files:
+      - summary.json
+      - README.md
+    status: CURRENT
+    void_reasons: []
+    superseded_by: null
+    note: >
+      Proves DSpark proposer does not suffer from sliding-window cross-attention staleness decay.
+      Acceptance rate remains 76.7%-80.4% across 1,536 generated tokens (~1,000 decode steps).

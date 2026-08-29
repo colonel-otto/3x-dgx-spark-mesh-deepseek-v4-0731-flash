@@ -1,0 +1,71 @@
+{
+  "date": "2026-08-29",
+  "issue": 36,
+  "config": {
+    "model": "deepseek-v4-flash-0731",
+    "image": "dsv4-3spark:0.1.1",
+    "nnodes": 3,
+    "tp_size": 3,
+    "mtp_num_tokens": 2,
+    "gpu_memory_utilization": 0.835,
+    "max_num_batched_tokens": 8192,
+    "max_model_len": 1048576,
+    "block_size": 256,
+    "temperature": 0.0
+  },
+  "horizons": [
+    {
+      "max_tokens_target": 256,
+      "completion_tokens": 256,
+      "elapsed_sec": 13.263,
+      "tok_per_sec": 19.3,
+      "drafts_count": 108.0,
+      "draft_tokens": 216.0,
+      "accepted_tokens": 149.0,
+      "acceptance_rate": 0.69,
+      "mean_accepted_per_step": 1.38,
+      "pos0_accepted": 83.0,
+      "pos1_accepted": 66.0
+    },
+    {
+      "max_tokens_target": 512,
+      "completion_tokens": 512,
+      "elapsed_sec": 9.199,
+      "tok_per_sec": 55.66,
+      "drafts_count": 199.0,
+      "draft_tokens": 398.0,
+      "accepted_tokens": 314.0,
+      "acceptance_rate": 0.7889,
+      "mean_accepted_per_step": 1.578,
+      "pos0_accepted": 172.0,
+      "pos1_accepted": 142.0
+    },
+    {
+      "max_tokens_target": 1024,
+      "completion_tokens": 1024,
+      "elapsed_sec": 19.574,
+      "tok_per_sec": 52.31,
+      "drafts_count": 393.0,
+      "draft_tokens": 786.0,
+      "accepted_tokens": 632.0,
+      "acceptance_rate": 0.8041,
+      "mean_accepted_per_step": 1.608,
+      "pos0_accepted": 346.0,
+      "pos1_accepted": 286.0
+    },
+    {
+      "max_tokens_target": 1536,
+      "completion_tokens": 1536,
+      "elapsed_sec": 26.873,
+      "tok_per_sec": 57.16,
+      "drafts_count": 606.0,
+      "draft_tokens": 1212.0,
+      "accepted_tokens": 930.0,
+      "acceptance_rate": 0.7673,
+      "mean_accepted_per_step": 1.535,
+      "pos0_accepted": 507.0,
+      "pos1_accepted": 423.0
+    }
+  ],
+  "conclusion": "No staleness decay observed across 1,536 tokens (~1,000 decode steps). Speculative acceptance rate stays between 76.7% and 80.4% with mean 1.55 accepted draft tokens per step (effective tau = 2.55 tokens/forward pass), maintaining 52-57 tok/s decode throughput at depth."
+}

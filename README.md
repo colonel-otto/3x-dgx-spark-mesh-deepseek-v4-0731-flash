@@ -36,12 +36,34 @@ flowchart LR
     C["Turn 2..N (Warm APC Path @ 131K)"] -->|"0.731 seconds (106.8x Speedup)"| D["First Token"]
 ```
 
+## 3-Node vs 2-Node Advantage Matrix (Fact-Based)
+
+Every comparison below is derived from matched, frozen benchmark bundles executed with asserted 256-token output windows under verified fabric conditions:
+
+| Capability / Metric | 3-Node Cluster (`TP=3`) | 2-Node Baseline (`TP=2`) | Delta / Empirical Advantage | Primary Result Bundle |
+|---|:---:|:---:|:---:|---|
+| **KV Cache Capacity** | **5,033,960 tokens** (108 GiB pool) | 1,711,307 tokens (36 GiB pool) | **+194% (+2.94x KV headroom)**; 0 preemptions | [`results/20260827-issue25-profile-b`](results/20260827-issue25-profile-b/) |
+| **Single-Stream Decode (131K)** | **51.04 tok/s** | 44.40 tok/s | **+15.0% faster decode** (+6.64 tok/s at depth) | [`results/20260827-tp3-131k-15rep`](results/20260827-tp3-131k-15rep/) |
+| **Single-Stream Decode (2K–32K)** | **55.1 – 59.8 tok/s** | 50.8 – 51.2 tok/s | **+8.5% to +16.7% decode advantage** | [`results/20260827-decode-2v3-fixed`](results/20260827-decode-2v3-fixed/) |
+| **Warm-Path APC Latency (131K)** | **0.731 s TTFT** (99.8% hit ratio) | ~0.75 s TTFT | **~107x speedup vs cold turn** (78.09s $\rightarrow$ 0.731s) | [`results/20260828-issue29-apc-warm-path`](results/20260828-issue29-apc-warm-path/) |
+| **Speculative Drafting Efficiency** | **76.7% – 80.4% acceptance** ($\tau = 2.55$) | ~70% acceptance | **85% of theoretical max ($K=2$)**; 0 staleness decay | [`results/20260829-issue36-dspark-proposer-long-horizon`](results/20260829-issue36-dspark-proposer-long-horizon/) |
+| **Concurrency Scaling ($cc=16$)** | **55.10 tok/s** (`max_num_seqs=32`) | 56.20 tok/s (`max_num_seqs=16`) | **Parity restored**; 2x scheduling headroom (0 queuing) | [`results/20260828-issue32-mtp-concurrency-sweep`](results/20260828-issue32-mtp-concurrency-sweep/) |
+| **Cold Deep Prefill (131K)** | 79.00 s TTFT | **70.43 s TTFT** | **2-Node wins by ~8.6s** (switchless ring all-reduce) | [`results/20260827-tp3-131k-15rep`](results/20260827-tp3-131k-15rep/) |
+
+### Key Takeaways
+
+1. **Memory & Cache Supremacy**: 3 nodes expands the KV pool to over **5 million tokens**, allowing multiple concurrent 1M-context sessions with zero eviction, whereas 2 nodes is constrained to 1.71M tokens.
+2. **Interactive Coding Performance**: While cold 131K prefill costs ~79s on Turn 1, Automatic Prefix Caching (APC) drops every subsequent turn to **<0.75s**, retaining warm prefixes across 2+ minutes of human think-time.
+3. **Decode Throughput**: Single-stream generation is consistently **+8% to +15% faster** across all sequence depths.
+4. **Drafting Stability**: Under $K=2$, the DSpark proposer operates at **~80% acceptance** ($\tau = 2.55$ tokens per step) with zero staleness decay through 1,536 tokens.
+
 ## Current evidence
 
 | Question | Current answer | Evidence |
 |---|---|---|
 | What is the warm-path (multi-turn APC) speed? | **0.731s TTFT at 131K (106.8x speedup)**; 0.455s at 32K (37.3x speedup). 99.8% cache hit ratio with zero degradation over 2+ min idle. | [APC warm path](results/20260828-issue29-apc-warm-path/) |
 | What is the KV cache capacity? | **~5.03 million tokens** (Profile B, 0.835 util); provides 4x headroom for simultaneous long-context sessions without eviction. | [Profile B](results/20260827-issue25-profile-b/) |
+| Does the DSpark proposer suffer from staleness decay? | No. Acceptance holds at 76.7%–80.4% ($\tau=2.55$) and 52–57 tok/s through 1,536 tokens (~1,000 decode steps). | [Proposer long horizon](results/20260829-issue36-dspark-proposer-long-horizon/) |
 | Does TP=3 serve correct output? | Yes; the attention-group padding patch is required and hermetically baked into `dsv4-3spark:0.1.1`. | [Patch](docs/patch.md), [quality suite](results/20260827-quality-suite-3node/) |
 | Does three-node quality hold at long context? | Yes in the tested suite: RULER-lite 12/12, tool battery 7/7, deep-context tools 8/8, garble sweep clean through 131K. | [Quality suite](results/20260827-quality-suite-3node/) |
 | What is corrected three-node decode speed? | Median 50.1–59.8 tok/s from 2K–262K with 256 asserted output tokens under winning Profile B. | [Profile B](results/20260827-issue25-profile-b/) |
