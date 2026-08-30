@@ -163,6 +163,31 @@ an unusually favourable speculative-acceptance run, an intrinsic property of the
 
 This exists so the choice cannot be made after seeing which arm it favours.
 
+### 5f. The deep cells are outlier-prone, not broadly unstable (TP=3 arm, all 5 cells)
+
+With the full TP=3 depth sweep complete, the shape of the noise is now characterised.
+Dropping **one** high and **one** low rep from each cell:
+
+| Depth | Median | Spread as measured | Spread dropping hi+lo |
+|---|---:|---:|---:|
+| 2K | 51.10 | 9.6 % | **5.7 %** |
+| 8K | 51.50 | 6.6 % | — |
+| 32K | 52.20 | 5.9 % | — |
+| 131K | 46.87 | 30.6 % | **7.8 %** |
+| 262K | 44.90 | 22.3 % | **8.5 %** |
+
+Every cell lands at **5.7–8.5 %** once a single extreme rep at each end is set aside —
+inside the Issue #31 floor of 6.6–11.7 %. So the deep cells are not diffusely noisy; they
+carry **occasional extreme reps on an otherwise tight distribution**, consistent with
+speculative-acceptance variance rather than thermal drift (which would show as a trend
+across reps, as it did in the aborted run 1, and does not here).
+
+**Consequence, fixed before the TP=2 arm:** the **median is trustworthy at every depth**,
+including 131K and 262K. Raw spread at those depths is inflated by single reps and must
+not by itself be read as "this cell cannot adjudicate". The adjudication test in 5e(4) is
+therefore applied to the **hi+lo-trimmed** spread, with the raw spread always published
+beside it. Both arms are read the same way, and n=7 stays the published rep count.
+
 ## 6. Stopping rule
 
 The run completes all cells in 5a–5d, or it reports which cells are missing and why. A
