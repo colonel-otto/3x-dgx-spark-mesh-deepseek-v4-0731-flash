@@ -115,12 +115,30 @@ that goes bad. Per node (121.69 GiB total):
 Do not tune this purely for KV pool size. Recovery access is worth more than the
 last GiB of cache.
 
-**A cold start takes ~30 minutes, not 6-8.** Weight loading is only the first
-~3 minutes of it (155 GiB main model ~139 s, then the MTP draft ~26 s); the rest
-is KV profiling, `torch.compile` and CUDA graph capture. `dsv4-service-start`
-budgets 45 minutes for exactly this reason — an earlier 15-minute budget aborted a
-startup that was progressing normally. Do not conclude a start has hung because it
-has been running 10 minutes; check that the container log is still advancing, and
+**A clean cold start takes ~6 minutes.** Measured phase-by-phase from the
+container log, 2026-08-30 15:37 boot (GPU_MEMORY_UTILIZATION=0.82, warm page
+cache):
+
+| Phase | Duration |
+|---|---|
+| systemd → engine init | ~30 s |
+| Weight load (155 GiB main + MTP draft, "Model loading took 199 s") | ~3.3 min |
+| KV profile + cache init (30.99 GiB → 4,390,838 tokens) | ~20 s |
+| CUDA graph capture (15 PIECEWISE + 14 FULL, "finished in 13 secs") | **13 s** |
+| `init engine (profile, create kv cache, warmup model)` | 86.7 s total |
+| **`/v1/models` answering** | **~6 min** |
+
+The earlier "~30 minutes, not 6-8" claim in this section is **superseded**: that
+figure was measured across a bringup that included startup-memory-check failures
+and retries (the 0.835→0.82 tuning session), not a clean start. `torch.compile`
+is a red herring — the log warns the model does not support it. CUDA graph
+capture, the other named suspect, is 13 seconds.
+
+What remains true: **do not kill a start on a stopwatch.** A start that hits the
+memory-check/retry path, cold page cache, or first-boot kernel autotune can
+legitimately run far longer than 6 minutes, and `dsv4-service-start`'s 45-minute
+budget exists because a 15-minute budget aborted a healthy bringup. Judge a start
+by whether the container log is still advancing, never by elapsed time alone —
 see "Startup hangs after weight loading" above for what a real hang looks like.
 
 ## `systemctl stop dsv4` leaves all three containers running
