@@ -29,6 +29,20 @@
 > **Still open, not refuted:** cold deep-prefill **TTFT** (a different measurement from
 > decode rate) and **high-concurrency aggregate** at cc≥8. Both were measured under the
 > six confounds and are being re-tested matched.
+>
+> **Independently corroborated the same day** on
+> [`eugr/llama-benchy`](https://github.com/eugr/llama-benchy), a third-party harness we did
+> not write — see [**RESULT-LLAMA-BENCHY-2V3-2026-08-30**](RESULT-LLAMA-BENCHY-2V3-2026-08-30.md).
+> At n=10, **14 of 16 cells resolved and all 14 favour three nodes; zero cells favour two.**
+> It also resolves **aggregate throughput at cc=4/8/16 (+15.4 % to +20.1 %)** for three
+> nodes — the axis this document once awarded to two — and **prefill throughput on all four
+> depths (+12.5 % to +15.8 %, growing with depth)**, where this document reported parity.
+> Note that prefill *throughput* is a different measurement from the cold deep-prefill
+> **TTFT** row above, which llama-benchy did not measure.
+> Its like-for-like decode-at-depth ratio is **+15.4 %**, ~1.6 pp below
+> our +17–20 % band's floor. Two cells (8K decode, cc=1 decode) were **inconclusive** —
+> neither favouring two nodes — and are being re-run at higher n. **Cross-harness absolute
+> t/s are not comparable**; only the within-harness 2v3 ratio is.
 
 ## 1. Executive Summary
 

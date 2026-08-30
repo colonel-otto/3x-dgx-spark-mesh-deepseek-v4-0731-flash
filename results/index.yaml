@@ -68,11 +68,11 @@ meta:
     - ABSENT
     - PRE-DATES-GATE
   fabric_gate_tally:
-    PRESENT-PASS: 12
+    PRESENT-PASS: 14
     PRESENT-FAIL: 0
-    ABSENT: 19
+    ABSENT: 21
     PRE-DATES-GATE: 5
-    total: 37
+    total: 40
   fabric_gate_tally_detail:
     PRESENT-PASS:
       - 20260825-deep-concurrency        # fabric-gate-full.json 13/13, nccl=full
@@ -1719,6 +1719,88 @@ directories:
       delta=654 expected=654 on both arms. TTFT here is WARM, so the original
       COLD deep-prefill claim is not directly addressed. Prefill throughput and
       the APC warm path were not re-tested.
+
+  - dir: 20260830T101053Z-llama-benchy-2v3
+    date: 2026-08-30
+    description: >
+      INDEPENDENT THIRD-PARTY CORROBORATION of the node-count comparison, on
+      eugr/llama-benchy 0.4.1.dev1+ge9be34457 - a harness this project did not
+      write. Node count the only variable, both arms asserted against the live
+      engine, same session. 14 of 16 cells resolved and ALL 14 favour three
+      nodes; ZERO cells favour two. Prefill resolves on all four depths (+12.5%
+      to +15.8%, advantage growing with depth); decode resolves at depth
+      0/32K/131K (+11.9% to +20.8%) and at cc=4/8/16 (+15.4% to +20.1%
+      aggregate). Two cells (8K decode, cc=1 decode) were INCONCLUSIVE, neither
+      favouring two nodes.
+    has_readme: false
+    nodes: [2, 3]
+    nodes_evidence: >
+      tp2/engine-config.txt and tp3/engine-config.txt capture live argv
+      (--tensor-parallel-size 2 / 3, --nnodes 2 / 3); the orchestrator asserted
+      TP and the eight matched engine settings against the RUNNING engine
+      before each arm.
+    tp_size: [2, 3]
+    kv_pool_tokens: null
+    kv_pool_source: not captured in this bundle; see 20260830-matched-2v3-powered
+    harness: eugr/llama-benchy 0.4.1.dev1+ge9be34457 (commit e9be344), third-party
+    harness_committed: false
+    output_tokens_requested: 256
+    output_tokens_actual: {256: all cells}
+    output_tokens_field: response_size (PER-CELL, asserted via --exact-tg)
+    output_tokens_note: >
+      --exact-tg sends min_tokens + ignore_eos; every cell in all four result
+      files records response_size 256 and live TP=3 counters showed benchmark
+      requests finishing on `length` rather than `stop`. The 25-token window
+      collapse cannot recur.
+    reps: 10 runs per cell per arm, 3 warm-up runs per shape discarded
+    reps_verified: true
+    statistic: mean +/- std per cell as reported by llama-benchy
+    fabric_gate: PRESENT-PASS
+    fabric_gate_artifact: tp2/fabric-gate.json
+    fabric_gate_evidence: >
+      TP=2 gate 14 pass, 0 fail, 1 skip; TP=3 gate 24 pass, 0 fail, 1 skip
+      (tp3/fabric-gate.json). Fewer directed pairs on two nodes, correctly.
+    fabric_gate_note: >
+      Both arms gated. NCCL bandwidth skipped in both (nccl_mode skip) because
+      the engine was live.
+    fabric_gated: true
+    fabric_state: healthy
+    raw_data_committed: true
+    raw_files:
+      - tp2/tp2-depth.json
+      - tp2/tp2-concurrency.json
+      - tp2/engine-config.txt
+      - tp2/fabric-gate.json
+      - tp3/tp3-depth.json
+      - tp3/tp3-concurrency.json
+      - tp3/engine-config.txt
+      - tp3/fabric-gate.json
+      - analysis.json
+      - thresholds-prereg.md
+      - prereg-outcome.md
+      - power-check.md
+      - software-stack.txt
+    status: CURRENT
+    void_reasons: []
+    superseded_by: null
+    note: >
+      CONFIRMATORY, NOT A REPLACEMENT for 20260830-matched-2v3-powered: n=10
+      here against n=30 there. CROSS-HARNESS ABSOLUTE t/s ARE NOT COMPARABLE -
+      llama-benchy --depth N prefills CACHED context while our
+      decode_depth_sweep.py does not, so only the 2v3 ratio computed WITHIN
+      each harness may be read against the other. The like-for-like figure
+      against our +17-20% decode band is llama-benchy's decode-at-depth mean of
+      +15.4%, about 1.6 pp BELOW our band's floor - inside the pre-registered
+      +/-5 pp tolerance but at the low end. The pooled +16.7% mixes depth-sweep
+      decode (+15.4%) with concurrency decode (+18.1%) and flatters the
+      agreement; do not quote it against a depth result. The two INCONCLUSIVE
+      cells (8K decode +4.0%, cc=1 decode +6.3%) are one arm being noisy at
+      n=10 (a ~2.8x variance asymmetry), NOT the arms being equal, and must not
+      be reported as findings in either direction; a higher-n re-run of those
+      two cells is in progress. --tokenizer is mandatory: llama-benchy falls
+      back to gpt2 silently, an 11.6% token-count error. 1 NODE IS OUT OF SCOPE
+      AND IMPOSSIBLE for this checkpoint - it exceeds a single GB10's 128 GB.
+      262K excluded by the plan at ~173 s/rep.
 
   - dir: 20260827-decode-concurrency-2v3-fixed
     date: 2026-08-27

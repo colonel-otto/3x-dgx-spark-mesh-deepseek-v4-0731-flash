@@ -6,6 +6,17 @@ thermally-equalised, adequately-powered comparison in this repository's history.
 Pre-registered in [`PREREGISTRATION-2V3-MATCHED.md`](PREREGISTRATION-2V3-MATCHED.md) —
 hypotheses, tie band, outlier rule, and adjudication test all fixed **before** measurement.
 
+**Independently corroborated.** The same question was re-run the same day on
+[`eugr/llama-benchy`](https://github.com/eugr/llama-benchy), a third-party harness we did
+not write — see [**`RESULT-LLAMA-BENCHY-2V3-2026-08-30.md`**](RESULT-LLAMA-BENCHY-2V3-2026-08-30.md).
+At n=10 it resolved 14 of 16 cells and **all 14 favour three nodes, with zero cells
+favouring two.** Its like-for-like decode-at-depth ratio is **+15.4 %**, ~1.6 pp below this
+run's +17–20 % band at 8K–131K — inside the pre-registered ±5 pp tolerance, but at the low
+end. Two of its cells were inconclusive at n=10 (neither favouring two nodes) and are being
+re-run at higher n. **Cross-harness absolute t/s are not comparable**, because
+`llama-benchy --depth N` prefills cached context and `decode_depth_sweep.py` does not; only
+the 2v3 ratio computed within each harness may be read against the other.
+
 ---
 
 ## 1. Headline: three nodes decode faster. Confirmed.
@@ -206,6 +217,10 @@ plausible).
 >   cells as a tie, not a win.
 > - **Aggregate throughput: +18.6 % to +22.3 %** at cc=4/8/16, complete separation.
 > - **KV cache: 2.11× larger.**
+>
+> And it is not our harness alone saying so: an independent third-party harness
+> ([llama-benchy](RESULT-LLAMA-BENCHY-2V3-2026-08-30.md)) resolved 14 of 16 cells the same
+> day and **every one favours three nodes**.
 
 **Every "two nodes win" row in the previously published table was an artefact of the six
 confounds — principally that the 2-node arm never ran Profile B.** Both such claims (deep

@@ -18,6 +18,7 @@ The canonical GitHub repository is
 | Stable example configuration | `configs/*.env.example` or `config/` | Placeholder addresses and no credentials |
 | Reusable automation | `scripts/` | Parameterized; no workstation-specific paths or embedded hosts |
 | A settled finding or failure mode | `docs/DECISIONS.md`, a dated report, or troubleshooting docs | Link directly to committed evidence |
+| A run on a **third-party** harness | `results/YYYYMMDD-<subject>/` plus a dated report | Name the tool and its exact version; state which comparisons are valid across harnesses and which are not (see [`RESULT-LLAMA-BENCHY-2V3-2026-08-30.md`](RESULT-LLAMA-BENCHY-2V3-2026-08-30.md)) |
 
 Raw evidence belongs in Git when it is small enough to review and necessary to reproduce
 a published claim. Prefer text, CSV, JSON, or JSONL. Do not commit only a screenshot or a
@@ -95,6 +96,7 @@ pull request:
 | Question | Owner |
 |---|---|
 | What should a new reader believe now? | Root `README.md` |
+| Do two or three nodes serve this model faster? | `RESULT-2V3-MATCHED-2026-08-30.md`, with `RESULT-LLAMA-BENCHY-2V3-2026-08-30.md` as the independent third-party corroboration |
 | What is running and what remains open? | `HANDOFF-2026-08-27.md` until a newer dated handoff replaces it |
 | How do I build and start it? | `setup.md`, with `topology.md` and `patch.md` as focused dependencies |
 | How must benchmarks be run? | `BENCHMARK-POLICY.md` |

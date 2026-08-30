@@ -6,12 +6,19 @@ decode +6.7 % to +20.2 %, aggregate throughput +18.6 % to +22.3 %, warm TTFT fro
 and a 2.11× KV pool. See [**RESULT-2V3-MATCHED**](RESULT-2V3-MATCHED-2026-08-30.md).
 Older 2v3 numbers are superseded; check the provenance index before quoting any benchmark.
 
+**And it is no longer self-certified.** An independent third-party harness we did not write
+([`eugr/llama-benchy`](https://github.com/eugr/llama-benchy)) re-ran the same question the
+same day: 14 of 16 cells resolved, **all 14 favour three nodes, zero favour two**. See
+[**RESULT-LLAMA-BENCHY-2V3**](RESULT-LLAMA-BENCHY-2V3-2026-08-30.md).
+
 ## Read first
 
 | Document | Purpose |
 |---|---|
 | [**RESULT: matched 2v3**](RESULT-2V3-MATCHED-2026-08-30.md) | **The settled node-count answer.** Node count the only variable, n=30/cell, significance-tested |
 | [Pre-registration](PREREGISTRATION-2V3-MATCHED.md) | Hypotheses, tie band and outlier rule, fixed before that run measured anything |
+| [**RESULT: independent llama-benchy 2v3**](RESULT-LLAMA-BENCHY-2V3-2026-08-30.md) | **The same question on a harness we did not write.** 14/16 cells resolved, all 14 favour three nodes, zero favour two; like-for-like decode ratio +15.4 % against our +17–20 % band |
+| [Plan: llama-benchy 2v3](PLAN-LLAMA-BENCHY-2V3.md) | Why that tool, the fairness rules, and the three expectations pre-registered before it ran |
 | [3-Node vs 2-Node Benchmark](BENCHMARK-2V3-NODES.md) | Older matrix — superseded for decode/concurrency; still the reference for APC, MTP and architecture |
 | [Current handoff](HANDOFF-2026-08-29-EVENING.md) | Cluster state, the six-confound finding, harness bugs fixed, and next steps |
 | [GPU clocks cannot be locked](GPU-CLOCKS-NOT-LOCKABLE.md) | Why GB10 ignores `nvidia-smi -lgc`, and what to do instead |
@@ -26,6 +33,8 @@ Older 2v3 numbers are superseded; check the provenance index before quoting any 
 
 | Evidence | Status | What it establishes |
 |---|---|---|
+| [Matched 2v3 comparison](../results/20260830-matched-2v3-powered/) | Current, gate present/pass | The settled node-count answer: node count the only variable, n=30/cell, all five decode depths significant |
+| [Independent llama-benchy 2v3](../results/20260830T101053Z-llama-benchy-2v3/) | Current, confirmatory, gate present/pass | Third-party harness, n=10: 14 of 16 cells resolved, all 14 favour three nodes, zero favour two; two cells inconclusive pending a higher-n re-run |
 | [Corrected 3-node decode curve](../results/20260827-decode-3node-fixed/) | Current, single arm, gate absent | 256-token medians and full spreads from 2K–262K; intermittent slow mode at depth |
 | [3-node quality suite](../results/20260827-quality-suite-3node/) | Current quality evidence, gate absent | RULER-lite 12/12, tools 7/7, deep tools 8/8, garble clean through 131K |
 | [Controlled NCCL run](../results/20260826-nccl-controlled/) | Current, directly measured | 23.92 GB/s at 16 GiB; no bandwidth gap versus reference |

@@ -23,6 +23,9 @@ fabric gate weakens performance evidence but does not invalidate pass/fail quali
 
 | Bundle | Nodes | Gate | What it establishes |
 |---|---:|---|---|
+| [20260830T101053Z-llama-benchy-2v3](20260830T101053Z-llama-benchy-2v3/) | 2/3 | Present/pass both arms | **Independent third-party corroboration** on `eugr/llama-benchy` 0.4.1.dev1+ge9be34457, n=10: 14 of 16 cells resolved, all 14 favour three nodes, zero favour two. Confirmatory only; cross-harness absolute t/s are not comparable |
+| [20260830-matched-2v3-powered](20260830-matched-2v3-powered/) | 2/3 | Present/pass | **The settled node-count comparison**; node count the only variable, n=30/cell, three nodes win decode, TTFT, aggregate throughput and KV pool |
+| [20260829-issue38-kernel-profiling](20260829-issue38-kernel-profiling/) | 3 | Absent | First device-level kernel trace for TP=3; decode is 87.5% NCCL AllReduce bound |
 | [20260829-issue36-dspark-proposer-long-horizon](20260829-issue36-dspark-proposer-long-horizon/) | 3 | Absent | DSpark proposer long-generation audit (256-1536 tokens); confirms 76.7%-80.4% acceptance (tau=2.55) with 0 staleness decay |
 | [20260828-issue36-locked-clocks-suite](20260828-issue36-locked-clocks-suite/) | 3 | Absent | Master suite under hardware-locked 3003 MHz clocks: determinism, MTP K=2 concurrency, prefill depth, and APC warm path |
 | [20260828-issue35-guidellm-concurrency](20260828-issue35-guidellm-concurrency/) | 3 | Absent | GuideLLM industry standard concurrency and latency sweep across cc=1..32 |

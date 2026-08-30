@@ -11,11 +11,11 @@ and diagnostic baseline values.
 
 | Item | Count |
 |---|---:|
-| Result bundles | 39 |
-| `CURRENT` | 25 |
+| Result bundles | 40 |
+| `CURRENT` | 26 |
 | `VOID` | 9 |
 | `SUPERSEDED` | 5 |
-| Own passing fabric gate | 13 |
+| Own passing fabric gate | 14 |
 | Gate absent | 21 |
 | Predates the gate | 5 |
 
@@ -41,6 +41,7 @@ quality evidence or a methodology-only control.
 | [20260827-decode-3node-fixed](20260827-decode-3node-fixed/) | 2026-08-27 | 3 / 3 | `ABSENT` | Corrected 3-node decode depth curve with a forced and verified 256-token window. Supersedes the TP=3 arm of 20260826-decode-depth-2v3. |
 | [20260827-quality-suite-3node](20260827-quality-suite-3node/) | 2026-08-27 | 3 / 3 | `ABSENT` | The 2-node repository's quality scripts, vendored unmodified and run on the 3-node TP=3 deployment through 131K context. |
 | [20260830-matched-2v3-powered](20260830-matched-2v3-powered/) | 2026-08-30 | [2, 3] / [2, 3] | `PRESENT-PASS` | THE SETTLED NODE-COUNT COMPARISON. Configuration-identical, same-session, thermally-equalised, power-analysis-sized. Three nodes win decode at every depth (+6.7% to +20.2%), aggregate throughput at every concurrency (+18.6% to +22.3%), warm TTFT from 32K up, and KV pool (2.11x). No measured workload favours two nodes. |
+| [20260830T101053Z-llama-benchy-2v3](20260830T101053Z-llama-benchy-2v3/) | 2026-08-30 | [2, 3] / [2, 3] | `PRESENT-PASS` | INDEPENDENT THIRD-PARTY CORROBORATION of the node-count comparison, on eugr/llama-benchy 0.4.1.dev1+ge9be34457 - a harness this project did not write. Node count the only variable, both arms asserted against the live engine, same session. 14 of 16 cells resolved and ALL 14 favour three nodes; ZERO cells favour two. Prefill resolves on all four depths (+12.5% to +15.8%, advantage growing with depth); decode resolves at depth 0/32K/131K (+11.9% to +20.8%) and at cc=4/8/16 (+15.4% to +20.1% aggregate). Two cells (8K decode, cc=1 decode) were INCONCLUSIVE, neither favouring two nodes. |
 | [20260827-issue25-profile-b](20260827-issue25-profile-b/) | 2026-08-27 | 3 / 3 | `PRESENT-PASS` | Profile B evaluation for issue #25 applying published recipe deltas: GPU_MEMORY_UTILIZATION=0.835, LONG_PREFILL_TOKEN_THRESHOLD=1024, DSPARK_MAX_INFLIGHT_PREFILLS=2, VLLM_PREFIX_CACHE_RETENTION_INTERVAL=4096, and concurrency hotfixes. |
 | [20260827-tp3-131k-15rep](20260827-tp3-131k-15rep/) | 2026-08-27 | 3 / 3 | `PRESENT-PASS` | 15-repetition single-stream decode and TTFT evaluation at 131K on TP=3 (Profile B) with live restoration completion check for issue #24. |
 | [20260827-issue28-speed-bt16384](20260827-issue28-speed-bt16384/) | 2026-08-27 | 3 / 3 | `PRESENT-PASS` | Speed profile sweep testing MAX_NUM_BATCHED_TOKENS=16384 on 3-node TP=3 for Issue #28. 7 reps per depth from 2K to 262K with 256 tokens asserted and 5 starvation trials. Shows +11.5% decode speedup at 262K (51.39 tok/s) but degrades 131K and 262K TTFT (+22-29%). Mechanism uncharacterized: the bus-saturation hypothesis is withdrawn as arithmetically infeasible and untested. Confounded by MAX_MODEL_LEN=460800 vs 1048576. The +11.5% sits inside a 32.2% run spread. |
