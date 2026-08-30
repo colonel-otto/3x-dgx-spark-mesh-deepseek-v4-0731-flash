@@ -71,10 +71,17 @@ cells run, the honest claim is "measured clean through 524K; 600K–1M unmeasure
 
 **SCHEDULED: the deep cells run automatically at 02:00 EDT 2026-08-31** via a
 one-shot systemd timer on sparkmain (`issue22-deep-cells.timer`, runs as user
-sparkmain, log `/tmp/issue22-rerun-deep.log`). The script's own gates apply at
-fire time: it refuses if the engine is down or the cluster is not idle, so a
-stopped or busy cluster simply skips the run (check the log in the morning).
-Cancel with `sudo systemctl stop issue22-deep-cells.timer`.
+sparkmain, log `/tmp/issue22-rerun-deep.log`). Two-stage, self-healing:
+
+- **01:50 `dsv4-prestart.timer`** (root): if `:8100/v1/models` doesn't answer,
+  `systemctl reset-failed dsv4` then `systemctl start dsv4` (~6-min clean cold
+  start). No-op when the engine is already up.
+- **02:00 `issue22-deep-cells.timer`** (user sparkmain): waits up to 30 min for
+  the engine to answer, then runs the sweep. The idle-exclusivity gate still
+  applies — foreign traffic voids the run rather than polluting it.
+
+Cancel both with:
+`sudo systemctl stop issue22-deep-cells.timer dsv4-prestart.timer`.
 
 **To resume manually instead (engine up, cluster idle):**
 ```bash
