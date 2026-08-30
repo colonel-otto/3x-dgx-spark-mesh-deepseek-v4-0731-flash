@@ -60,3 +60,35 @@ where the first launch fit, try `drop_caches` before concluding the config regre
 - A host-built NCCL is not automatically the runtime used by the Python process.
 - The uppercase second CX-7 interface pair is optional multi-rail headroom, not a
   prerequisite for the historical result.
+
+## Startup fails instantly with "Free memory on device ... is less than desired GPU memory utilization"
+
+```
+ValueError: Free memory on device cuda:0 (100.94/121.69 GiB) on startup is less
+than desired GPU memory utilization (0.835, 101.61 GiB).
+```
+
+`GPU_MEMORY_UTILIZATION` is a fraction of **total** memory, but the check compares
+it against **free** memory. On a GB10 node the OS, dockerd, `open-webui` (~1 GiB on
+rank 0) and the exporters are already resident, so a node never frees more than
+~100.9-101.5 GiB of its 121.69 GiB. Any value above ~0.828 therefore fails on a
+warm box even though nothing is wrong with the cluster.
+
+Fix by lowering the value on **all three ranks** (a mismatch hangs startup forever
+with no error) or by freeing resident host RAM. See `DECISIONS.md` for the current
+value and why it moved.
+
+**`VLLM_SKIP_INIT_MEMORY_CHECK` does not work.** The engine logs it as
+`Unknown vLLM environment variable detected` and `request_memory()` in
+`vllm/v1/worker/utils.py` raises unconditionally — there is no skip branch in this
+build. Do not rely on it to let a tight value through.
+
+**Read the container log, not the journal.** `journalctl -u dsv4` shows only the
+outer wrapper's traceback ending in `Engine core initialization failed. See root
+cause above.` — the actual `ValueError` is upstream of it, in
+`docker logs dspark-vllm-gx10-vllm-dspark-1`.
+
+**Free is not available.** These are unified-memory nodes: `nvidia-smi` reports
+`N/A` and the check reads *free*. A node showing 74 GiB free / 116 GiB available
+has 42 GiB of reclaimable page cache — but vLLM tests the free number, so judge
+headroom by that.
