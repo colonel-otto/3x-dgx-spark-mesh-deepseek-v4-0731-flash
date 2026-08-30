@@ -1,0 +1,55 @@
+# Build the GB10 DSpark runtime directly from upstream vLLM instead of the
+# prebuilt ghcr.io/anemll/dspark-vllm-gx10 image, so the base is ours to pin,
+# audit, and upgrade. Replicates Anemll's recipe (MIT, see CREDITS.md):
+#   stock vllm-openai image -> pinned pip deps -> Anemll overlay -> our patches.
+# All pins mirror ../upstream.lock; keep the ARG defaults in sync with it.
+#
+# Build on a Spark (linux/arm64):
+#   docker build -f docker/Dockerfile.upstream -t dsv4-3spark-upstream:v0.25.1 .
+
+ARG VLLM_BASE=vllm/vllm-openai:v0.25.1
+
+FROM alpine/git:latest AS overlay
+ARG ANEMLL_OVERLAY_REPO=https://github.com/Anemll/dspark-vllm-gx10.git
+ARG ANEMLL_OVERLAY_COMMIT=47503f8e38dadd4dededca798150db2619594fce
+RUN git clone --filter=blob:none --no-checkout "${ANEMLL_OVERLAY_REPO}" /src && \
+    git -C /src checkout --detach "${ANEMLL_OVERLAY_COMMIT}" && \
+    test "$(git -C /src rev-parse HEAD)" = "${ANEMLL_OVERLAY_COMMIT}"
+
+FROM ${VLLM_BASE}
+ARG FLASHINFER_COMMIT=0472b9b3f2fba11b463f8526f390297d52a8aad7
+ARG B12X_COMMIT=7dc6fb8fcc6446ea093537d1657df81985fa5f43
+ARG CUTLASS_DSL_VERSION=4.5.2
+ARG CUDA_PYTHON_VERSION=13.3.1
+ARG TVM_FFI_VERSION=0.1.9
+
+LABEL org.opencontainers.image.source="https://github.com/colonel-otto/3x-dgx-spark-mesh-deepseek-v4-0731-flash"
+LABEL org.opencontainers.image.description="DeepSeek-V4 Flash 3-node DGX Spark runtime built from upstream vLLM (Anemll overlay recipe + TP=3 and DSpark hotfixes)"
+LABEL org.opencontainers.image.licenses="MIT AND Apache-2.0"
+
+ENV FLASHINFER_DISABLE_VERSION_CHECK=1
+RUN python3 -m pip install --no-cache-dir \
+      "cuda-python==${CUDA_PYTHON_VERSION}" \
+      "nvidia-cutlass-dsl==${CUTLASS_DSL_VERSION}" \
+      "nvidia-cutlass-dsl-libs-base==${CUTLASS_DSL_VERSION}" \
+      "nvidia-cutlass-dsl-libs-cu13==${CUTLASS_DSL_VERSION}" \
+      "apache-tvm-ffi==${TVM_FFI_VERSION}" && \
+    python3 -m pip install --no-cache-dir --no-deps --no-build-isolation \
+      "https://github.com/lukealonso/b12x/archive/${B12X_COMMIT}.tar.gz" && \
+    python3 -m pip install --no-cache-dir --no-deps --no-build-isolation \
+      --force-reinstall \
+      "https://github.com/flashinfer-ai/flashinfer/archive/${FLASHINFER_COMMIT}.tar.gz"
+
+# Anemll's downstream overlay (deepseek_v4 model code, NVFP4 KV plumbing,
+# B12X MoE glue), pinned in the overlay stage above.
+COPY --from=overlay /src/overlay/vllm/ /usr/local/lib/python3.12/dist-packages/vllm/
+
+# Our patches, applied at build time -- the same set Dockerfile.runtime applies
+# to the prebuilt image, so both images are functionally interchangeable.
+COPY patches/ /opt/dsv4-tp3/
+RUN python3 /opt/dsv4-tp3/apply_tp3_patch.py && \
+    python3 /opt/dsv4-tp3/hotfix-dsv4-issue26-hybrid-swa-min.py && \
+    python3 /opt/dsv4-tp3/hotfix-dsv4-issue27-partial-prefill-concurrency.py && \
+    python3 /opt/dsv4-tp3/apply_tp3_patch.py --check
+
+ENTRYPOINT ["vllm", "serve"]
