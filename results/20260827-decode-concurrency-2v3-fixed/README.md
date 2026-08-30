@@ -1,6 +1,6 @@
 # Corrected 256-token concurrency: two nodes versus three — 2026-08-27
 
-**Status:** `CURRENT` · **Depth:** 8,192 · **Output:** 256 tokens asserted per request ·
+**Status:** `SUPERSEDED-BY-20260830-matched-2v3-powered` · **Depth:** 8,192 · **Output:** 256 tokens asserted per request ·
 **Trials:** 3 per concurrency and arm
 
 This is the fixed-window follow-up to the historical concurrency result. It confirms the

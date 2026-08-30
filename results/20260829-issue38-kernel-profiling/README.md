@@ -1,5 +1,6 @@
 # Issue #38: Kernel Profiling Trace Analysis (3-Node DGX Spark TP=3)
 
+**Status**: `CURRENT`  
 **Date**: 2026-08-29  
 **Target Cluster**: 3x DGX Spark (`sparkmain`, `spark1`, `spark2`)  
 **Model**: DeepSeek-V4 Flash (TP=3, NVFP4/FP8, MTP Speculative Decoding K=2)  

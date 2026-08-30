@@ -1628,7 +1628,7 @@ directories:
       - tp3/tp3-fixed.jsonl
       - tp3/tp3-fixed-summary.json
       - tp3/engine-config.txt
-    status: SUPERSEDED
+    status: SUPERSEDED-BY-20260830-matched-2v3-powered
     void_reasons: []
     superseded_by: 20260830-matched-2v3-powered
     note: >
@@ -1841,7 +1841,7 @@ directories:
       - tp3/3node-run.log
       - harness/bench_miaai_cc.py
       - harness/run_2node_cc_sweep.sh
-    status: SUPERSEDED
+    status: SUPERSEDED-BY-20260830-matched-2v3-powered
     void_reasons: []
     superseded_by: 20260830-matched-2v3-powered
     supersession_note: >

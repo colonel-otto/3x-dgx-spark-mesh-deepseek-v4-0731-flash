@@ -1,6 +1,6 @@
 # Corrected 256-token decode: two nodes versus three — 2026-08-27
 
-**Status:** `CURRENT` · **Harness:** corrected `decode_depth_sweep.py` · **Output:**
+**Status:** `SUPERSEDED-BY-20260830-matched-2v3-powered` · **Harness:** corrected `decode_depth_sweep.py` · **Output:**
 256 tokens asserted on all 70 reps · **Cache:** zero cached tokens on all reps
 
 This bundle imports the raw data behind the fixed-harness node-count result posted to

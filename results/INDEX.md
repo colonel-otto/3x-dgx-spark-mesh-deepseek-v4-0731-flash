@@ -60,6 +60,8 @@ quality evidence or a methodology-only control.
 |---|---|---|---|---|
 | [20260824-kv-quality](20260824-kv-quality/) | 2026-08-24 | 3 / 3 | `ABSENT` | NVFP4 KV-cache quality probe (needle retrieval) to 464K actual prompt tokens. Single-arm, no comparison dtype. |
 | [20260824-seqs32-nccl](20260824-seqs32-nccl/) | 2026-08-24 | 3 / 3 | `ABSENT` | MAX_NUM_SEQS=32 trial plus NCCL all-gather sweeps; includes the crash logs from the _ALLGATHER_BASE timeout that caused the rejection. |
+| [20260827-decode-2v3-fixed](20260827-decode-2v3-fixed/) | 2026-08-27 | [2, 3] / [2, 3] | `PRESENT-PASS` | Corrected 256-token matched node-count sweep, seven reps per arm and depth. Three nodes win cc=1 decode by 7.3-16.7% across 2K-262K. |
+| [20260827-decode-concurrency-2v3-fixed](20260827-decode-concurrency-2v3-fixed/) | 2026-08-27 | [2, 3] / [2, 3] | `PRESENT-PASS` | Corrected 256-token concurrency comparison at 8K. TP=3 wins cc=4; TP=2 wins aggregate throughput at cc=8 and cc=16. |
 | [20260827-issue25-profile-a](20260827-issue25-profile-a/) | 2026-08-27 | 3 / 3 | `PRESENT-PASS` | Baseline TP=3 production configuration before applying the recipe tuning deltas in issue #25. Includes 5-trial starvation probe and 5-depth fixed-window sweep. |
 
 ## Void evidence retained as diagnostic baselines
