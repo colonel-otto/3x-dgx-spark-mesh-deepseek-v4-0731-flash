@@ -15,21 +15,24 @@ under passing fabric gates.
 
 ## Start here
 
-1. [3-Node vs 2-Node Benchmark](docs/BENCHMARK-2V3-NODES.md) — comprehensive performance
-   matrix, context scaling, and architectural analysis.
-2. [Current handoff](docs/HANDOFF-2026-08-28.md) — cluster state, verified findings, and
+1. [**RESULT: matched 2v3 comparison**](docs/RESULT-2V3-MATCHED-2026-08-30.md) — the
+   settled answer. Node count as the only variable, n=30 per cell: three nodes decode
+   **+6.7 % to +20.2 %** faster across 2K–262K, all significant. **Read this first.**
+2. [3-Node vs 2-Node Benchmark](docs/BENCHMARK-2V3-NODES.md) — the older matrix, partly
+   superseded by the above; still the reference for APC, MTP, and architectural analysis.
+3. [Current handoff](docs/HANDOFF-2026-08-29-EVENING.md) — cluster state, verified findings, and
    recipe tuning conclusions.
-3. [Documentation index](docs/README.md) — setup, operations, method, decisions, and
+4. [Documentation index](docs/README.md) — setup, operations, method, decisions, and
    historical investigations.
-4. [Results index](results/README.md) — one readable row per frozen run bundle.
-5. [Provenance index](results/INDEX.md) — status, gate coverage, raw evidence, and caveats.
-6. [Repository and data map](docs/REPOSITORY-MAP.md) — what belongs on GitHub and what
+5. [Results index](results/README.md) — one readable row per frozen run bundle.
+6. [Provenance index](results/INDEX.md) — status, gate coverage, raw evidence, and caveats.
+7. [Repository and data map](docs/REPOSITORY-MAP.md) — what belongs on GitHub and what
    should stay local.
 
 ## The 3-Node Value: Multi-Million Token KV Cache & 100x Warm-Path Speedup
 
 The primary operational value of the 3-node cluster (`TP=3`) is **expanded unified memory**:
-- **Multi-Million Token KV Cache Pool**: 3 nodes expand KV capacity to **4,660,501 tokens** under Profile B (`GPU_MEMORY_UTILIZATION=0.835`, `MTP_NUM_TOKENS=2`) per the engine's init log — 4.44x headroom at 1M tokens per request, with zero KV preemption observed in any benchmark bundle to date. (The `/metrics` endpoint reports a lower figure on the same engine; see [Current evidence](#current-evidence).)
+- **Multi-Million Token KV Cache Pool**: 3 nodes expand KV capacity to **4,688,072 tokens** (**2.11x** the 2-node pool of 2,217,166, measured matched 2026-08-30) under Profile B (`GPU_MEMORY_UTILIZATION=0.835`, `MTP_NUM_TOKENS=2`) per the engine's init log — 4.44x headroom at 1M tokens per request, with zero KV preemption observed in any benchmark bundle to date. (The `/metrics` endpoint reports a lower figure on the same engine; see [Current evidence](#current-evidence).)
 - **The Warm Multi-Turn Path (APC)**: While Turn 1 of a 131K-token coding session costs ~78s cold, **every subsequent turn responds in <0.75s (a ~107x latency reduction)** via Automatic Prefix Caching, with prefix retention confirmed across 30s and 120s human think-time pauses with zero degradation.
 
 ```mermaid
@@ -46,33 +49,33 @@ configuration-identical and were not run on the same day**: the TP=2 arm ran
 shape is `MAX_NUM_SEQS=32` with `MTP_NUM_TOKENS=2`. Rows are marked accordingly. Where
 no 2-node measurement exists, the cell says so rather than estimating.
 
-> **Two further caveats, added 2026-08-29 — a corrected replacement is being measured now.**
+> ## ✅ SETTLED 2026-08-30 — see [**RESULT-2V3-MATCHED**](docs/RESULT-2V3-MATCHED-2026-08-30.md)
 >
-> 1. **There is a third confound**, not previously disclosed here or in `DECISIONS.md`:
->    the arms also differ in `GPU_MEMORY_UTILIZATION` (**0.80** on the TP=2 arm vs
->    **0.835** on TP=3), read from the live env files and the running engine. Per Issue
->    #25 that knob alone is worth ~35 % of the KV pool and −10.7 % starvation TTFT.
-> 2. **No run in this repository had controlled GPU clocks.** GB10 does not honour
->    `nvidia-smi -lgc`; clock floats with a package power budget and varies per node with
->    thermal state ([`GPU-CLOCKS-NOT-LOCKABLE.md`](docs/GPU-CLOCKS-NOT-LOCKABLE.md)).
->    Measured impact when uncontrolled: per-cell spread reached **17.3 %** against a noise
->    floor of 6.6–11.7 %, which cannot resolve the 7–17 % deltas in this very table.
+> The matched comparison has now run. **Three nodes decode faster at every tested depth**,
+> with node count as the only variable and n=30 per cell (n=12 at 262K):
 >
-> A configuration-identical, same-session, thermally-equalised comparison with continuous
-> clock telemetry is in progress; its hypotheses and tie band were fixed in advance in
-> [`PREREGISTRATION-2V3-MATCHED.md`](docs/PREREGISTRATION-2V3-MATCHED.md). **Treat the
-> deltas below as provisional until it lands.**
+> | Depth | TP=3 | TP=2 | Delta | p | Cliff's δ |
+> |---:|---:|---:|---:|---:|---:|
+> | 2K | 46.59 | 43.68 | **+6.7 %** | 6.0×10⁻⁵ | 0.604 |
+> | 8K | 51.07 | 43.62 | **+17.1 %** | 3.5×10⁻¹⁰ | 0.944 |
+> | 32K | 50.83 | 42.29 | **+20.2 %** | 3.0×10⁻¹¹ | **1.000** |
+> | 131K | 47.38 | 39.92 | **+18.7 %** | 3.3×10⁻¹¹ | 0.998 |
+> | 262K | 45.04 | 39.79 | **+13.2 %** | 4×10⁻⁵ | **1.000** |
 >
-> 3. **Four of the five decode deltas below are not statistically significant.** An exact
->    Mann-Whitney U test on the committed per-rep data (n=7 vs n=7, α=0.05) gives
->    p = 0.097 (2K), **0.0006 (8K)**, 0.073 (32K), **0.535 (131K)**, 0.209 (262K). Only
->    the 8K row separates — and it carries all three confounds above. Every delta is
->    smaller than the spread of at least one arm it came from. Full working:
->    [`ANALYSIS-2V3-2026-08-29.md`](docs/ANALYSIS-2V3-2026-08-29.md).
+> All five significant by two independent tests. **δ = 1.000 at 32K and 262K means every
+> TP=3 rep beat every TP=2 rep.** Matched KV pool is **2.11×** (2,217,166 vs 4,688,072),
+> not the 2.6× below.
 >
-> **The supportable claim today:** three-node TP=3 works, is numerically correct, and
-> reproduces within ~±8 % across days. **We cannot currently claim a decode speedup over
-> two nodes.**
+> **The table below is superseded.** It is retained for provenance only. Its arms differed
+> in **six** engine settings — `MAX_NUM_SEQS`, `MTP_NUM_TOKENS`, `GPU_MEMORY_UTILIZATION`,
+> `LONG_PREFILL_TOKEN_THRESHOLD`, `DSPARK_MAX_INFLIGHT_PREFILLS`, `KV_CACHE_DTYPE` — of
+> which only the first two were ever disclosed, so it compared *three nodes tuned against
+> two nodes untuned*. At n=7 four of its five decode rows also failed a significance test.
+> Its direction was right; its evidence was not.
+>
+> Two rows below remain **open**, not refuted: cold deep-prefill **TTFT** (a different
+> measurement from decode rate) and **high-concurrency aggregate** at cc≥8. Both were
+> measured under the six confounds and are being re-tested matched.
 
 | Capability / Metric | 3-Node (`TP=3`) | 2-Node (`TP=2`) | Delta | Source bundle |
 |---|:---:|:---:|:---:|---|
@@ -87,16 +90,19 @@ no 2-node measurement exists, the cell says so rather than estimating.
 
 ### Key takeaways
 
-1. **Decode favours three nodes; deep cold prefill favours two.** TP=3 leads
-   single-stream decode by +7.3% to +16.7% from 2K–262K, while TP=2 reaches first token
-   22.3 s sooner at 131K. Which matters depends on whether your turns are long-output or
-   long-input.
+1. **Decode favours three nodes at every depth — confirmed matched, 2026-08-30.**
+   +6.7 % at 2K and **+13 % to +20 % from 8K through 262K**, all significant, with complete
+   separation at 32K and 262K ([RESULT](docs/RESULT-2V3-MATCHED-2026-08-30.md)). The older
+   "+7.3 % to +16.7 %" understated it. Cold **TTFT** at depth is a separate question and is
+   still open.
 2. **The warm path dwarfs both.** Cold 131K costs ~78 s once; every subsequent turn
    returns in **<0.75 s** via prefix caching, retained across 2 minutes of think-time.
    For interactive coding this effect is ~100x, two orders of magnitude larger than any
    node-count delta in this table.
-3. **KV capacity is 2.6x larger on three nodes and has never been the binding
-   constraint** — zero preemptions in every bundle, on either arm.
+3. **KV capacity is 2.11x larger on three nodes** (matched measurement: 4,688,072 vs
+   2,217,166 tokens) **and has never been the binding constraint** — zero preemptions in
+   every bundle, on either arm. The "2.6x" figure came from arms differing in
+   `GPU_MEMORY_UTILIZATION` and `MTP_NUM_TOKENS`, both of which move the pool.
 4. **Drafting is healthy.** Under $K=2$ the DSpark proposer holds ~77–80% acceptance
    through 1,536 generated tokens, ruling out the community-reported staleness decay.
 
@@ -114,7 +120,7 @@ the one comparison that would make every row above configuration-matched.
 | Does TP=3 serve correct output? | Yes; the attention-group padding patch is required and hermetically baked into `dsv4-3spark:0.1.1`. | [Patch](docs/patch.md), [quality suite](results/20260827-quality-suite-3node/) |
 | Does three-node quality hold at long context? | Yes in the tested suite: RULER-lite 12/12, tool battery 7/7, deep-context tools 8/8, garble sweep clean through 131K. | [Quality suite](results/20260827-quality-suite-3node/) |
 | What is corrected three-node decode speed? | Median 50.1–59.8 tok/s from 2K–262K with 256 asserted output tokens under winning Profile B. | [Profile B](results/20260827-issue25-profile-b/) |
-| Does three-node beat two-node at cc=1 decode? | **Unresolved — do not claim a win.** The +7.3% to +16.7% figures come from arms that differed in three engine settings, and **four of the five rows fail an exact Mann-Whitney U test** at n=7 (131K: p=0.535; 2K: p=0.097). Only 8K separates (p=0.0006), and it carries the same confounds. A matched arm is staged but not yet run. | [Analysis](docs/ANALYSIS-2V3-2026-08-29.md), [Matched 2v3](results/20260827-decode-2v3-fixed/) |
+| Does three-node beat two-node at cc=1 decode? | **Yes — confirmed on a matched arm, 2026-08-30.** With node count as the *only* variable and n=30 per cell: **+6.7%** at 2K, **+17.1%** at 8K, **+20.2%** at 32K, **+18.7%** at 131K, **+13.2%** at 262K. All five significant by two independent tests (p from 6×10⁻⁵ to 3×10⁻¹¹). Cliff's δ = 1.000 at 32K and 262K — every TP=3 rep beat every TP=2 rep. Supersedes the older +7.3–+16.7% figures, which were directionally right but drawn from arms differing in **six** settings at n=7. | [**RESULT**](docs/RESULT-2V3-MATCHED-2026-08-30.md), [Analysis](docs/ANALYSIS-2V3-2026-08-29.md) |
 | Does three-node beat two-node at TTFT? | Three nodes wins below 32K (13% sooner at 2K, 12% at 8K); **two nodes wins deep cold prefill** — 70.43 s vs 92.73 s at 131K in the matched arm. Warm turns are sub-second on three nodes and unmeasured on two. | [Matched 2v3](results/20260827-decode-2v3-fixed/) |
 | Does three-node beat two-node at concurrency? | **Not at `MTP=5`** — TP=2 led at `cc=8` and `cc=16` (56.20 vs 52.77 tok/s). Moving to `MTP=2` raised the 3-node `cc=16` figure to 55.10 tok/s against its own `MTP=5` arm, but **no 2-node arm was run at `MTP=2`**, so the gap is narrowed on one side only, not closed. | [Concurrency 2v3](results/20260827-decode-concurrency-2v3-fixed/), [MTP sweep](results/20260828-issue32-mtp-concurrency-sweep/) |
 | Is the fabric below the published reference? | No. Official `nccl-tests` measured 23.92 GB/s at 16 GiB. | [Controlled NCCL run](results/20260826-nccl-controlled/) |

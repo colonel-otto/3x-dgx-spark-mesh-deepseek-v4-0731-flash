@@ -7,24 +7,28 @@
 
 ---
 
-> ## ⚠️ SUPERSEDED IN PART — read [`ANALYSIS-2V3-2026-08-29.md`](ANALYSIS-2V3-2026-08-29.md) first
+> ## ✅ SUPERSEDED for decode — see [**RESULT-2V3-MATCHED-2026-08-30**](RESULT-2V3-MATCHED-2026-08-30.md)
 >
-> An exact Mann-Whitney U test on this document's own committed per-rep data shows
-> **four of the five decode rows below are not statistically significant** at n=7:
+> A matched comparison ran 2026-08-30 with node count as the **only** variable (all nine
+> engine settings identical and verified against each live engine) at **n=30 per cell**.
+> Three nodes decode faster at **every** tested depth:
 >
-> | Depth | Delta claimed | p | |
-> |---:|---:|---:|---|
-> | 2K | +16.7 % | 0.0973 | not significant |
-> | 8K | +14.2 % | 0.0006 | significant |
-> | 32K | +11.0 % | 0.0728 | not significant |
-> | 131K | +7.3 % | 0.5350 | not significant |
-> | 262K | +10.0 % | 0.2086 | not significant |
+> | Depth | TP=3 | TP=2 | Delta | p | Cliff's δ |
+> |---:|---:|---:|---:|---:|---:|
+> | 2K | 46.59 | 43.68 | +6.7 % | 6.0×10⁻⁵ | 0.604 |
+> | 8K | 51.07 | 43.62 | +17.1 % | 3.5×10⁻¹⁰ | 0.944 |
+> | 32K | 50.83 | 42.29 | +20.2 % | 3.0×10⁻¹¹ | **1.000** |
+> | 131K | 47.38 | 39.92 | +18.7 % | 3.3×10⁻¹¹ | 0.998 |
+> | 262K | 45.04 | 39.79 | +13.2 % | 4×10⁻⁵ | **1.000** |
 >
-> Every delta is smaller than the spread of at least one arm it was computed from (the 2K
-> TP=3 cell spans 38.22–64.54 tok/s). The one surviving row, 8K, is still confounded by
-> **three** engine settings — `MAX_NUM_SEQS`, `MTP_NUM_TOKENS`, and
-> `GPU_MEMORY_UTILIZATION` (0.80 vs 0.835), the last of which is disclosed nowhere in this
-> document. **Do not quote the decode deltas below as node-count wins.**
+> **The decode rows below are superseded.** They were directionally correct but rested on
+> arms differing in **six** engine settings (only two disclosed) at n=7, where four of five
+> rows failed an exact Mann-Whitney U test (2K p=0.097; 131K p=0.535). Matched, the true
+> effect is *larger* than published at 8K–262K. KV pool matched is **2.11×**, not 2.6×.
+>
+> **Still open, not refuted:** cold deep-prefill **TTFT** (a different measurement from
+> decode rate) and **high-concurrency aggregate** at cc≥8. Both were measured under the
+> six confounds and are being re-tested matched.
 
 ## 1. Executive Summary
 
