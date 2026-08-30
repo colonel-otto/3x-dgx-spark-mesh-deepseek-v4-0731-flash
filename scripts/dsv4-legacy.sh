@@ -30,9 +30,18 @@ IMAGE=dsv4-3spark:0.1.1
 NAME=dsv4-legacy
 TARBALL='$HOME/images/dsv4-3spark-0.1.1.tar'
 
+# ⛔ The image is a docker-commit of a LIVE COMPOSE CONTAINER, so it bakes in
+# com.docker.compose.project=dspark-vllm-gx10 -- and every container created
+# from it inherits that label, which makes `docker compose -p dspark-vllm-gx10
+# down` (the dsv4 stop path, run nightly by the sweep) reap it as its own.
+# That is what killed the first two batches. The --label overrides below
+# rewrite the compose identity so no compose teardown can ever match it.
 create_cmd="docker inspect $NAME >/dev/null 2>&1 && echo 'already parked' || \
 docker create --name $NAME \
   --label keep=parked-legacy \
+  --label com.docker.compose.project=dsv4-legacy-parked \
+  --label com.docker.compose.service=dsv4-legacy-parked \
+  --label com.docker.compose.oneoff=True \
   --label info='parked legacy runtime, deliberately stopped -- do not reap; see 3spark-dsv4/scripts/dsv4-legacy.sh' \
   --gpus all --network host --ipc host --shm-size 64gb \
   -v \$HOME/.cache/huggingface:/cache/huggingface \
