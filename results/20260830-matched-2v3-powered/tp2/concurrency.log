@@ -1,0 +1,66 @@
+
+=======================================================
+Starting MTP=2 Sweep: Context=8192, Concurrencies=[4, 8, 16], Reps=15
+=======================================================
+
+Running 3 single-stream warmup request(s)...
+Single-stream warmup complete.
+
+--- Concurrency cc=4 (Reps=15) ---
+  Warming cc=4 shape (3 batches, discarded) ...
+  Rep 1/15: Agg =  34.88 tok/s, Median Stream = 17.76 tok/s, Median TTFT = 14.576 s
+  Rep 2/15: Agg =  36.01 tok/s, Median Stream = 20.05 tok/s, Median TTFT = 15.576 s
+  Rep 3/15: Agg =  36.52 tok/s, Median Stream = 22.13 tok/s, Median TTFT = 16.277 s
+  Rep 4/15: Agg =  34.30 tok/s, Median Stream = 19.79 tok/s, Median TTFT = 16.595 s
+  Rep 5/15: Agg =  35.41 tok/s, Median Stream = 20.52 tok/s, Median TTFT = 16.106 s
+  Rep 6/15: Agg =  35.38 tok/s, Median Stream = 19.18 tok/s, Median TTFT = 15.564 s
+  Rep 7/15: Agg =  35.28 tok/s, Median Stream = 19.48 tok/s, Median TTFT = 15.573 s
+  Rep 8/15: Agg =  37.24 tok/s, Median Stream = 21.86 tok/s, Median TTFT = 15.635 s
+  Rep 9/15: Agg =  34.74 tok/s, Median Stream = 20.10 tok/s, Median TTFT = 16.508 s
+  Rep 10/15: Agg =  34.69 tok/s, Median Stream = 21.98 tok/s, Median TTFT = 17.812 s
+  Rep 11/15: Agg =  34.12 tok/s, Median Stream = 17.78 tok/s, Median TTFT = 15.586 s
+  Rep 12/15: Agg =  35.84 tok/s, Median Stream = 18.87 tok/s, Median TTFT = 14.552 s
+  Rep 13/15: Agg =  36.55 tok/s, Median Stream = 21.55 tok/s, Median TTFT = 15.941 s
+  Rep 14/15: Agg =  34.02 tok/s, Median Stream = 21.34 tok/s, Median TTFT = 17.940 s
+  Rep 15/15: Agg =  34.40 tok/s, Median Stream = 20.10 tok/s, Median TTFT = 16.797 s
+  => Cell cc=4 Summary: Median Agg =  35.28 tok/s (Spread:  3.22), Acceptance = 65.5%, Mean Accepted Len = 1.31
+
+--- Concurrency cc=8 (Reps=15) ---
+  Warming cc=8 shape (3 batches, discarded) ...
+  Rep 1/15: Agg =  39.22 tok/s, Median Stream = 15.11 tok/s, Median TTFT = 34.088 s
+  Rep 2/15: Agg =  41.97 tok/s, Median Stream = 16.79 tok/s, Median TTFT = 33.272 s
+  Rep 3/15: Agg =  40.08 tok/s, Median Stream = 17.21 tok/s, Median TTFT = 36.009 s
+  Rep 4/15: Agg =  40.31 tok/s, Median Stream = 17.29 tok/s, Median TTFT = 35.950 s
+  Rep 5/15: Agg =  41.76 tok/s, Median Stream = 14.91 tok/s, Median TTFT = 31.413 s
+  Rep 6/15: Agg =  39.96 tok/s, Median Stream = 16.99 tok/s, Median TTFT = 35.952 s
+  Rep 7/15: Agg =  40.50 tok/s, Median Stream = 17.97 tok/s, Median TTFT = 36.079 s
+  Rep 8/15: Agg =  40.67 tok/s, Median Stream = 14.77 tok/s, Median TTFT = 31.677 s
+  Rep 9/15: Agg =  41.13 tok/s, Median Stream = 15.52 tok/s, Median TTFT = 32.688 s
+  Rep 10/15: Agg =  41.26 tok/s, Median Stream = 19.82 tok/s, Median TTFT = 36.148 s
+  Rep 11/15: Agg =  38.92 tok/s, Median Stream = 15.32 tok/s, Median TTFT = 35.420 s
+  Rep 12/15: Agg =  41.66 tok/s, Median Stream = 18.64 tok/s, Median TTFT = 35.208 s
+  Rep 13/15: Agg =  41.98 tok/s, Median Stream = 19.32 tok/s, Median TTFT = 35.002 s
+  Rep 14/15: Agg =  40.76 tok/s, Median Stream = 15.97 tok/s, Median TTFT = 33.922 s
+  Rep 15/15: Agg =  43.07 tok/s, Median Stream = 19.21 tok/s, Median TTFT = 33.915 s
+  => Cell cc=8 Summary: Median Agg =  40.76 tok/s (Spread:  4.14), Acceptance = 65.9%, Mean Accepted Len = 1.32
+
+--- Concurrency cc=16 (Reps=15) ---
+  Warming cc=16 shape (3 batches, discarded) ...
+  Rep 1/15: Agg =  44.33 tok/s, Median Stream =  7.61 tok/s, Median TTFT = 53.657 s
+  Rep 2/15: Agg =  43.87 tok/s, Median Stream =  7.19 tok/s, Median TTFT = 53.121 s
+  Rep 3/15: Agg =  44.49 tok/s, Median Stream =  7.06 tok/s, Median TTFT = 52.061 s
+  Rep 4/15: Agg =  43.99 tok/s, Median Stream =  7.18 tok/s, Median TTFT = 53.171 s
+  Rep 5/15: Agg =  44.80 tok/s, Median Stream =  7.08 tok/s, Median TTFT = 52.633 s
+  Rep 6/15: Agg =  46.23 tok/s, Median Stream =  7.85 tok/s, Median TTFT = 51.650 s
+  Rep 7/15: Agg =  44.45 tok/s, Median Stream =  7.01 tok/s, Median TTFT = 51.201 s
+  Rep 8/15: Agg =  45.84 tok/s, Median Stream =  8.05 tok/s, Median TTFT = 50.892 s
+  Rep 9/15: Agg =  45.45 tok/s, Median Stream =  8.01 tok/s, Median TTFT = 55.435 s
+  Rep 10/15: Agg =  45.72 tok/s, Median Stream =  7.31 tok/s, Median TTFT = 50.366 s
+  Rep 11/15: Agg =  40.85 tok/s, Median Stream =  7.26 tok/s, Median TTFT = 59.540 s
+  Rep 12/15: Agg =  42.84 tok/s, Median Stream =  7.34 tok/s, Median TTFT = 57.357 s
+  Rep 13/15: Agg =  44.43 tok/s, Median Stream =  7.53 tok/s, Median TTFT = 53.883 s
+  Rep 14/15: Agg =  43.27 tok/s, Median Stream =  6.81 tok/s, Median TTFT = 52.194 s
+  Rep 15/15: Agg =  44.49 tok/s, Median Stream =  7.53 tok/s, Median TTFT = 54.434 s
+  => Cell cc=16 Summary: Median Agg =  44.45 tok/s (Spread:  5.37), Acceptance = 66.3%, Mean Accepted Len = 1.33
+
+Saved results to /home/sparkmain/bench-repo/results/20260829T234009Z-matched-2v3/tp2/concurrency.json

@@ -1,15 +1,21 @@
 # Documentation index
 
-The current performance comparison is open: the corrected three-node decode arm exists,
-but the matching corrected two-node arm does not. Start with the dated handoff and check
-the provenance index before quoting any benchmark.
+**The node-count comparison is SETTLED (2026-08-30).** A configuration-identical,
+power-analysis-sized run shows three nodes beating two on every measured workload —
+decode +6.7 % to +20.2 %, aggregate throughput +18.6 % to +22.3 %, warm TTFT from 32K up,
+and a 2.11× KV pool. See [**RESULT-2V3-MATCHED**](RESULT-2V3-MATCHED-2026-08-30.md).
+Older 2v3 numbers are superseded; check the provenance index before quoting any benchmark.
 
 ## Read first
 
 | Document | Purpose |
 |---|---|
-| [3-Node vs 2-Node Benchmark](BENCHMARK-2V3-NODES.md) | Comprehensive performance matrix, context scaling, and architectural analysis |
-| [Current handoff](HANDOFF-2026-08-28.md) | Current cluster, verified findings, APC warm path, and closed issues #28–#34 |
+| [**RESULT: matched 2v3**](RESULT-2V3-MATCHED-2026-08-30.md) | **The settled node-count answer.** Node count the only variable, n=30/cell, significance-tested |
+| [Pre-registration](PREREGISTRATION-2V3-MATCHED.md) | Hypotheses, tie band and outlier rule, fixed before that run measured anything |
+| [3-Node vs 2-Node Benchmark](BENCHMARK-2V3-NODES.md) | Older matrix — superseded for decode/concurrency; still the reference for APC, MTP and architecture |
+| [Current handoff](HANDOFF-2026-08-29-EVENING.md) | Cluster state, the six-confound finding, harness bugs fixed, and next steps |
+| [GPU clocks cannot be locked](GPU-CLOCKS-NOT-LOCKABLE.md) | Why GB10 ignores `nvidia-smi -lgc`, and what to do instead |
+| [KV instrument reconciliation](KV-INSTRUMENT-RECONCILIATION.md) | Why the init log and `/metrics` disagree on KV pool size |
 | [Repository and data map](REPOSITORY-MAP.md) | What belongs on GitHub, what remains local, and where each artifact goes |
 | [Results index](../results/README.md) | Readable catalogue of every frozen run bundle |
 | [Provenance index](../results/INDEX.md) | Which evidence is current, void, superseded, gated, or ungated |

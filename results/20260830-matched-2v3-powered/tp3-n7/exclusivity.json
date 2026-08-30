@@ -1,0 +1,10 @@
+{
+  "timestamp": "2026-08-30T00:38:22Z",
+  "status": "FAIL",
+  "start_request_success_total": 72.0,
+  "end_request_success_total": 315.0,
+  "expected_requests": 45,
+  "actual_requests_delta": 243,
+  "foreign_requests_detected": 198,
+  "is_exclusive": false
+}

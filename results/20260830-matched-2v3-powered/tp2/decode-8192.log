@@ -1,0 +1,39 @@
+
+=== depth 8192 (tp2) ===
+  warmup 1: 42.4 tok/s (ptok=8081, cached=0)
+  warmup 2: 45.1 tok/s (ptok=8081, cached=0)
+  warmup 3: 42.5 tok/s (ptok=8081, cached=0)
+  rep 1: 43.5 tok/s ttft=4.7s ptok=8081
+  rep 2: 43.6 tok/s ttft=4.9s ptok=8081
+  rep 3: 41.4 tok/s ttft=4.7s ptok=8081
+  rep 4: 43.6 tok/s ttft=4.7s ptok=8081
+  rep 5: 43.9 tok/s ttft=4.9s ptok=8081
+  rep 6: 42.8 tok/s ttft=4.7s ptok=8081
+  rep 7: 42.7 tok/s ttft=4.7s ptok=8081
+  rep 8: 41.6 tok/s ttft=4.9s ptok=8081
+  rep 9: 44.2 tok/s ttft=4.8s ptok=8081
+  rep 10: 44.7 tok/s ttft=4.8s ptok=8081
+  rep 11: 40.7 tok/s ttft=4.9s ptok=8082
+  rep 12: 44.7 tok/s ttft=5.0s ptok=8082
+  rep 13: 43.0 tok/s ttft=4.8s ptok=8082
+  rep 14: 45.6 tok/s ttft=4.9s ptok=8082
+  rep 15: 44.9 tok/s ttft=5.0s ptok=8082
+  rep 16: 41.9 tok/s ttft=4.7s ptok=8082
+  rep 17: 42.3 tok/s ttft=4.9s ptok=8082
+  rep 18: 43.6 tok/s ttft=5.0s ptok=8082
+  rep 19: 44.0 tok/s ttft=4.7s ptok=8082
+  rep 20: 44.0 tok/s ttft=4.8s ptok=8082
+  rep 21: 42.8 tok/s ttft=5.0s ptok=8082
+  rep 22: 42.8 tok/s ttft=4.7s ptok=8082
+  rep 23: 43.7 tok/s ttft=4.8s ptok=8082
+  rep 24: 42.7 tok/s ttft=4.9s ptok=8082
+  rep 25: 44.4 tok/s ttft=4.7s ptok=8082
+  rep 26: 44.3 tok/s ttft=4.7s ptok=8082
+  rep 27: 42.5 tok/s ttft=4.7s ptok=8082
+  rep 28: 43.9 tok/s ttft=4.7s ptok=8082
+  rep 29: 44.1 tok/s ttft=4.7s ptok=8082
+  rep 30: 43.8 tok/s ttft=4.7s ptok=8082
+  MEDIAN 43.6 tok/s  (n=30, spread 11.0%, cache_hits=0)
+
+=== SUMMARY tp2 ===
+   8082.0 tok ->   43.62 tok/s  (spread 11.0%, cache 0)

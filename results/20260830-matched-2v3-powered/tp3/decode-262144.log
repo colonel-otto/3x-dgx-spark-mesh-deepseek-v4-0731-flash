@@ -1,0 +1,21 @@
+
+=== depth 262144 (tp3) ===
+  warmup 1: 46.6 tok/s (ptok=257993, cached=0)
+  warmup 2: 47.9 tok/s (ptok=257993, cached=0)
+  warmup 3: 44.1 tok/s (ptok=257993, cached=0)
+  rep 1: 47.8 tok/s ttft=166.8s ptok=257993
+  rep 2: 45.5 tok/s ttft=166.5s ptok=257993
+  rep 3: 44.0 tok/s ttft=166.5s ptok=257993
+  rep 4: 46.1 tok/s ttft=166.9s ptok=257993
+  rep 5: 44.7 tok/s ttft=166.5s ptok=257993
+  rep 6: 43.5 tok/s ttft=165.8s ptok=257993
+  rep 7: 42.4 tok/s ttft=176.8s ptok=257993
+  rep 8: 45.4 tok/s ttft=167.7s ptok=257993
+  rep 9: 45.9 tok/s ttft=166.2s ptok=257993
+  rep 10: 64.3 tok/s ttft=171.8s ptok=257993
+  rep 11: 44.0 tok/s ttft=168.4s ptok=257993
+  rep 12: 44.5 tok/s ttft=166.1s ptok=257993
+  MEDIAN 45.0 tok/s  (n=12, spread 48.6%, cache_hits=0)
+
+=== SUMMARY tp3 ===
+  257993.0 tok ->   45.04 tok/s  (spread 48.6%, cache 0)

@@ -1,0 +1,36 @@
+
+=======================================================
+Starting MTP=2 Sweep: Context=8192, Concurrencies=[4, 8, 16], Reps=5
+=======================================================
+
+Running 2 single-stream warmup request(s)...
+Single-stream warmup complete.
+
+--- Concurrency cc=4 (Reps=5) ---
+  Warming cc=4 shape (2 batches, discarded) ...
+  Rep 1/5: Agg =  41.67 tok/s, Median Stream = 20.70 tok/s, Median TTFT = 10.922 s
+  Rep 2/5: Agg =  41.33 tok/s, Median Stream = 20.68 tok/s, Median TTFT = 11.072 s
+  Rep 3/5: Agg =  41.06 tok/s, Median Stream = 19.68 tok/s, Median TTFT = 11.236 s
+  Rep 4/5: Agg =  40.97 tok/s, Median Stream = 19.75 tok/s, Median TTFT = 11.134 s
+  Rep 5/5: Agg =  41.07 tok/s, Median Stream = 20.24 tok/s, Median TTFT = 11.057 s
+  => Cell cc=4 Summary: Median Agg =  41.07 tok/s (Spread:  0.69), Acceptance = 67.1%, Mean Accepted Len = 1.34
+
+--- Concurrency cc=8 (Reps=5) ---
+  Warming cc=8 shape (2 batches, discarded) ...
+  Rep 1/5: Agg =  48.24 tok/s, Median Stream = 11.61 tok/s, Median TTFT = 19.297 s
+  Rep 2/5: Agg =  49.08 tok/s, Median Stream = 11.85 tok/s, Median TTFT = 18.817 s
+  Rep 3/5: Agg =  49.62 tok/s, Median Stream = 11.90 tok/s, Median TTFT = 18.669 s
+  Rep 4/5: Agg =  50.36 tok/s, Median Stream = 12.48 tok/s, Median TTFT = 18.542 s
+  Rep 5/5: Agg =  48.98 tok/s, Median Stream = 12.11 tok/s, Median TTFT = 19.006 s
+  => Cell cc=8 Summary: Median Agg =  49.08 tok/s (Spread:  2.12), Acceptance = 67.7%, Mean Accepted Len = 1.35
+
+--- Concurrency cc=16 (Reps=5) ---
+  Warming cc=16 shape (2 batches, discarded) ...
+  Rep 1/5: Agg =  53.14 tok/s, Median Stream =  6.46 tok/s, Median TTFT = 34.856 s
+  Rep 2/5: Agg =  54.34 tok/s, Median Stream =  6.73 tok/s, Median TTFT = 34.033 s
+  Rep 3/5: Agg =  54.20 tok/s, Median Stream =  6.65 tok/s, Median TTFT = 34.188 s
+  Rep 4/5: Agg =  54.12 tok/s, Median Stream =  6.58 tok/s, Median TTFT = 33.941 s
+  Rep 5/5: Agg =  53.57 tok/s, Median Stream =  6.48 tok/s, Median TTFT = 34.484 s
+  => Cell cc=16 Summary: Median Agg =  54.12 tok/s (Spread:  1.20), Acceptance = 66.7%, Mean Accepted Len = 1.33
+
+Saved results to /home/sparkmain/bench-repo/results/20260829T234009Z-matched-2v3/tp3/concurrency.json

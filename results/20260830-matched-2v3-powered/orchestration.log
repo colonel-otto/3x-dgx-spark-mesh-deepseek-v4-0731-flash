@@ -1,0 +1,227 @@
+[2026-08-29T19:40:09-04:00] ### Matched 2v3 run 20260829T234009Z -> /home/sparkmain/bench-repo/results/20260829T234009Z-matched-2v3
+[2026-08-29T19:40:09-04:00] ### Pre-registration: docs/PREREGISTRATION-2V3-MATCHED.md
+[2026-08-29T19:40:09-04:00] ### Matched config: seqs=32 mtp=2 gpumem=0.835
+[2026-08-29T19:40:09-04:00] === Step 0: stop open-webui (Requirement 5) ===
+[2026-08-29T19:40:16-04:00] open-webui stopped.
+[2026-08-29T19:40:16-04:00] === Step 1: verify patch parity across all 3 nodes ===
+[2026-08-29T19:40:19-04:00] Patch parity verified: all 3 nodes byte-identical.
+[2026-08-29T19:40:19-04:00] === Step 2: ARM A (TP=3) ===
+[2026-08-29T19:40:19-04:00] TP=3 live config matches the matched profile.
+== fabric gate: 3 nodes from 3spark-live.env ==
+-- ssh liveness
+  [32mPASS[0m  sparkmain -> node0
+  [32mPASS[0m  spark1 -> node1
+  [32mPASS[0m  spark2 -> node2
+-- fabric mesh (all directed pairs) + latency
+  [32mPASS[0m  sparkmain -> spark1 (192.168.100.2) rtt 0.544ms
+  [32mPASS[0m  sparkmain -> spark2 (192.168.101.2) rtt 0.579ms
+  [32mPASS[0m  spark1 -> sparkmain (192.168.200.1) rtt 0.823ms
+  [32mPASS[0m  spark1 -> spark2 (192.168.101.2) rtt 0.656ms
+  [32mPASS[0m  spark2 -> sparkmain (192.168.200.1) rtt 0.871ms
+  [32mPASS[0m  spark2 -> spark1 (192.168.100.2) rtt 0.388ms
+-- peer egress device (RDMA/model data must leave via the fabric)
+  [32mPASS[0m  sparkmain: all peer FABRIC routes egress the fabric
+  [32mPASS[0m  spark1: all peer FABRIC routes egress the fabric
+  [32mPASS[0m  spark2: all peer FABRIC routes egress the fabric
+-- fabric addressing (duplicate/overlapping subnets)
+  [32mPASS[0m  sparkmain fabric addressing clean: enp1s0f0np0=192.168.100.1/30 enp1s0f1np1=192.168.101.1/30 enP2p1s0f0np0=192.168.110.1/30 enP2p1s0f1np1=192.168.111.1/30 
+  [32mPASS[0m  spark1 fabric addressing clean: enp1s0f0np0=192.168.102.1/30 enp1s0f1np1=192.168.100.2/30 enP2p1s0f0np0=192.168.112.1/30 enP2p1s0f1np1=192.168.110.2/30 
+  [32mPASS[0m  spark2 fabric addressing clean: enp1s0f0np0=192.168.101.2/30 enp1s0f1np1=192.168.102.2/30 enP2p1s0f0np0=192.168.111.2/30 enP2p1s0f1np1=192.168.112.2/30 
+-- fabric arp (peer on correct port)
+  [32mPASS[0m  sparkmain: every fabric peer on its cabled port
+  [32mPASS[0m  spark1: every fabric peer on its cabled port
+  [32mPASS[0m  spark2: every fabric peer on its cabled port
+-- fabric config persistence (survives reboot?)
+  [32mPASS[0m  sparkmain: fabric addressing persisted and netplan generates
+  [32mPASS[0m  spark1: fabric addressing persisted and netplan generates
+  [32mPASS[0m  spark2: fabric addressing persisted and netplan generates
+-- engine rdma health (if running)
+  [32mPASS[0m  sparkmain: engine log clean of RDMA completion errors
+  [32mPASS[0m  spark1: engine log clean of RDMA completion errors
+  [32mPASS[0m  spark2: engine log clean of RDMA completion errors
+-- nccl collective bandwidth
+  [33mSKIP[0m  bandwidth not measured (engine up, or --nccl=skip). THIS IS THE CHECK THAT MATTERS -- run it when the engine is down.
+
+== 24 passed, 0 failed, 1 skipped ==
+wrote /home/sparkmain/bench-repo/results/20260829T234009Z-matched-2v3/tp3/fabric-gate.json
+GATE PASSED (with skips). Bandwidth unverified -- see above.
+[2026-08-29T19:40:47-04:00] === MEASURE [tp3]: exclusivity + config capture ===
+[2026-08-29T19:40:47-04:00] --- config for /home/sparkmain/bench-repo/results/20260829T234009Z-matched-2v3/tp3 ---
+/usr/bin/python3 /usr/local/bin/vllm serve /models/dsv4-abliterated --served-model-name deepseek-v4-flash-0731 --host 0.0.0.0 --port 8100 --trust-remote-code --tensor-parallel-size 3 --pipeline-parallel-size 1 --kv-cache-dtype nvfp4_ds_mla --block-size 256 --max-model-len 1048576 --max-num-seqs 32 --max-num-batched-tokens 8192 --long-prefill-token-threshold 1024 --max-cudagraph-capture-size 96 --gpu-memory-utilization 0.835 --enable-prefix-caching --async-scheduling --enable-chunked-prefill --speculative-config {"method":"dspark","num_speculative_tokens":2,"draft_sample_method":"probabilistic"} --profiler-config {"profiler":"torch","torch_profiler_dir":"/tmp/profiler_traces","ignore_frontend":true} --tokenizer-mode deepseek_v4 --distributed-executor-backend mp --moe-backend flashinfer_b12x --tool-call-parser deepseek_v4 --enable-auto-tool-choice --reasoning-parser deepseek_v4 --reasoning-config {"reasoning_parser":"deepseek_v4","reasoning_start_str":"<think>","reasoning_end_str":"</think>"} --default-chat-template-kwargs {"thinking":false} --generation-config vllm --enable-flashinfer-autotune --nnodes 3 --node-rank 0 --master-addr 192.168.200.1 --master-port 25000 --jit-monitor-mode warn
+(EngineCore pid=172) INFO 08-29 22:19:36 [kv_cache_utils.py:2146] GPU KV cache size: 4,688,072 tokens
+(EngineCore pid=172) INFO 08-29 22:19:36 [kv_cache_utils.py:2147] Maximum concurrency for 1,048,576 tokens per request: 4.47x
+{"id":"chatcmpl-a6f9fec611a9105f","object":"chat.completion","created":1788046848,"model":"deepseek-v4-flash-0731","choices":[{"index":0,"message":{"role":"assistant","content":"391","refusal":null,"annotations":null,"audio":null,"function_call":null,"reasoning":null},"logprobs":null,"finish_reason":"stop","stop_reason":null,"token_ids":null,"routed_experts":null}],"service_tier":null,"system_fingerprint":"vllm-0.25.2.dev0+g752a3a504.d20260714-tp3-619067dd","usage":{"prompt_tokens":18,"total_tokens":20,"completion_tokens":2,"prompt_tokens_details":null},"prompt_logprobs":null,"prompt_token_ids":null,"prompt_text":null,"kv_transfer_params":null,"metrics":null}
+[2026-08-29T19:40:52-04:00] cooldown: waiting for all nodes <= 70C (max 900s)
+[2026-08-29T19:40:53-04:00] cooldown: all nodes <= 70C after 0s
+[2026-08-29T19:40:53-04:00] telemetry started -> /home/sparkmain/bench-repo/results/20260829T234009Z-matched-2v3/tp3/clocks-*.csv
+IDLE_OK start_request_success_total=72.0
+[2026-08-29T19:40:53-04:00] [tp3] exclusivity start_total=72.0
+[2026-08-29T19:40:53-04:00] === [tp3] depth sweep (256-tok asserted, warm, reps=7) ===
+[2026-08-29T19:40:53-04:00] --- [tp3] depth 2048 ---
+
+=== depth 2048 (tp3) ===
+  warmup 1: 49.2 tok/s (ptok=2036, cached=0)
+  warmup 2: 48.5 tok/s (ptok=2036, cached=0)
+  rep 1: 47.8 tok/s ttft=0.7s ptok=2036
+  rep 2: 49.0 tok/s ttft=0.5s ptok=2036
+  rep 3: 51.3 tok/s ttft=0.4s ptok=2036
+  rep 4: 51.9 tok/s ttft=0.4s ptok=2036
+  rep 5: 50.4 tok/s ttft=0.3s ptok=2036
+  rep 6: 51.1 tok/s ttft=0.4s ptok=2036
+  rep 7: 52.7 tok/s ttft=0.3s ptok=2036
+  MEDIAN 51.1 tok/s  (n=7, spread 9.5%, cache_hits=0)
+
+=== SUMMARY tp3 ===
+     2036 tok ->   51.06 tok/s  (spread 9.5%, cache 0)
+[2026-08-29T19:41:48-04:00] --- [tp3] depth 8192 ---
+
+=== depth 8192 (tp3) ===
+  warmup 1: 49.1 tok/s (ptok=8081, cached=0)
+  warmup 2: 52.2 tok/s (ptok=8081, cached=0)
+  rep 1: 51.8 tok/s ttft=0.3s ptok=8081
+  rep 2: 49.2 tok/s ttft=0.3s ptok=8081
+  rep 3: 50.8 tok/s ttft=0.3s ptok=8081
+  rep 4: 51.3 tok/s ttft=0.3s ptok=8081
+  rep 5: 52.6 tok/s ttft=0.3s ptok=8081
+  rep 6: 51.5 tok/s ttft=0.3s ptok=8081
+  rep 7: 51.5 tok/s ttft=0.3s ptok=8081
+  MEDIAN 51.5 tok/s  (n=7, spread 6.6%, cache_hits=0)
+
+=== SUMMARY tp3 ===
+     8081 tok ->   51.50 tok/s  (spread 6.6%, cache 0)
+[2026-08-29T19:42:36-04:00] --- [tp3] depth 32768 ---
+
+=== depth 32768 (tp3) ===
+  warmup 1: 50.0 tok/s (ptok=32268, cached=0)
+  warmup 2: 49.7 tok/s (ptok=32268, cached=0)
+  rep 1: 50.1 tok/s ttft=2.2s ptok=32268
+  rep 2: 52.4 tok/s ttft=2.1s ptok=32268
+  rep 3: 52.0 tok/s ttft=2.1s ptok=32268
+  rep 4: 53.0 tok/s ttft=2.2s ptok=32268
+  rep 5: 49.9 tok/s ttft=2.1s ptok=32268
+  rep 6: 53.0 tok/s ttft=2.1s ptok=32268
+  rep 7: 52.2 tok/s ttft=2.1s ptok=32268
+  MEDIAN 52.2 tok/s  (n=7, spread 5.9%, cache_hits=0)
+
+=== SUMMARY tp3 ===
+    32268 tok ->   52.20 tok/s  (spread 5.9%, cache 0)
+[2026-08-29T19:43:41-04:00] --- [tp3] depth 131072 ---
+
+=== depth 131072 (tp3) ===
+  warmup 1: 47.5 tok/s (ptok=129006, cached=0)
+  warmup 2: 46.5 tok/s (ptok=129006, cached=0)
+  rep 1: 46.4 tok/s ttft=74.3s ptok=129006
+  rep 2: 48.0 tok/s ttft=74.6s ptok=129006
+  rep 3: 45.8 tok/s ttft=74.6s ptok=129006
+  rep 4: 45.1 tok/s ttft=74.6s ptok=129006
+  rep 5: 49.4 tok/s ttft=74.6s ptok=129006
+  rep 6: 46.9 tok/s ttft=74.6s ptok=129006
+  rep 7: 59.4 tok/s ttft=78.1s ptok=129006
+  MEDIAN 46.9 tok/s  (n=7, spread 30.6%, cache_hits=0)
+
+=== SUMMARY tp3 ===
+   129006 tok ->   46.87 tok/s  (spread 30.6%, cache 0)
+[2026-08-29T19:54:30-04:00] --- [tp3] depth 262144 ---
+
+=== depth 262144 (tp3) ===
+  warmup 1: 43.2 tok/s (ptok=257993, cached=0)
+  warmup 2: 44.7 tok/s (ptok=257993, cached=0)
+  rep 1: 41.3 tok/s ttft=175.6s ptok=257993
+  rep 2: 44.9 tok/s ttft=167.1s ptok=257993
+  rep 3: 44.6 tok/s ttft=166.8s ptok=257993
+  rep 4: 51.3 tok/s ttft=175.2s ptok=257993
+  rep 5: 45.7 tok/s ttft=169.5s ptok=257993
+  rep 6: 46.9 tok/s ttft=166.9s ptok=257993
+  rep 7: 43.1 tok/s ttft=167.5s ptok=257993
+  MEDIAN 44.9 tok/s  (n=7, spread 22.3%, cache_hits=0)
+
+=== SUMMARY tp3 ===
+   257993 tok ->   44.92 tok/s  (spread 22.3%, cache 0)
+[2026-08-29T20:20:57-04:00] === [tp3] concurrency sweep cc=4,8,16 @8K (H2) ===
+
+=======================================================
+Starting MTP=2 Sweep: Context=8192, Concurrencies=[4, 8, 16], Reps=5
+=======================================================
+
+Running 2 single-stream warmup request(s)...
+Single-stream warmup complete.
+
+--- Concurrency cc=4 (Reps=5) ---
+  Warming cc=4 shape (2 batches, discarded) ...
+  Rep 1/5: Agg =  41.67 tok/s, Median Stream = 20.70 tok/s, Median TTFT = 10.922 s
+  Rep 2/5: Agg =  41.33 tok/s, Median Stream = 20.68 tok/s, Median TTFT = 11.072 s
+  Rep 3/5: Agg =  41.06 tok/s, Median Stream = 19.68 tok/s, Median TTFT = 11.236 s
+  Rep 4/5: Agg =  40.97 tok/s, Median Stream = 19.75 tok/s, Median TTFT = 11.134 s
+  Rep 5/5: Agg =  41.07 tok/s, Median Stream = 20.24 tok/s, Median TTFT = 11.057 s
+  => Cell cc=4 Summary: Median Agg =  41.07 tok/s (Spread:  0.69), Acceptance = 67.1%, Mean Accepted Len = 1.34
+
+--- Concurrency cc=8 (Reps=5) ---
+  Warming cc=8 shape (2 batches, discarded) ...
+  Rep 1/5: Agg =  48.24 tok/s, Median Stream = 11.61 tok/s, Median TTFT = 19.297 s
+  Rep 2/5: Agg =  49.08 tok/s, Median Stream = 11.85 tok/s, Median TTFT = 18.817 s
+  Rep 3/5: Agg =  49.62 tok/s, Median Stream = 11.90 tok/s, Median TTFT = 18.669 s
+  Rep 4/5: Agg =  50.36 tok/s, Median Stream = 12.48 tok/s, Median TTFT = 18.542 s
+  Rep 5/5: Agg =  48.98 tok/s, Median Stream = 12.11 tok/s, Median TTFT = 19.006 s
+  => Cell cc=8 Summary: Median Agg =  49.08 tok/s (Spread:  2.12), Acceptance = 67.7%, Mean Accepted Len = 1.35
+
+--- Concurrency cc=16 (Reps=5) ---
+  Warming cc=16 shape (2 batches, discarded) ...
+  Rep 1/5: Agg =  53.14 tok/s, Median Stream =  6.46 tok/s, Median TTFT = 34.856 s
+  Rep 2/5: Agg =  54.34 tok/s, Median Stream =  6.73 tok/s, Median TTFT = 34.033 s
+  Rep 3/5: Agg =  54.20 tok/s, Median Stream =  6.65 tok/s, Median TTFT = 34.188 s
+  Rep 4/5: Agg =  54.12 tok/s, Median Stream =  6.58 tok/s, Median TTFT = 33.941 s
+  Rep 5/5: Agg =  53.57 tok/s, Median Stream =  6.48 tok/s, Median TTFT = 34.484 s
+  => Cell cc=16 Summary: Median Agg =  54.12 tok/s (Spread:  1.20), Acceptance = 66.7%, Mean Accepted Len = 1.33
+
+Saved results to /home/sparkmain/bench-repo/results/20260829T234009Z-matched-2v3/tp3/concurrency.json
+EXCLUSIVITY_FAIL Exclusivity check failed: expected 45 requests, but saw delta of 243 (198 foreign requests detected). Benchmark results are contaminated and void.
+[2026-08-29T20:38:22-04:00] WARN: [tp3] exclusivity delta mismatch -- see exclusivity.json
+  sparkmain: clock mean 2440 MHz (min 2359, max 2522), temp mean 78 C (max 87), n=690
+  spark1: clock mean 2469 MHz (min 2314, max 2548), temp mean 81 C (max 89), n=690
+  spark2: clock mean 2426 MHz (min 2255, max 2496), temp mean 83 C (max 89), n=690
+[2026-08-29T20:38:22-04:00] === [tp3] arm complete ===
+[2026-08-29T20:38:22-04:00] === Step 3: stop 3-node service ===
+[2026-08-29T20:39:32-04:00] === Step 3b: rewrite 2-node env to the MATCHED config ===
+GPU_MEMORY_UTILIZATION=0.835
+MAX_MODEL_LEN=1048576
+MAX_NUM_BATCHED_TOKENS=8192
+MAX_NUM_SEQS=32
+MTP_NUM_TOKENS=2
+GPU_MEMORY_UTILIZATION=0.835
+MAX_MODEL_LEN=1048576
+MAX_NUM_BATCHED_TOKENS=8192
+MAX_NUM_SEQS=32
+MTP_NUM_TOKENS=2
+[2026-08-29T20:39:33-04:00] 2-node env rewritten (backups: *.prematched.20260829T234009Z)
+[2026-08-29T20:39:33-04:00] === Step 4: fabric gate (engine stopped) ===
+== fabric gate: 2 nodes from 2spark-live.env ==
+-- ssh liveness
+  [32mPASS[0m  sparkmain -> node0
+  [32mPASS[0m  spark1 -> node1
+-- fabric mesh (all directed pairs) + latency
+  [32mPASS[0m  sparkmain -> spark1 (192.168.100.2) rtt 0.778ms
+  [32mPASS[0m  spark1 -> sparkmain (192.168.200.1) rtt 1.035ms
+-- peer egress device (RDMA/model data must leave via the fabric)
+  [32mPASS[0m  sparkmain: all peer FABRIC routes egress the fabric
+  [32mPASS[0m  spark1: all peer FABRIC routes egress the fabric
+-- fabric addressing (duplicate/overlapping subnets)
+  [32mPASS[0m  sparkmain fabric addressing clean: enp1s0f0np0=192.168.100.1/30 enp1s0f1np1=192.168.101.1/30 enP2p1s0f0np0=192.168.110.1/30 enP2p1s0f1np1=192.168.111.1/30 
+  [32mPASS[0m  spark1 fabric addressing clean: enp1s0f0np0=192.168.102.1/30 enp1s0f1np1=192.168.100.2/30 enP2p1s0f0np0=192.168.112.1/30 enP2p1s0f1np1=192.168.110.2/30 
+-- fabric arp (peer on correct port)
+  [32mPASS[0m  sparkmain: every fabric peer on its cabled port
+  [32mPASS[0m  spark1: every fabric peer on its cabled port
+-- fabric config persistence (survives reboot?)
+  [32mPASS[0m  sparkmain: fabric addressing persisted and netplan generates
+  [32mPASS[0m  spark1: fabric addressing persisted and netplan generates
+-- engine rdma health (if running)
+  [33mSKIP[0m  sparkmain: no engine running (nothing to check)
+  [33mSKIP[0m  spark1: no engine running (nothing to check)
+-- nccl collective bandwidth
+  [32mPASS[0m  gate-p01 transport: via NET/IB/4 via NET/IB/5 (ndevs=1 ndevs=2)
+  [32mPASS[0m  gate-p01 merged devices: rocep1s0f0 rocep1s0f0+rocep1s0f1 rocep1s0f1 roceP2p1s0f0 roceP2p1s0f0+roceP2p1s0f1 roceP2p1s0f1
+  [32mPASS[0m  gate-p01: 9.31 GB/s @64MiB
+
+== 15 passed, 0 failed, 2 skipped ==
+wrote /home/sparkmain/bench-repo/results/20260829T234009Z-matched-2v3/tp2/fabric-gate.json
+GATE PASSED (with skips). Bandwidth unverified -- see above.
+[2026-08-29T20:39:59-04:00] Restoring open-webui ...

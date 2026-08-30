@@ -1,0 +1,15 @@
+
+=== depth 8192 (tp3) ===
+  warmup 1: 49.1 tok/s (ptok=8081, cached=0)
+  warmup 2: 52.2 tok/s (ptok=8081, cached=0)
+  rep 1: 51.8 tok/s ttft=0.3s ptok=8081
+  rep 2: 49.2 tok/s ttft=0.3s ptok=8081
+  rep 3: 50.8 tok/s ttft=0.3s ptok=8081
+  rep 4: 51.3 tok/s ttft=0.3s ptok=8081
+  rep 5: 52.6 tok/s ttft=0.3s ptok=8081
+  rep 6: 51.5 tok/s ttft=0.3s ptok=8081
+  rep 7: 51.5 tok/s ttft=0.3s ptok=8081
+  MEDIAN 51.5 tok/s  (n=7, spread 6.6%, cache_hits=0)
+
+=== SUMMARY tp3 ===
+     8081 tok ->   51.50 tok/s  (spread 6.6%, cache 0)

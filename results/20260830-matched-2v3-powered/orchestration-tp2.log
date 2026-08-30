@@ -1,0 +1,643 @@
+[2026-08-29T21:13:34-04:00] ### TP=2 arm resume -> /home/sparkmain/bench-repo/results/20260829T234009Z-matched-2v3
+[2026-08-29T21:13:34-04:00] === Step 0: verify preconditions ===
+[2026-08-29T21:13:34-04:00] tp2 fabric gate artifact present.
+[2026-08-29T21:13:34-04:00] sparkmain config/head.env: GPU_MEMORY_UTILIZATION=0.835 MAX_NUM_SEQS=32 MTP_NUM_TOKENS=2 
+[2026-08-29T21:13:35-04:00] spark1 config/worker.env: GPU_MEMORY_UTILIZATION=0.835 MAX_NUM_SEQS=32 MTP_NUM_TOKENS=2 
+[2026-08-29T21:13:35-04:00] Matched config verified on both ranks, backups present.
+[2026-08-29T21:13:37-04:00] All nodes clear of vllm containers.
+[2026-08-29T21:13:37-04:00] === Step 0b: stop open-webui (Requirement 5) ===
+[2026-08-29T21:13:38-04:00] open-webui stopped.
+[2026-08-29T21:13:38-04:00] === Step 1: bring up TP=2 ===
+[2026-08-29T21:13:39-04:00] Config verified identical across both ranks:
+    GPU_MEMORY_UTILIZATION=0.835
+    MAX_MODEL_LEN=1048576
+    MAX_NUM_BATCHED_TOKENS=8192
+    MAX_NUM_SEQS=32
+    MTP_NUM_TOKENS=2
+[2026-08-29T21:13:39-04:00] Starting worker spark1 (rank 1) ...
+ Container dspark-vllm-gx10-vllm-dspark-1 Creating 
+ Container dspark-vllm-gx10-vllm-dspark-1 Created 
+ Container dspark-vllm-gx10-vllm-dspark-1 Starting 
+ Container dspark-vllm-gx10-vllm-dspark-1 Started 
+[2026-08-29T21:13:55-04:00] Starting head sparkmain (rank 0) ...
+ Container dspark-vllm-gx10-vllm-dspark-1 Creating 
+ Container dspark-vllm-gx10-vllm-dspark-1 Created 
+ Container dspark-vllm-gx10-vllm-dspark-1 Starting 
+ Container dspark-vllm-gx10-vllm-dspark-1 Started 
+[2026-08-29T21:13:56-04:00] Waiting for http://127.0.0.1:8100 (cold start is ~7 min) ...
+[2026-08-29T21:30:00-04:00] ERROR: timed out waiting for http://127.0.0.1:8100
+[2026-08-29T21:30:00-04:00] cluster_tp2.sh up FAILED. Restoring env files and 3-node service.
+[2026-08-29T21:30:00-04:00] Stopping head sparkmain ...
+[2026-08-29T21:30:01-04:00] Stopping worker spark1 ...
+[2026-08-29T21:30:02-04:00] Stopped.
+Job for dsv4.service failed because the control process exited with error code.
+See "systemctl status dsv4.service" and "journalctl -xeu dsv4.service" for details.
+[2026-08-29T21:45:28-04:00] FATAL: TP=2 bringup failed
+[2026-08-29T21:45:28-04:00] Restoring open-webui ...
+[2026-08-29T22:24:29-04:00] ### TP=2 arm resume -> /home/sparkmain/bench-repo/results/20260829T234009Z-matched-2v3
+[2026-08-29T22:24:29-04:00] === Step 0: verify preconditions ===
+[2026-08-29T22:24:29-04:00] tp2 fabric gate artifact present.
+[2026-08-29T22:24:29-04:00] sparkmain config/head.env: GPU_MEMORY_UTILIZATION=0.835 MAX_NUM_SEQS=32 MTP_NUM_TOKENS=2 
+[2026-08-29T22:24:30-04:00] spark1 config/worker.env: GPU_MEMORY_UTILIZATION=0.835 MAX_NUM_SEQS=32 MTP_NUM_TOKENS=2 
+[2026-08-29T22:24:30-04:00] Matched config verified on both ranks, backups present.
+[2026-08-29T22:24:31-04:00] All nodes clear of vllm containers.
+[2026-08-29T22:24:31-04:00] === Step 0b: stop open-webui (Requirement 5) ===
+[2026-08-29T22:24:41-04:00] open-webui stopped.
+[2026-08-29T22:24:41-04:00] === Step 1: bring up TP=2 ===
+[2026-08-29T22:24:42-04:00] Config verified identical across both ranks:
+    GPU_MEMORY_UTILIZATION=0.835
+    MAX_MODEL_LEN=1048576
+    MAX_NUM_BATCHED_TOKENS=8192
+    MAX_NUM_SEQS=32
+    MTP_NUM_TOKENS=2
+[2026-08-29T22:24:43-04:00] Starting worker spark1 (rank 1) ...
+ Container dspark-vllm-gx10-vllm-dspark-1 Creating 
+ Container dspark-vllm-gx10-vllm-dspark-1 Created 
+ Container dspark-vllm-gx10-vllm-dspark-1 Starting 
+ Container dspark-vllm-gx10-vllm-dspark-1 Started 
+[2026-08-29T22:24:58-04:00] Starting head sparkmain (rank 0) ...
+ Container dspark-vllm-gx10-vllm-dspark-1 Creating 
+ Container dspark-vllm-gx10-vllm-dspark-1 Created 
+ Container dspark-vllm-gx10-vllm-dspark-1 Starting 
+ Container dspark-vllm-gx10-vllm-dspark-1 Started 
+[2026-08-29T22:24:59-04:00] Waiting for http://127.0.0.1:8100 (cold start measured ~30 min; budget 45 min) ...
+[2026-08-29T22:56:25-04:00] Restoring open-webui ...
+[2026-08-29T22:57:52-04:00] ### TP=2 arm resume -> /home/sparkmain/bench-repo/results/20260829T234009Z-matched-2v3
+[2026-08-29T22:57:52-04:00] === Step 0: verify preconditions ===
+[2026-08-29T22:57:52-04:00] tp2 fabric gate artifact present.
+[2026-08-29T22:57:52-04:00] sparkmain config/head.env: GPU_MEMORY_UTILIZATION=0.835 MAX_NUM_SEQS=32 MTP_NUM_TOKENS=2 
+[2026-08-29T22:57:53-04:00] spark1 config/worker.env: GPU_MEMORY_UTILIZATION=0.835 MAX_NUM_SEQS=32 MTP_NUM_TOKENS=2 
+[2026-08-29T22:57:54-04:00] Matched config verified on both ranks, backups present.
+[2026-08-29T22:57:55-04:00] All nodes clear of vllm containers.
+[2026-08-29T22:57:55-04:00] === Step 0b: stop open-webui (Requirement 5) ===
+[2026-08-29T22:57:56-04:00] open-webui stopped.
+[2026-08-29T22:57:56-04:00] === Step 1: bring up TP=2 ===
+[2026-08-29T22:57:57-04:00] Config verified identical across both ranks:
+    GPU_MEMORY_UTILIZATION=0.835
+    MAX_MODEL_LEN=1048576
+    MAX_NUM_BATCHED_TOKENS=8192
+    MAX_NUM_SEQS=32
+    MTP_NUM_TOKENS=2
+[2026-08-29T22:57:57-04:00] Starting worker spark1 (rank 1) ...
+ Container dspark-vllm-gx10-vllm-dspark-1 Recreate 
+ Container dspark-vllm-gx10-vllm-dspark-1 Recreated 
+ Container dspark-vllm-gx10-vllm-dspark-1 Starting 
+ Container dspark-vllm-gx10-vllm-dspark-1 Started 
+[2026-08-29T22:58:13-04:00] Starting head sparkmain (rank 0) ...
+ Container dspark-vllm-gx10-vllm-dspark-1 Recreate 
+ Container dspark-vllm-gx10-vllm-dspark-1 Recreated 
+ Container dspark-vllm-gx10-vllm-dspark-1 Starting 
+ Container dspark-vllm-gx10-vllm-dspark-1 Started 
+[2026-08-29T22:58:15-04:00] Waiting for http://127.0.0.1:8100 (cold start measured ~30 min; budget 45 min) ...
+[2026-08-29T23:04:53-04:00] READY after ~375s
+--gpu-memory-utilization 0.835
+--max-model-len 1048576
+--max-num-seqs 32
+--tensor-parallel-size 2
+[2026-08-29T23:04:53-04:00] === Step 2: verify live TP=2 engine matches the profile ===
+[2026-08-29T23:04:53-04:00] live: /usr/bin/python3 /usr/local/bin/vllm serve /models/dsv4-abliterated --served-model-name deepseek-v4-flash-0731 --host 0.0.0.0 --port 8100 --trust-remote-code --tensor-parallel-size 2 --pipeline-parallel-size 1 --kv-cache-dtype nvfp4_ds_mla --block-size 256 --max-model-len 1048576 --max-num-seqs 32 --max-num-batched-tokens 8192 --long-prefill-token-threshold 1024 --max-cudagraph-capture-size 96 --gpu-memory-utilization 0.835 --enable-prefix-caching --async-scheduling --enable-chunked-prefill --speculative-config {"method":"dspark","num_speculative_tokens":2,"draft_sample_method":"probabilistic"} --tokenizer-mode deepseek_v4 --distributed-executor-backend mp --moe-backend flashinfer_b12x --tool-call-parser deepseek_v4 --enable-auto-tool-choice --reasoning-parser deepseek_v4 --reasoning-config {"reasoning_parser":"deepseek_v4","reasoning_start_str":"<think>","reasoning_end_str":"</think>"} --default-chat-template-kwargs {"thinking":false} --generation-config vllm --enable-flashinfer-autotune --nnodes 2 --node-rank 0 --master-addr 192.168.100.1 --master-port 25000 --jit-monitor-mode warn
+[2026-08-29T23:04:53-04:00] MATCH CONFIRMED: node count is the only variable.
+(EngineCore pid=181) INFO 08-30 03:03:19 [kv_cache_utils.py:2146] GPU KV cache size: 2,217,166 tokens
+(EngineCore pid=181) INFO 08-30 03:03:19 [kv_cache_utils.py:2147] Maximum concurrency for 1,048,576 tokens per request: 2.11x
+[2026-08-29T23:04:53-04:00] === Step 3: correctness ===
+{"id":"chatcmpl-ba37d2fafb6a312f","object":"chat.completion","created":1788059093,"model":"deepseek-v4-flash-0731","choices":[{"index":0,"message":{"role":"assistant","content":"391","refusal":null,"annotations":null,"audio":null,"function_call":null,"reasoning":null},"logprobs":null,"finish_reason":"stop","stop_reason":null,"token_ids":null,"routed_experts":null}],"service_tier":null,"system_fingerprint":"vllm-0.25.2.dev0+g752a3a504.d20260714-tp2-26ea8310","usage":{"prompt_tokens":18,"total_tokens":20,"completion_tokens":2,"prompt_tokens_details":null},"prompt_logprobs":null,"prompt_token_ids":null,"prompt_text":null,"kv_transfer_params":null,"metrics":null}
+[2026-08-29T23:04:53-04:00] cooldown: waiting for all nodes <= 70C (max 900s)
+[2026-08-29T23:04:55-04:00] cooldown: all nodes <= 70C after 0s
+[2026-08-29T23:04:55-04:00] telemetry started -> /home/sparkmain/bench-repo/results/20260829T234009Z-matched-2v3/tp2/clocks-*.csv
+IDLE_OK start_request_success_total=1.0
+[2026-08-29T23:04:55-04:00] exclusivity start_total=1.0
+[2026-08-29T23:04:55-04:00] === [tp2] depth sweep (per-cell n from power analysis) ===
+[2026-08-29T23:04:55-04:00] --- [tp2] depth 2048 (n=30) ---
+
+=== depth 2048 (tp2) ===
+  warmup 1: 43.9 tok/s (ptok=2036, cached=0)
+  warmup 2: 45.0 tok/s (ptok=2036, cached=0)
+  warmup 3: 41.9 tok/s (ptok=2036, cached=0)
+  rep 1: 44.2 tok/s ttft=1.2s ptok=2036
+  rep 2: 44.8 tok/s ttft=1.2s ptok=2036
+  rep 3: 44.3 tok/s ttft=1.2s ptok=2036
+  rep 4: 45.6 tok/s ttft=1.2s ptok=2036
+  rep 5: 44.6 tok/s ttft=1.2s ptok=2036
+  rep 6: 45.8 tok/s ttft=1.2s ptok=2036
+  rep 7: 43.6 tok/s ttft=1.2s ptok=2036
+  rep 8: 45.9 tok/s ttft=1.2s ptok=2036
+  rep 9: 42.0 tok/s ttft=1.2s ptok=2036
+  rep 10: 45.4 tok/s ttft=1.2s ptok=2036
+  rep 11: 44.6 tok/s ttft=1.2s ptok=2035
+  rep 12: 43.7 tok/s ttft=1.2s ptok=2035
+  rep 13: 43.0 tok/s ttft=1.2s ptok=2035
+  rep 14: 41.9 tok/s ttft=1.2s ptok=2035
+  rep 15: 45.5 tok/s ttft=1.2s ptok=2035
+  rep 16: 42.9 tok/s ttft=1.2s ptok=2035
+  rep 17: 44.1 tok/s ttft=1.2s ptok=2035
+  rep 18: 41.1 tok/s ttft=1.2s ptok=2035
+  rep 19: 44.7 tok/s ttft=1.2s ptok=2035
+  rep 20: 42.5 tok/s ttft=1.2s ptok=2035
+  rep 21: 43.7 tok/s ttft=1.2s ptok=2035
+  rep 22: 43.6 tok/s ttft=1.2s ptok=2035
+  rep 23: 42.7 tok/s ttft=1.2s ptok=2035
+  rep 24: 44.2 tok/s ttft=1.2s ptok=2035
+  rep 25: 42.1 tok/s ttft=1.2s ptok=2035
+  rep 26: 42.8 tok/s ttft=1.2s ptok=2035
+  rep 27: 41.3 tok/s ttft=1.2s ptok=2035
+  rep 28: 42.6 tok/s ttft=1.2s ptok=2035
+  rep 29: 42.7 tok/s ttft=1.2s ptok=2035
+  rep 30: 44.1 tok/s ttft=1.2s ptok=2035
+  MEDIAN 43.7 tok/s  (n=30, spread 11.0%, cache_hits=0)
+
+=== SUMMARY tp2 ===
+   2035.0 tok ->   43.68 tok/s  (spread 11.0%, cache 0)
+[2026-08-29T23:08:58-04:00] --- [tp2] depth 8192 (n=30) ---
+
+=== depth 8192 (tp2) ===
+  warmup 1: 42.4 tok/s (ptok=8081, cached=0)
+  warmup 2: 45.1 tok/s (ptok=8081, cached=0)
+  warmup 3: 42.5 tok/s (ptok=8081, cached=0)
+  rep 1: 43.5 tok/s ttft=4.7s ptok=8081
+  rep 2: 43.6 tok/s ttft=4.9s ptok=8081
+  rep 3: 41.4 tok/s ttft=4.7s ptok=8081
+  rep 4: 43.6 tok/s ttft=4.7s ptok=8081
+  rep 5: 43.9 tok/s ttft=4.9s ptok=8081
+  rep 6: 42.8 tok/s ttft=4.7s ptok=8081
+  rep 7: 42.7 tok/s ttft=4.7s ptok=8081
+  rep 8: 41.6 tok/s ttft=4.9s ptok=8081
+  rep 9: 44.2 tok/s ttft=4.8s ptok=8081
+  rep 10: 44.7 tok/s ttft=4.8s ptok=8081
+  rep 11: 40.7 tok/s ttft=4.9s ptok=8082
+  rep 12: 44.7 tok/s ttft=5.0s ptok=8082
+  rep 13: 43.0 tok/s ttft=4.8s ptok=8082
+  rep 14: 45.6 tok/s ttft=4.9s ptok=8082
+  rep 15: 44.9 tok/s ttft=5.0s ptok=8082
+  rep 16: 41.9 tok/s ttft=4.7s ptok=8082
+  rep 17: 42.3 tok/s ttft=4.9s ptok=8082
+  rep 18: 43.6 tok/s ttft=5.0s ptok=8082
+  rep 19: 44.0 tok/s ttft=4.7s ptok=8082
+  rep 20: 44.0 tok/s ttft=4.8s ptok=8082
+  rep 21: 42.8 tok/s ttft=5.0s ptok=8082
+  rep 22: 42.8 tok/s ttft=4.7s ptok=8082
+  rep 23: 43.7 tok/s ttft=4.8s ptok=8082
+  rep 24: 42.7 tok/s ttft=4.9s ptok=8082
+  rep 25: 44.4 tok/s ttft=4.7s ptok=8082
+  rep 26: 44.3 tok/s ttft=4.7s ptok=8082
+  rep 27: 42.5 tok/s ttft=4.7s ptok=8082
+  rep 28: 43.9 tok/s ttft=4.7s ptok=8082
+  rep 29: 44.1 tok/s ttft=4.7s ptok=8082
+  rep 30: 43.8 tok/s ttft=4.7s ptok=8082
+  MEDIAN 43.6 tok/s  (n=30, spread 11.0%, cache_hits=0)
+
+=== SUMMARY tp2 ===
+   8082.0 tok ->   43.62 tok/s  (spread 11.0%, cache 0)
+[2026-08-29T23:14:51-04:00] --- [tp2] depth 32768 (n=30) ---
+
+=== depth 32768 (tp2) ===
+  warmup 1: 46.0 tok/s (ptok=32268, cached=0)
+  warmup 2: 44.2 tok/s (ptok=32268, cached=0)
+  warmup 3: 44.5 tok/s (ptok=32268, cached=0)
+  rep 1: 42.9 tok/s ttft=19.8s ptok=32268
+  rep 2: 43.5 tok/s ttft=19.9s ptok=32268
+  rep 3: 40.6 tok/s ttft=19.1s ptok=32268
+  rep 4: 41.2 tok/s ttft=19.1s ptok=32268
+  rep 5: 45.0 tok/s ttft=19.8s ptok=32268
+  rep 6: 43.9 tok/s ttft=19.9s ptok=32268
+  rep 7: 42.2 tok/s ttft=19.5s ptok=32268
+  rep 8: 42.3 tok/s ttft=19.1s ptok=32268
+  rep 9: 41.6 tok/s ttft=19.6s ptok=32268
+  rep 10: 45.3 tok/s ttft=19.8s ptok=32268
+  rep 11: 42.6 tok/s ttft=19.6s ptok=32268
+  rep 12: 42.5 tok/s ttft=19.1s ptok=32268
+  rep 13: 41.1 tok/s ttft=19.4s ptok=32268
+  rep 14: 41.1 tok/s ttft=19.9s ptok=32268
+  rep 15: 44.5 tok/s ttft=19.8s ptok=32268
+  rep 16: 39.2 tok/s ttft=19.1s ptok=32268
+  rep 17: 42.0 tok/s ttft=19.2s ptok=32268
+  rep 18: 42.3 tok/s ttft=19.8s ptok=32268
+  rep 19: 45.0 tok/s ttft=19.9s ptok=32268
+  rep 20: 42.2 tok/s ttft=19.6s ptok=32268
+  rep 21: 42.8 tok/s ttft=19.1s ptok=32268
+  rep 22: 44.2 tok/s ttft=19.8s ptok=32268
+  rep 23: 42.5 tok/s ttft=19.8s ptok=32268
+  rep 24: 38.6 tok/s ttft=19.6s ptok=32268
+  rep 25: 40.6 tok/s ttft=19.2s ptok=32268
+  rep 26: 45.5 tok/s ttft=19.5s ptok=32268
+  rep 27: 41.7 tok/s ttft=19.8s ptok=32268
+  rep 28: 40.7 tok/s ttft=19.9s ptok=32268
+  rep 29: 40.0 tok/s ttft=19.2s ptok=32268
+  rep 30: 43.7 tok/s ttft=19.1s ptok=32268
+  MEDIAN 42.3 tok/s  (n=30, spread 16.2%, cache_hits=0)
+
+=== SUMMARY tp2 ===
+  32268.0 tok ->   42.29 tok/s  (spread 16.2%, cache 0)
+[2026-08-29T23:28:58-04:00] --- [tp2] depth 131072 (n=30) ---
+
+=== depth 131072 (tp2) ===
+  warmup 1: 41.3 tok/s (ptok=129006, cached=0)
+  warmup 2: 41.5 tok/s (ptok=129006, cached=0)
+  warmup 3: 38.2 tok/s (ptok=129006, cached=0)
+  rep 1: 35.8 tok/s ttft=85.8s ptok=129006
+  rep 2: 41.0 tok/s ttft=86.6s ptok=129006
+  rep 3: 40.4 tok/s ttft=87.5s ptok=129006
+  rep 4: 39.6 tok/s ttft=87.9s ptok=129006
+  rep 5: 37.4 tok/s ttft=85.6s ptok=129006
+  rep 6: 41.1 tok/s ttft=86.3s ptok=129006
+  rep 7: 41.5 tok/s ttft=87.2s ptok=129006
+  rep 8: 39.9 tok/s ttft=87.3s ptok=129006
+  rep 9: 40.0 tok/s ttft=86.5s ptok=129006
+  rep 10: 36.8 tok/s ttft=85.9s ptok=129006
+  rep 11: 40.1 tok/s ttft=86.8s ptok=129006
+  rep 12: 38.6 tok/s ttft=86.8s ptok=129006
+  rep 13: 42.2 tok/s ttft=87.5s ptok=129006
+  rep 14: 37.9 tok/s ttft=85.9s ptok=129006
+  rep 15: 41.1 tok/s ttft=86.1s ptok=129006
+  rep 16: 39.0 tok/s ttft=87.3s ptok=129006
+  rep 17: 40.1 tok/s ttft=87.6s ptok=129006
+  rep 18: 40.9 tok/s ttft=86.6s ptok=129006
+  rep 19: 40.6 tok/s ttft=98.5s ptok=129006
+  rep 20: 36.5 tok/s ttft=91.4s ptok=129006
+  rep 21: 43.9 tok/s ttft=93.0s ptok=129006
+  rep 22: 40.3 tok/s ttft=94.3s ptok=129006
+  rep 23: 41.7 tok/s ttft=91.4s ptok=129006
+  rep 24: 40.0 tok/s ttft=101.3s ptok=129006
+  rep 25: 35.6 tok/s ttft=98.6s ptok=129006
+  rep 26: 34.5 tok/s ttft=99.9s ptok=129006
+  rep 27: 34.3 tok/s ttft=93.1s ptok=129006
+  rep 28: 39.2 tok/s ttft=91.9s ptok=129006
+  rep 29: 38.9 tok/s ttft=98.1s ptok=129006
+  rep 30: 37.9 tok/s ttft=103.3s ptok=129006
+  MEDIAN 39.9 tok/s  (n=30, spread 24.1%, cache_hits=0)
+
+=== SUMMARY tp2 ===
+  129006.0 tok ->   39.92 tok/s  (spread 24.1%, cache 0)
+[2026-08-30T00:22:11-04:00] --- [tp2] depth 262144 (n=12) ---
+
+=== depth 262144 (tp2) ===
+  warmup 1: 39.6 tok/s (ptok=257993, cached=0)
+  warmup 2: 30.0 tok/s (ptok=257993, cached=0)
+  warmup 3: 31.8 tok/s (ptok=257993, cached=0)
+  rep 1: 38.3 tok/s ttft=204.2s ptok=257993
+  rep 2: 40.5 tok/s ttft=208.4s ptok=257993
+  rep 3: 40.8 tok/s ttft=212.2s ptok=257993
+  rep 4: 31.5 tok/s ttft=226.3s ptok=257993
+  rep 5: 35.3 tok/s ttft=230.0s ptok=257993
+  rep 6: 40.3 tok/s ttft=239.3s ptok=257993
+  rep 7: 38.9 tok/s ttft=258.7s ptok=257993
+  rep 8: 40.1 tok/s ttft=232.8s ptok=257993
+  rep 9: 40.6 tok/s ttft=209.3s ptok=257993
+  rep 10: 33.8 tok/s ttft=228.2s ptok=257993
+  rep 11: 41.7 tok/s ttft=241.4s ptok=257993
+  rep 12: 39.5 tok/s ttft=216.0s ptok=257993
+  MEDIAN 39.8 tok/s  (n=12, spread 25.6%, cache_hits=0)
+
+=== SUMMARY tp2 ===
+  257993.0 tok ->   39.79 tok/s  (spread 25.6%, cache 0)
+[2026-08-30T01:20:51-04:00] === [tp2] concurrency sweep cc=4,8,16 @8K (H2) ===
+
+=======================================================
+Starting MTP=2 Sweep: Context=8192, Concurrencies=[4, 8, 16], Reps=15
+=======================================================
+
+Running 3 single-stream warmup request(s)...
+Single-stream warmup complete.
+
+--- Concurrency cc=4 (Reps=15) ---
+  Warming cc=4 shape (3 batches, discarded) ...
+  Rep 1/15: Agg =  34.88 tok/s, Median Stream = 17.76 tok/s, Median TTFT = 14.576 s
+  Rep 2/15: Agg =  36.01 tok/s, Median Stream = 20.05 tok/s, Median TTFT = 15.576 s
+  Rep 3/15: Agg =  36.52 tok/s, Median Stream = 22.13 tok/s, Median TTFT = 16.277 s
+  Rep 4/15: Agg =  34.30 tok/s, Median Stream = 19.79 tok/s, Median TTFT = 16.595 s
+  Rep 5/15: Agg =  35.41 tok/s, Median Stream = 20.52 tok/s, Median TTFT = 16.106 s
+  Rep 6/15: Agg =  35.38 tok/s, Median Stream = 19.18 tok/s, Median TTFT = 15.564 s
+  Rep 7/15: Agg =  35.28 tok/s, Median Stream = 19.48 tok/s, Median TTFT = 15.573 s
+  Rep 8/15: Agg =  37.24 tok/s, Median Stream = 21.86 tok/s, Median TTFT = 15.635 s
+  Rep 9/15: Agg =  34.74 tok/s, Median Stream = 20.10 tok/s, Median TTFT = 16.508 s
+  Rep 10/15: Agg =  34.69 tok/s, Median Stream = 21.98 tok/s, Median TTFT = 17.812 s
+  Rep 11/15: Agg =  34.12 tok/s, Median Stream = 17.78 tok/s, Median TTFT = 15.586 s
+  Rep 12/15: Agg =  35.84 tok/s, Median Stream = 18.87 tok/s, Median TTFT = 14.552 s
+  Rep 13/15: Agg =  36.55 tok/s, Median Stream = 21.55 tok/s, Median TTFT = 15.941 s
+  Rep 14/15: Agg =  34.02 tok/s, Median Stream = 21.34 tok/s, Median TTFT = 17.940 s
+  Rep 15/15: Agg =  34.40 tok/s, Median Stream = 20.10 tok/s, Median TTFT = 16.797 s
+  => Cell cc=4 Summary: Median Agg =  35.28 tok/s (Spread:  3.22), Acceptance = 65.5%, Mean Accepted Len = 1.31
+
+--- Concurrency cc=8 (Reps=15) ---
+  Warming cc=8 shape (3 batches, discarded) ...
+  Rep 1/15: Agg =  39.22 tok/s, Median Stream = 15.11 tok/s, Median TTFT = 34.088 s
+  Rep 2/15: Agg =  41.97 tok/s, Median Stream = 16.79 tok/s, Median TTFT = 33.272 s
+  Rep 3/15: Agg =  40.08 tok/s, Median Stream = 17.21 tok/s, Median TTFT = 36.009 s
+  Rep 4/15: Agg =  40.31 tok/s, Median Stream = 17.29 tok/s, Median TTFT = 35.950 s
+  Rep 5/15: Agg =  41.76 tok/s, Median Stream = 14.91 tok/s, Median TTFT = 31.413 s
+  Rep 6/15: Agg =  39.96 tok/s, Median Stream = 16.99 tok/s, Median TTFT = 35.952 s
+  Rep 7/15: Agg =  40.50 tok/s, Median Stream = 17.97 tok/s, Median TTFT = 36.079 s
+  Rep 8/15: Agg =  40.67 tok/s, Median Stream = 14.77 tok/s, Median TTFT = 31.677 s
+  Rep 9/15: Agg =  41.13 tok/s, Median Stream = 15.52 tok/s, Median TTFT = 32.688 s
+  Rep 10/15: Agg =  41.26 tok/s, Median Stream = 19.82 tok/s, Median TTFT = 36.148 s
+  Rep 11/15: Agg =  38.92 tok/s, Median Stream = 15.32 tok/s, Median TTFT = 35.420 s
+  Rep 12/15: Agg =  41.66 tok/s, Median Stream = 18.64 tok/s, Median TTFT = 35.208 s
+  Rep 13/15: Agg =  41.98 tok/s, Median Stream = 19.32 tok/s, Median TTFT = 35.002 s
+  Rep 14/15: Agg =  40.76 tok/s, Median Stream = 15.97 tok/s, Median TTFT = 33.922 s
+  Rep 15/15: Agg =  43.07 tok/s, Median Stream = 19.21 tok/s, Median TTFT = 33.915 s
+  => Cell cc=8 Summary: Median Agg =  40.76 tok/s (Spread:  4.14), Acceptance = 65.9%, Mean Accepted Len = 1.32
+
+--- Concurrency cc=16 (Reps=15) ---
+  Warming cc=16 shape (3 batches, discarded) ...
+  Rep 1/15: Agg =  44.33 tok/s, Median Stream =  7.61 tok/s, Median TTFT = 53.657 s
+  Rep 2/15: Agg =  43.87 tok/s, Median Stream =  7.19 tok/s, Median TTFT = 53.121 s
+  Rep 3/15: Agg =  44.49 tok/s, Median Stream =  7.06 tok/s, Median TTFT = 52.061 s
+  Rep 4/15: Agg =  43.99 tok/s, Median Stream =  7.18 tok/s, Median TTFT = 53.171 s
+  Rep 5/15: Agg =  44.80 tok/s, Median Stream =  7.08 tok/s, Median TTFT = 52.633 s
+  Rep 6/15: Agg =  46.23 tok/s, Median Stream =  7.85 tok/s, Median TTFT = 51.650 s
+  Rep 7/15: Agg =  44.45 tok/s, Median Stream =  7.01 tok/s, Median TTFT = 51.201 s
+  Rep 8/15: Agg =  45.84 tok/s, Median Stream =  8.05 tok/s, Median TTFT = 50.892 s
+  Rep 9/15: Agg =  45.45 tok/s, Median Stream =  8.01 tok/s, Median TTFT = 55.435 s
+  Rep 10/15: Agg =  45.72 tok/s, Median Stream =  7.31 tok/s, Median TTFT = 50.366 s
+  Rep 11/15: Agg =  40.85 tok/s, Median Stream =  7.26 tok/s, Median TTFT = 59.540 s
+  Rep 12/15: Agg =  42.84 tok/s, Median Stream =  7.34 tok/s, Median TTFT = 57.357 s
+  Rep 13/15: Agg =  44.43 tok/s, Median Stream =  7.53 tok/s, Median TTFT = 53.883 s
+  Rep 14/15: Agg =  43.27 tok/s, Median Stream =  6.81 tok/s, Median TTFT = 52.194 s
+  Rep 15/15: Agg =  44.49 tok/s, Median Stream =  7.53 tok/s, Median TTFT = 54.434 s
+  => Cell cc=16 Summary: Median Agg =  44.45 tok/s (Spread:  5.37), Acceptance = 66.3%, Mean Accepted Len = 1.33
+
+Saved results to /home/sparkmain/bench-repo/results/20260829T234009Z-matched-2v3/tp2/concurrency.json
+[2026-08-30T02:13:14-04:00] [tp2] expected request ledger: 654
+EXCLUSIVITY_PASS delta=654 expected=654
+  sparkmain: clock mean 2442 MHz (min 2353, max 2502), temp mean 77 C (max 85), n=2260
+  spark1: clock mean 2478 MHz (min 2424, max 2567), temp mean 80 C (max 89), n=2260
+  spark2: clock mean 2515 MHz (min 2515, max 2528), temp mean 50 C (max 51), n=2260
+[2026-08-30T02:13:14-04:00] === [tp2] arm complete ===
+[2026-08-30T02:13:14-04:00] === Step 5: tear down TP=2, restore env, restart 3-node ===
+[2026-08-30T02:13:14-04:00] Stopping head sparkmain ...
+[2026-08-30T02:13:22-04:00] Stopping worker spark1 ...
+[2026-08-30T02:13:38-04:00] Stopped.
+restored config/head.env
+restored config/worker.env
+[2026-08-30T02:27:22-04:00] === Step 6: wait for 3-node health ===
+[2026-08-30T02:27:22-04:00] 3-node cluster healthy.
+[2026-08-30T02:27:22-04:00] === Step 7: re-measure TP=3 at matched n ===
+[2026-08-30T02:27:22-04:00] preserved the n=7 TP=3 arm as tp3-n7/
+[2026-08-30T02:27:22-04:00] live: /usr/bin/python3 /usr/local/bin/vllm serve /models/dsv4-abliterated --served-model-name deepseek-v4-flash-0731 --host 0.0.0.0 --port 8100 --trust-remote-code --tensor-parallel-size 3 --pipeline-parallel-size 1 --kv-cache-dtype nvfp4_ds_mla --block-size 256 --max-model-len 1048576 --max-num-seqs 32 --max-num-batched-tokens 8192 --long-prefill-token-threshold 1024 --max-cudagraph-capture-size 96 --gpu-memory-utilization 0.835 --enable-prefix-caching --async-scheduling --enable-chunked-prefill --speculative-config {"method":"dspark","num_speculative_tokens":2,"draft_sample_method":"probabilistic"} --profiler-config {"profiler":"torch","torch_profiler_dir":"/tmp/profiler_traces","ignore_frontend":true} --tokenizer-mode deepseek_v4 --distributed-executor-backend mp --moe-backend flashinfer_b12x --tool-call-parser deepseek_v4 --enable-auto-tool-choice --reasoning-parser deepseek_v4 --reasoning-config {"reasoning_parser":"deepseek_v4","reasoning_start_str":"<think>","reasoning_end_str":"</think>"} --default-chat-template-kwargs {"thinking":false} --generation-config vllm --enable-flashinfer-autotune --nnodes 3 --node-rank 0 --master-addr 192.168.200.1 --master-port 25000 --jit-monitor-mode warn
+[2026-08-30T02:27:22-04:00] TP=3 config confirmed; both arms now identical except node count.
+[2026-08-30T02:27:24-04:00] TP=3 correctness 391 OK
+[2026-08-30T02:27:24-04:00] cooldown: waiting for all nodes <= 70C (max 900s)
+[2026-08-30T02:27:27-04:00] cooldown: all nodes <= 70C after 0s
+[2026-08-30T02:27:27-04:00] telemetry started -> /home/sparkmain/bench-repo/results/20260829T234009Z-matched-2v3/tp3/clocks-*.csv
+IDLE_OK start_request_success_total=1.0
+[2026-08-30T02:27:27-04:00] [tp3] exclusivity start_total=1.0
+[2026-08-30T02:27:27-04:00] === [tp3] depth sweep (matched n) ===
+[2026-08-30T02:27:27-04:00] --- [tp3] depth 2048 (n=30) ---
+
+=== depth 2048 (tp3) ===
+  warmup 1: 44.1 tok/s (ptok=2036, cached=0)
+  warmup 2: 48.7 tok/s (ptok=2036, cached=0)
+  warmup 3: 49.0 tok/s (ptok=2036, cached=0)
+  rep 1: 49.2 tok/s ttft=1.1s ptok=2036
+  rep 2: 54.2 tok/s ttft=2.0s ptok=2036
+  rep 3: 50.9 tok/s ttft=1.1s ptok=2036
+  rep 4: 43.8 tok/s ttft=2.3s ptok=2036
+  rep 5: 45.7 tok/s ttft=1.5s ptok=2036
+  rep 6: 52.7 tok/s ttft=1.1s ptok=2036
+  rep 7: 49.6 tok/s ttft=1.1s ptok=2036
+  rep 8: 54.4 tok/s ttft=1.1s ptok=2036
+  rep 9: 45.9 tok/s ttft=1.1s ptok=2036
+  rep 10: 46.5 tok/s ttft=1.7s ptok=2036
+  rep 11: 45.6 tok/s ttft=2.0s ptok=2035
+  rep 12: 55.5 tok/s ttft=1.1s ptok=2035
+  rep 13: 42.0 tok/s ttft=1.1s ptok=2035
+  rep 14: 50.9 tok/s ttft=1.1s ptok=2035
+  rep 15: 42.1 tok/s ttft=2.0s ptok=2035
+  rep 16: 44.6 tok/s ttft=2.5s ptok=2035
+  rep 17: 41.3 tok/s ttft=1.5s ptok=2035
+  rep 18: 43.2 tok/s ttft=2.3s ptok=2035
+  rep 19: 42.4 tok/s ttft=1.7s ptok=2035
+  rep 20: 46.0 tok/s ttft=2.1s ptok=2035
+  rep 21: 47.3 tok/s ttft=1.1s ptok=2035
+  rep 22: 49.9 tok/s ttft=1.1s ptok=2035
+  rep 23: 49.7 tok/s ttft=1.1s ptok=2035
+  rep 24: 46.2 tok/s ttft=1.1s ptok=2035
+  rep 25: 38.2 tok/s ttft=1.1s ptok=2035
+  rep 26: 46.1 tok/s ttft=1.1s ptok=2035
+  rep 27: 47.7 tok/s ttft=1.3s ptok=2035
+  rep 28: 49.5 tok/s ttft=1.1s ptok=2035
+  rep 29: 48.7 tok/s ttft=1.1s ptok=2035
+  rep 30: 46.7 tok/s ttft=1.1s ptok=2035
+  MEDIAN 46.6 tok/s  (n=30, spread 37.1%, cache_hits=0)
+
+=== SUMMARY tp3 ===
+   2035.0 tok ->   46.59 tok/s  (spread 37.1%, cache 0)
+[2026-08-30T02:31:34-04:00] --- [tp3] depth 8192 (n=30) ---
+
+=== depth 8192 (tp3) ===
+  warmup 1: 54.1 tok/s (ptok=8081, cached=0)
+  warmup 2: 52.7 tok/s (ptok=8081, cached=0)
+  warmup 3: 52.6 tok/s (ptok=8081, cached=0)
+  rep 1: 46.9 tok/s ttft=4.2s ptok=8081
+  rep 2: 44.4 tok/s ttft=6.8s ptok=8081
+  rep 3: 54.6 tok/s ttft=5.8s ptok=8081
+  rep 4: 54.3 tok/s ttft=4.2s ptok=8081
+  rep 5: 55.1 tok/s ttft=4.2s ptok=8081
+  rep 6: 49.9 tok/s ttft=4.2s ptok=8081
+  rep 7: 52.0 tok/s ttft=6.7s ptok=8081
+  rep 8: 52.2 tok/s ttft=4.2s ptok=8081
+  rep 9: 50.5 tok/s ttft=4.2s ptok=8081
+  rep 10: 49.7 tok/s ttft=4.2s ptok=8081
+  rep 11: 52.6 tok/s ttft=6.6s ptok=8082
+  rep 12: 50.5 tok/s ttft=4.2s ptok=8082
+  rep 13: 53.4 tok/s ttft=4.2s ptok=8082
+  rep 14: 45.5 tok/s ttft=4.2s ptok=8082
+  rep 15: 53.8 tok/s ttft=6.2s ptok=8082
+  rep 16: 49.6 tok/s ttft=4.2s ptok=8082
+  rep 17: 52.8 tok/s ttft=4.2s ptok=8082
+  rep 18: 48.1 tok/s ttft=4.2s ptok=8082
+  rep 19: 52.0 tok/s ttft=6.1s ptok=8082
+  rep 20: 50.7 tok/s ttft=4.2s ptok=8082
+  rep 21: 53.1 tok/s ttft=4.2s ptok=8082
+  rep 22: 47.0 tok/s ttft=4.2s ptok=8082
+  rep 23: 51.5 tok/s ttft=5.8s ptok=8082
+  rep 24: 51.6 tok/s ttft=4.2s ptok=8082
+  rep 25: 51.7 tok/s ttft=4.2s ptok=8082
+  rep 26: 46.6 tok/s ttft=4.2s ptok=8082
+  rep 27: 48.8 tok/s ttft=5.1s ptok=8082
+  rep 28: 50.6 tok/s ttft=4.2s ptok=8082
+  rep 29: 52.5 tok/s ttft=4.2s ptok=8082
+  rep 30: 42.9 tok/s ttft=4.2s ptok=8082
+  MEDIAN 51.1 tok/s  (n=30, spread 23.9%, cache_hits=0)
+
+=== SUMMARY tp3 ===
+   8082.0 tok ->   51.07 tok/s  (spread 23.9%, cache 0)
+[2026-08-30T02:36:57-04:00] --- [tp3] depth 32768 (n=30) ---
+
+=== depth 32768 (tp3) ===
+  warmup 1: 51.7 tok/s (ptok=32268, cached=0)
+  warmup 2: 51.2 tok/s (ptok=32268, cached=0)
+  warmup 3: 52.6 tok/s (ptok=32268, cached=0)
+  rep 1: 51.1 tok/s ttft=17.2s ptok=32268
+  rep 2: 49.7 tok/s ttft=17.4s ptok=32268
+  rep 3: 49.9 tok/s ttft=17.3s ptok=32268
+  rep 4: 48.9 tok/s ttft=17.2s ptok=32268
+  rep 5: 52.6 tok/s ttft=17.2s ptok=32268
+  rep 6: 49.4 tok/s ttft=17.2s ptok=32268
+  rep 7: 52.7 tok/s ttft=17.2s ptok=32268
+  rep 8: 53.1 tok/s ttft=17.2s ptok=32268
+  rep 9: 51.9 tok/s ttft=17.3s ptok=32268
+  rep 10: 49.9 tok/s ttft=17.1s ptok=32268
+  rep 11: 51.1 tok/s ttft=17.1s ptok=32268
+  rep 12: 50.2 tok/s ttft=17.3s ptok=32268
+  rep 13: 53.4 tok/s ttft=17.2s ptok=32268
+  rep 14: 50.0 tok/s ttft=17.3s ptok=32268
+  rep 15: 49.6 tok/s ttft=17.3s ptok=32268
+  rep 16: 50.5 tok/s ttft=17.2s ptok=32268
+  rep 17: 52.6 tok/s ttft=17.3s ptok=32268
+  rep 18: 52.8 tok/s ttft=17.4s ptok=32268
+  rep 19: 51.7 tok/s ttft=17.2s ptok=32268
+  rep 20: 51.4 tok/s ttft=17.3s ptok=32268
+  rep 21: 45.9 tok/s ttft=17.4s ptok=32268
+  rep 22: 49.2 tok/s ttft=17.3s ptok=32268
+  rep 23: 51.4 tok/s ttft=17.3s ptok=32268
+  rep 24: 51.4 tok/s ttft=17.4s ptok=32268
+  rep 25: 50.4 tok/s ttft=17.2s ptok=32268
+  rep 26: 53.7 tok/s ttft=17.4s ptok=32268
+  rep 27: 50.6 tok/s ttft=17.3s ptok=32268
+  rep 28: 50.0 tok/s ttft=17.3s ptok=32268
+  rep 29: 51.2 tok/s ttft=17.4s ptok=32268
+  rep 30: 49.9 tok/s ttft=17.2s ptok=32268
+  MEDIAN 50.8 tok/s  (n=30, spread 15.4%, cache_hits=0)
+
+=== SUMMARY tp3 ===
+  32268.0 tok ->   50.83 tok/s  (spread 15.4%, cache 0)
+[2026-08-30T02:49:32-04:00] --- [tp3] depth 131072 (n=30) ---
+
+=== depth 131072 (tp3) ===
+  warmup 1: 49.8 tok/s (ptok=129006, cached=0)
+  warmup 2: 46.2 tok/s (ptok=129006, cached=0)
+  warmup 3: 46.7 tok/s (ptok=129006, cached=0)
+  rep 1: 48.6 tok/s ttft=75.0s ptok=129006
+  rep 2: 49.6 tok/s ttft=74.9s ptok=129006
+  rep 3: 48.9 tok/s ttft=74.9s ptok=129006
+  rep 4: 44.8 tok/s ttft=74.7s ptok=129006
+  rep 5: 46.5 tok/s ttft=75.1s ptok=129006
+  rep 6: 44.9 tok/s ttft=78.7s ptok=129006
+  rep 7: 45.3 tok/s ttft=80.0s ptok=129006
+  rep 8: 48.9 tok/s ttft=74.9s ptok=129006
+  rep 9: 48.6 tok/s ttft=74.8s ptok=129006
+  rep 10: 46.5 tok/s ttft=74.8s ptok=129006
+  rep 11: 47.4 tok/s ttft=74.9s ptok=129006
+  rep 12: 49.5 tok/s ttft=74.7s ptok=129006
+  rep 13: 49.3 tok/s ttft=76.2s ptok=129006
+  rep 14: 48.6 tok/s ttft=79.1s ptok=129006
+  rep 15: 44.7 tok/s ttft=75.1s ptok=129006
+  rep 16: 46.2 tok/s ttft=74.9s ptok=129006
+  rep 17: 45.8 tok/s ttft=75.0s ptok=129006
+  rep 18: 48.9 tok/s ttft=74.8s ptok=129006
+  rep 19: 46.7 tok/s ttft=75.1s ptok=129006
+  rep 20: 46.8 tok/s ttft=74.9s ptok=129006
+  rep 21: 47.6 tok/s ttft=74.8s ptok=129006
+  rep 22: 47.7 tok/s ttft=74.8s ptok=129006
+  rep 23: 49.2 tok/s ttft=74.8s ptok=129006
+  rep 24: 48.3 tok/s ttft=74.9s ptok=129006
+  rep 25: 47.0 tok/s ttft=74.8s ptok=129006
+  rep 26: 47.4 tok/s ttft=74.6s ptok=129006
+  rep 27: 42.7 tok/s ttft=75.5s ptok=129006
+  rep 28: 46.8 tok/s ttft=80.5s ptok=129006
+  rep 29: 43.9 tok/s ttft=75.0s ptok=129006
+  rep 30: 50.1 tok/s ttft=74.6s ptok=129006
+  MEDIAN 47.4 tok/s  (n=30, spread 15.8%, cache_hits=0)
+
+=== SUMMARY tp3 ===
+  129006.0 tok ->   47.38 tok/s  (spread 15.8%, cache 0)
+[2026-08-30T03:34:07-04:00] --- [tp3] depth 262144 (n=12) ---
+
+=== depth 262144 (tp3) ===
+  warmup 1: 46.6 tok/s (ptok=257993, cached=0)
+  warmup 2: 47.9 tok/s (ptok=257993, cached=0)
+  warmup 3: 44.1 tok/s (ptok=257993, cached=0)
+  rep 1: 47.8 tok/s ttft=166.8s ptok=257993
+  rep 2: 45.5 tok/s ttft=166.5s ptok=257993
+  rep 3: 44.0 tok/s ttft=166.5s ptok=257993
+  rep 4: 46.1 tok/s ttft=166.9s ptok=257993
+  rep 5: 44.7 tok/s ttft=166.5s ptok=257993
+  rep 6: 43.5 tok/s ttft=165.8s ptok=257993
+  rep 7: 42.4 tok/s ttft=176.8s ptok=257993
+  rep 8: 45.4 tok/s ttft=167.7s ptok=257993
+  rep 9: 45.9 tok/s ttft=166.2s ptok=257993
+  rep 10: 64.3 tok/s ttft=171.8s ptok=257993
+  rep 11: 44.0 tok/s ttft=168.4s ptok=257993
+  rep 12: 44.5 tok/s ttft=166.1s ptok=257993
+  MEDIAN 45.0 tok/s  (n=12, spread 48.6%, cache_hits=0)
+
+=== SUMMARY tp3 ===
+  257993.0 tok ->   45.04 tok/s  (spread 48.6%, cache 0)
+[2026-08-30T04:17:51-04:00] === [tp3] concurrency sweep cc=4,8,16 @8K (H2) ===
+
+=======================================================
+Starting MTP=2 Sweep: Context=8192, Concurrencies=[4, 8, 16], Reps=15
+=======================================================
+
+Running 3 single-stream warmup request(s)...
+Single-stream warmup complete.
+
+--- Concurrency cc=4 (Reps=15) ---
+  Warming cc=4 shape (3 batches, discarded) ...
+  Rep 1/15: Agg =  42.22 tok/s, Median Stream = 21.39 tok/s, Median TTFT = 11.137 s
+  Rep 2/15: Agg =  41.06 tok/s, Median Stream = 19.95 tok/s, Median TTFT = 11.306 s
+  Rep 3/15: Agg =  41.92 tok/s, Median Stream = 21.04 tok/s, Median TTFT = 10.988 s
+  Rep 4/15: Agg =  42.45 tok/s, Median Stream = 21.43 tok/s, Median TTFT = 10.932 s
+  Rep 5/15: Agg =  41.92 tok/s, Median Stream = 20.50 tok/s, Median TTFT = 11.111 s
+  Rep 6/15: Agg =  41.69 tok/s, Median Stream = 20.79 tok/s, Median TTFT = 10.985 s
+  Rep 7/15: Agg =  40.95 tok/s, Median Stream = 19.42 tok/s, Median TTFT = 11.132 s
+  Rep 8/15: Agg =  42.00 tok/s, Median Stream = 20.47 tok/s, Median TTFT = 11.129 s
+  Rep 9/15: Agg =  41.39 tok/s, Median Stream = 20.17 tok/s, Median TTFT = 11.202 s
+  Rep 10/15: Agg =  41.23 tok/s, Median Stream = 20.37 tok/s, Median TTFT = 10.991 s
+  Rep 11/15: Agg =  41.86 tok/s, Median Stream = 20.90 tok/s, Median TTFT = 10.955 s
+  Rep 12/15: Agg =  41.48 tok/s, Median Stream = 19.89 tok/s, Median TTFT = 11.130 s
+  Rep 13/15: Agg =  42.05 tok/s, Median Stream = 20.97 tok/s, Median TTFT = 11.226 s
+  Rep 14/15: Agg =  41.85 tok/s, Median Stream = 20.67 tok/s, Median TTFT = 11.195 s
+  Rep 15/15: Agg =  41.72 tok/s, Median Stream = 20.45 tok/s, Median TTFT = 11.103 s
+  => Cell cc=4 Summary: Median Agg =  41.85 tok/s (Spread:  1.50), Acceptance = 66.3%, Mean Accepted Len = 1.33
+
+--- Concurrency cc=8 (Reps=15) ---
+  Warming cc=8 shape (3 batches, discarded) ...
+  Rep 1/15: Agg =  50.43 tok/s, Median Stream = 12.49 tok/s, Median TTFT = 18.469 s
+  Rep 2/15: Agg =  50.07 tok/s, Median Stream = 11.90 tok/s, Median TTFT = 18.357 s
+  Rep 3/15: Agg =  47.39 tok/s, Median Stream = 11.52 tok/s, Median TTFT = 19.438 s
+  Rep 4/15: Agg =  46.78 tok/s, Median Stream = 11.46 tok/s, Median TTFT = 19.793 s
+  Rep 5/15: Agg =  49.94 tok/s, Median Stream = 12.29 tok/s, Median TTFT = 18.805 s
+  Rep 6/15: Agg =  49.99 tok/s, Median Stream = 12.13 tok/s, Median TTFT = 18.399 s
+  Rep 7/15: Agg =  49.61 tok/s, Median Stream = 11.86 tok/s, Median TTFT = 18.689 s
+  Rep 8/15: Agg =  49.88 tok/s, Median Stream = 12.25 tok/s, Median TTFT = 18.476 s
+  Rep 9/15: Agg =  49.42 tok/s, Median Stream = 11.88 tok/s, Median TTFT = 18.799 s
+  Rep 10/15: Agg =  49.91 tok/s, Median Stream = 12.03 tok/s, Median TTFT = 18.445 s
+  Rep 11/15: Agg =  49.11 tok/s, Median Stream = 11.75 tok/s, Median TTFT = 18.778 s
+  Rep 12/15: Agg =  50.15 tok/s, Median Stream = 12.27 tok/s, Median TTFT = 18.484 s
+  Rep 13/15: Agg =  49.39 tok/s, Median Stream = 11.95 tok/s, Median TTFT = 18.732 s
+  Rep 14/15: Agg =  49.83 tok/s, Median Stream = 12.03 tok/s, Median TTFT = 18.647 s
+  Rep 15/15: Agg =  49.53 tok/s, Median Stream = 11.78 tok/s, Median TTFT = 18.672 s
+  => Cell cc=8 Summary: Median Agg =  49.83 tok/s (Spread:  3.64), Acceptance = 66.6%, Mean Accepted Len = 1.33
+
+--- Concurrency cc=16 (Reps=15) ---
+  Warming cc=16 shape (3 batches, discarded) ...
+  Rep 1/15: Agg =  54.53 tok/s, Median Stream =  6.72 tok/s, Median TTFT = 33.952 s
+  Rep 2/15: Agg =  54.18 tok/s, Median Stream =  6.69 tok/s, Median TTFT = 34.043 s
+  Rep 3/15: Agg =  53.88 tok/s, Median Stream =  6.53 tok/s, Median TTFT = 33.966 s
+  Rep 4/15: Agg =  54.20 tok/s, Median Stream =  6.65 tok/s, Median TTFT = 34.016 s
+  Rep 5/15: Agg =  54.77 tok/s, Median Stream =  6.63 tok/s, Median TTFT = 33.684 s
+  Rep 6/15: Agg =  54.19 tok/s, Median Stream =  6.60 tok/s, Median TTFT = 34.147 s
+  Rep 7/15: Agg =  54.36 tok/s, Median Stream =  6.62 tok/s, Median TTFT = 33.798 s
+  Rep 8/15: Agg =  54.20 tok/s, Median Stream =  6.60 tok/s, Median TTFT = 33.980 s
+  Rep 9/15: Agg =  53.97 tok/s, Median Stream =  6.64 tok/s, Median TTFT = 34.015 s
+  Rep 10/15: Agg =  54.13 tok/s, Median Stream =  6.65 tok/s, Median TTFT = 33.984 s
+  Rep 11/15: Agg =  54.62 tok/s, Median Stream =  6.50 tok/s, Median TTFT = 33.707 s
+  Rep 12/15: Agg =  54.41 tok/s, Median Stream =  6.56 tok/s, Median TTFT = 33.995 s
+  Rep 13/15: Agg =  54.44 tok/s, Median Stream =  6.59 tok/s, Median TTFT = 34.011 s
+  Rep 14/15: Agg =  54.12 tok/s, Median Stream =  6.54 tok/s, Median TTFT = 34.019 s
+  Rep 15/15: Agg =  53.05 tok/s, Median Stream =  6.36 tok/s, Median TTFT = 34.048 s
+  => Cell cc=16 Summary: Median Agg =  54.20 tok/s (Spread:  1.72), Acceptance = 66.5%, Mean Accepted Len = 1.33
+
+Saved results to /home/sparkmain/bench-repo/results/20260829T234009Z-matched-2v3/tp3/concurrency.json
+[2026-08-30T05:01:33-04:00] [tp3] expected request ledger: 654
+EXCLUSIVITY_PASS delta=654 expected=654
+  sparkmain: clock mean 2445 MHz (min 2307, max 2502), temp mean 77 C (max 87), n=1849
+  spark1: clock mean 2471 MHz (min 2333, max 2567), temp mean 81 C (max 89), n=1849
+  spark2: clock mean 2428 MHz (min 2242, max 2496), temp mean 83 C (max 89), n=1849
+[2026-08-30T05:01:33-04:00] === [tp3] arm complete ===
+[2026-08-30T05:01:33-04:00] Restoring open-webui ...
+[2026-08-30T05:01:33-04:00] ### DONE. Both arms at matched n in: /home/sparkmain/bench-repo/results/20260829T234009Z-matched-2v3
+[2026-08-30T05:01:33-04:00] ###   tp2/     n=30/30/30/30/12 + cc n=15
+[2026-08-30T05:01:33-04:00] ###   tp3/     n=30/30/30/30/12 + cc n=15
+[2026-08-30T05:01:33-04:00] ###   tp3-n7/  the earlier n=7 arm, preserved

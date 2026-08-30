@@ -1,0 +1,14 @@
+[
+  {
+    "label": "tp2",
+    "target_depth": 8192,
+    "actual_prompt_tokens": 8082.0,
+    "n": 30,
+    "median_decode_tok_s": 43.62,
+    "min": 40.75,
+    "max": 45.57,
+    "spread_pct": 11.0,
+    "cache_hits": 0,
+    "median_ttft_s": 4.79
+  }
+]
