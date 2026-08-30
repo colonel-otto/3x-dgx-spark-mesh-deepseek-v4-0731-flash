@@ -69,7 +69,14 @@ the old exemption; 524K is the first data point past it; the 700K–1M cells cos
 — MiaAI's collapse signature onset is 600K+, above the stop point. Until the deep
 cells run, the honest claim is "measured clean through 524K; 600K–1M unmeasured."
 
-**To resume later (engine up, cluster idle):**
+**SCHEDULED: the deep cells run automatically at 02:00 EDT 2026-08-31** via a
+one-shot systemd timer on sparkmain (`issue22-deep-cells.timer`, runs as user
+sparkmain, log `/tmp/issue22-rerun-deep.log`). The script's own gates apply at
+fire time: it refuses if the engine is down or the cluster is not idle, so a
+stopped or busy cluster simply skips the run (check the log in the morning).
+Cancel with `sudo systemctl stop issue22-deep-cells.timer`.
+
+**To resume manually instead (engine up, cluster idle):**
 ```bash
 ssh sparkmain
 cd ~/issue22-rerun
