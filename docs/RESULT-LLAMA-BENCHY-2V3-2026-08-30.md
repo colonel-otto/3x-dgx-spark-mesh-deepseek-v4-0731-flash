@@ -58,6 +58,44 @@ Reported both ways deliberately. Aggregate throughput *rises* with concurrency
 (43→6 and 46→7). Quoting only the aggregate is the trap this repository already
 documents; the 2v3 ratio holds either way, which is the point.
 
+## ⚠️ Variance correction — read before quoting the depth-sweep magnitudes
+
+A higher-n re-run of the two inconclusive cells (2026-08-30, `n=30`,
+`results/20260830T130300Z-rerun-inconclusive/`) found that **`n=10` understated
+the spread in both cells measured**, in the same direction:
+
+| TP=3 cell | std at n=10 | std at n=30 | mean shift |
+|---|---|---|---|
+| 8K decode | 2.43 (CV 5.7%) | **5.87 (CV 13.5%)** | 2.5% |
+| cc=1 decode | 2.77 (CV 6.0%) | **5.01 (CV 10.5%)** | 3.1% |
+
+The **means were stable**; the upper tail was undersampled (8K reached 61.4
+tok/s at n=30 versus 46.5 at n=10). This is systematic, not a single-cell fluke,
+so it bears on the cells this run *did* resolve.
+
+Recomputing each resolved decode cell's Welch t with std inflated 2.0x on both
+arms — roughly the measured correction:
+
+| cell | 3v2 | t as run | t at 2x std | survives |
+|---|---|---|---|---|
+| depth 0 | +20.8% | 4.28 | 2.14 | yes |
+| depth 32K | +11.9% | 2.63 | **1.31** | **no** |
+| depth 131K | +13.5% | 2.36 | **1.18** | **no** |
+| cc=4 | +20.1% | 11.21 | 5.60 | yes |
+| cc=8 | +18.7% | 26.68 | 13.34 | yes |
+| cc=16 | +15.4% | 18.49 | 9.24 | yes |
+
+**Honest restatement: the direction is robust everywhere — no cell flips under
+any inflation tested — but the magnitude is firmly established only at
+concurrency and depth 0, and is provisional at 32K and 131K.** The concurrency
+cells would survive a 5x inflation; prefill's CVs were ~0.2-1% and have orders
+of magnitude of headroom. The matched run (our own harness, n=30) is a separate
+measurement and is unaffected.
+
+This does not retract the result — it narrows which parts carry weight. Full
+working: `results/20260830T130300Z-rerun-inconclusive/robustness-caveat.md` and
+`variance-caveat.md`.
+
 ## The two inconclusive cells
 
 Neither favours two nodes. Both are **one arm being noisy at n=10**, not the
