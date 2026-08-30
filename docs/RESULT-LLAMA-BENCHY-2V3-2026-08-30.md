@@ -73,17 +73,27 @@ The **means were stable**; the upper tail was undersampled (8K reached 61.4
 tok/s at n=30 versus 46.5 at n=10). This is systematic, not a single-cell fluke,
 so it bears on the cells this run *did* resolve.
 
-Recomputing each resolved decode cell's Welch t with std inflated 2.0x on both
-arms — roughly the measured correction:
+**The two arms did not move together.** An earlier version of this section
+assumed both arms' spreads had been understated and inflated both by 2.0x. The
+completed TP=2 arm falsified that: TP=2's std at 8K went *down* at n=30
+(6.45 → 4.02, **0.62x**) while TP=3's went *up* (2.43 → 5.87, **2.4x**). The
+arms converged toward similar CVs (10.4% and 13.5%) rather than both worsening.
 
-| cell | 3v2 | t as run | t at 2x std | survives |
-|---|---|---|---|---|
-| depth 0 | +20.8% | 4.28 | 2.14 | yes |
-| depth 32K | +11.9% | 2.63 | **1.31** | **no** |
-| depth 131K | +13.5% | 2.36 | **1.18** | **no** |
-| cc=4 | +20.1% | 11.21 | 5.60 | yes |
-| cc=8 | +18.7% | 26.68 | 13.34 | yes |
-| cc=16 | +15.4% | 18.49 | 9.24 | yes |
+Recomputing with the **measured** per-arm ratios (TP=2 x0.62, TP=3 x2.4), and
+showing the superseded 2x-both figure for comparison:
+
+| cell | 3v2 | t as run | t (2x both, superseded) | t (measured) | survives |
+|---|---|---|---|---|---|
+| depth 0 | +20.8% | 4.28 | 2.14 | 2.19 | yes |
+| depth 32K | +11.9% | 2.63 | 1.31 | **1.94** | **no — but borderline** |
+| depth 131K | +13.5% | 2.36 | 1.18 | **1.29** | **no** |
+| cc=4 | +20.1% | 11.21 | 5.60 | 6.72 | yes |
+| cc=8 | +18.7% | 26.68 | 13.34 | 15.02 | yes |
+| cc=16 | +15.4% | 18.49 | 9.24 | 9.51 | yes |
+
+The conclusion is unchanged — 32K and 131K remain provisional — but the severity
+was **overstated** in the 2x-both version. 32K lands at t=1.94, just under the
+threshold rather than well below it.
 
 **Honest restatement: the direction is robust everywhere — no cell flips under
 any inflation tested — but the magnitude is firmly established only at
