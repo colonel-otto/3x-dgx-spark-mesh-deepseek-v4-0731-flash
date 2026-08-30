@@ -1,0 +1,15 @@
+=== garble START 2026-08-30T15:49:48-04:00
+=== garble EXIT 1 2026-08-30T15:49:48-04:00
+ctx=131072 run=0: ERROR HTTP Error 404: Not Found
+ctx=131072 run=1: ERROR HTTP Error 404: Not Found
+
+result: GARBLE DETECTED -> /home/sparkmain/eugr-ab-results/garble.json
+=== ruler START 2026-08-30T15:49:48-04:00
+=== ruler EXIT 1 2026-08-30T15:49:52-04:00
+FAIL task_sniah                     ctx=       ? (    0s) gold=None pred='HTTP 404: {"detail":"Not Found"}'
+FAIL task_mkniah                    ctx=       ? (    0s) gold=None pred='HTTP 404: {"detail":"Not Found"}'
+FAIL task_vartrack                  ctx=       ? (    0s) gold=None pred='HTTP 404: {"detail":"Not Found"}'
+FAIL task_cwe                       ctx=       ? (    0s) gold=None pred='HTTP 404: {"detail":"Not Found"}'
+
+=== RULER-lite: 0/16 passed ===
+GARBLE-RULER-DONE

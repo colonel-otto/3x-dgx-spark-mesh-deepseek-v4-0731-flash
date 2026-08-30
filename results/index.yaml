@@ -72,7 +72,7 @@ meta:
     PRESENT-FAIL: 0
     ABSENT: 21
     PRE-DATES-GATE: 5
-    total: 41
+    total: 44
   fabric_gate_tally_detail:
     PRESENT-PASS:
       - 20260825-deep-concurrency        # fabric-gate-full.json 13/13, nccl=full
@@ -2473,3 +2473,136 @@ directories:
       correction-2x-assumption.md for a second, separate correction: the first
       published version of the robustness analysis inflated BOTH arms 2x from
       TP=3 data alone, before the TP=2 arm existed.
+  - dir: 20260829-matched-2v3-ABORTED
+    date: 2026-08-29
+    description: >
+      Matched 2-vs-3-node attempt aborted mid-transition by operator error;
+      retained as a diagnostic baseline. Do not cite any number here; the
+      settled result is 20260830-matched-2v3-powered.
+    has_readme: true
+    nodes: [2, 3]
+    nodes_evidence: >
+      tp2/ and tp3/ subdirectories plus orchestration.log record which arm was
+      being transitioned when the run was aborted.
+    tp_size: [2, 3]
+    kv_pool_tokens: null
+    kv_pool_source: not captured; run aborted before a complete arm
+    harness: bench-miaai (2-node repo suite), run aborted
+    harness_committed: false
+    output_tokens_requested: 256
+    output_tokens_actual: {}
+    output_tokens_field: "n/a (no complete cell)"
+    output_tokens_note: >
+      No cell completed; there is no output-token distribution to verify.
+    reps: none completed
+    reps_verified: false
+    statistic: n/a
+    fabric_gate: ABSENT
+    fabric_gate_artifact: null
+    fabric_gate_evidence: >
+      No fabric-gate artifact in the bundle.
+    fabric_gate_note: >
+      Aborted before the gate would have mattered.
+    fabric_gated: false
+    fabric_state: unknown
+    raw_data_committed: true
+    raw_files: [orchestration.log, patch-hashes-sparkmain.txt, patch-hashes-spark1.txt, patch-hashes-spark2.txt]
+    status: VOID-operator-error
+    void_reasons: [operator error mid-transition; no complete arm]
+    superseded_by: 20260830-matched-2v3-powered
+    note: >
+      Kept per BENCHMARK-POLICY: nothing is deleted, it is relabelled.
+  - dir: 20260830T194550Z-engine-ab-eugr
+    date: 2026-08-30
+    description: >
+      ENGINE A/B arm 1: eugr/spark-vllm-b12x (vLLM main dev g b5f995e73, digest
+      7dc02f16) on 3 nodes TP=3 with the SAME official 0731 checkpoint as every
+      anemll row. Correctness gate PASSED on the byte-identical 2-node-repo
+      suite: quick gate 7/7, tool battery 6/7 (forced_choice emitted valid JSON;
+      API semantics), deep-context 8/8, garble ALL CLEAN, RULER-lite 16/16
+      incl. 262K. Proves the image's native virtual-TP (heads 64->72, groups
+      8->9) is correct at TP=3; our padding patch is NOT applied. Throughput
+      (bench-miaai, synthetic-numbered-words, 256 tok) vs anemll tp3-seqs16:
+      c=1 82.1 vs 80.4 (parity); c=4 agg 162.7 vs 115.2 (+41%); c=8 171.7 vs
+      143.6 (+20%); c=16 133.9 vs 161.0 (-17%) - a scheduling cliff (TTFT 7.0s
+      vs 1.9s at c=8) that the engine attributes to nst=5 draft slots. Config
+      deltas: dspark nst=5 (not MTP K=2), kv fp8 (not nvfp4_ds_mla), V2 model
+      runner, --no-cache-dirs (20 post-start b12x JIT compiles contaminated
+      cold runs; warm reruns reported). NOT a same-day matched A/B - the anemll
+      engine was down; comparison values are the 2026-08-21 rows.
+    has_readme: true
+    nodes: 3
+    nodes_evidence: >
+      engine-config.txt captures the live engine init line
+      (tensor_parallel_size=3, nnodes 3, master = the head node wired-mgmt address) and the
+      virtual-TP plan warning; launch-header.txt shows the 3-node cluster list.
+    tp_size: 3
+    kv_pool_tokens: 2415674
+    kv_pool_source: "engine-config.txt (GPU KV cache size line: 2,415,674 tokens)"
+    harness: 2-node repo suite (bench-miaai, tool-battery, deepctx-tool-battery, context-garble-sweep, ruler-lite), unmodified
+    harness_committed: false
+    output_tokens_requested: 128
+    output_tokens_actual: {128: all bench-miaai cells}
+    output_tokens_field: "n=[...] per trial line in bench-*.log"
+    output_tokens_note: >
+      bench-miaai forces min_tokens=max_tokens=128 with ignore_eos; every trial
+      line records n=[128,...].
+    reps: c=1 8 trials (warm rerun; cold 8-trial run also kept), c=16 5 warm trials + 3 cold, c=4/c=8 3 trials each
+    reps_verified: true
+    statistic: median-of-trials per bench-miaai
+    fabric_gate: ABSENT
+    fabric_gate_artifact: null
+    fabric_gate_evidence: >
+      No fabric_gate.sh run; NCCL formed over the 200Gb mesh with the proven
+      tp3.env values and the launch log carries no GID-table-changed or NCCL
+      WARN lines after startup.
+    fabric_gate_note: >
+      Run the gate before the matched same-day A/B.
+    fabric_gated: false
+    fabric_state: healthy (no NCCL warnings; decode stable across trials)
+    raw_data_committed: true
+    raw_files: [engine-config.txt, image-digest.txt, launch-header.txt, recipe.yaml, bench-c1.log, bench-c16.log, bench-c16-warm.log, bench-run.log, tool-battery.log, deepctx-tool-battery.log, context-garble-sweep.log, garble.json, ruler-lite.log, ruler-lite.json, vendored-SHA256SUMS.txt, battery-run.log, battery-run2.log, battery-run3.log]
+    status: CURRENT
+    void_reasons: []
+    superseded_by: null
+    note: >
+      First new-engine arm. Protocol and next steps in docs/ENGINE-AB-3NODE.md.
+  - dir: 20260830-llama-benchy-ABORTED
+    date: 2026-08-30
+    description: >
+      First llama-benchy 2v3 attempt, aborted on the fabric gate before any
+      measurement. No numbers. The completed run is
+      20260830T101053Z-llama-benchy-2v3.
+    has_readme: true
+    nodes: [2, 3]
+    nodes_evidence: >
+      tp2/ and tp3/ scaffolding plus orchestration.log; no engine served a
+      benchmark request.
+    tp_size: [2, 3]
+    kv_pool_tokens: null
+    kv_pool_source: not captured; aborted before an arm ran
+    harness: eugr/llama-benchy (not run)
+    harness_committed: false
+    output_tokens_requested: 256
+    output_tokens_actual: {}
+    output_tokens_field: "n/a (no measurement)"
+    output_tokens_note: >
+      No requests were issued.
+    reps: none
+    reps_verified: false
+    statistic: n/a
+    fabric_gate: PRESENT-FAIL
+    fabric_gate_artifact: orchestration.log
+    fabric_gate_evidence: >
+      The run stopped at the fabric gate; orchestration.log records the abort.
+    fabric_gate_note: >
+      This is the gate doing its job.
+    fabric_gated: true
+    fabric_state: failed gate
+    raw_data_committed: true
+    raw_files: [orchestration.log, software-stack.txt, tokenizer-check.txt]
+    status: VOID-no-measurement
+    void_reasons: [aborted on fabric gate; no measurement taken]
+    superseded_by: 20260830T101053Z-llama-benchy-2v3
+    note: >
+      Kept per BENCHMARK-POLICY.

@@ -245,3 +245,19 @@ failures were the separate `GPU_MEMORY_UTILIZATION=0.835` init memory check
 (see above); 11:37 clean 6-min start; 12:55:13 the netplan event; 13:00:12
 EngineDead. Three engine deaths in one day, three distinct causes — check the
 docker log, not the unit state, before attributing.
+
+## eugr engine: bimodal TTFT / aggregate (7s vs 2s) in the first minutes after boot
+
+Two distinct effects, verified 2026-08-30 on the arm-1 run:
+
+1. **`[b12x cute.compile] … status=disk-cache-miss reason=post-engine-start`** in the launcher log —
+   B12X JIT-compiles each new CuTe kernel shape on first encounter; the batch that triggers one stalls.
+   Booting with `--no-cache-dirs` leaves no persisted kernel cache, so this repeats every boot (20 misses in
+   the first ~40 min of serving). Treat any throughput trial taken while the miss counter is still rising as
+   contaminated; re-run when `grep -c "cute.compile.*disk-cache-miss" <launch log>` has stopped moving.
+   Durable fix: mount uniform cache dirs (see ENGINE-AB-3NODE.md next steps).
+2. **A steady-state cliff at the max_num_seqs cap** (c=16: TTFT 7.0s for 16×256 tokens; c=8: 1.9s) that
+   persists after the miss counter freezes. Startup warns `max_num_scheduled_tokens is set to 8128 based on
+   the speculative decoding settings` — nst=5 draft slots × 16 seqs. Lower `num_speculative_tokens` or
+   raise the batched-token budget and re-measure; do not read the c=16 cell as an engine regression until
+   that is separated.

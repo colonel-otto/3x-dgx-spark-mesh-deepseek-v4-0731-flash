@@ -1,0 +1,215 @@
+{
+  "model": "deepseek-v4-flash-eugr-ab",
+  "base_url": "http://127.0.0.1:8000/v1",
+  "seed": 42,
+  "cases": [
+    {
+      "task": "sniah(key=prairie)",
+      "target": 8192,
+      "actual_tokens": 8200,
+      "ok": true,
+      "prediction": "24592",
+      "gold": [
+        "24592"
+      ],
+      "secs": 3.2
+    },
+    {
+      "task": "mkniah(keys=3,query=river)",
+      "target": 8192,
+      "actual_tokens": 8204,
+      "ok": true,
+      "prediction": "28289",
+      "gold": [
+        "28289"
+      ],
+      "secs": 6.9
+    },
+    {
+      "task": "vartrack(chains=1,hops=4)",
+      "target": 8192,
+      "actual_tokens": 8204,
+      "ok": true,
+      "prediction": "Based on the text, the chain of assignments is:\n\n1. `VAR CTOPA = 44671`  \n2. `VAR CGPOS = VAR CTOPA`",
+      "gold": [
+        "CTOPA",
+        "CGPOS",
+        "SKLHW",
+        "TEKHF",
+        "TCJJI"
+      ],
+      "secs": 5.3
+    },
+    {
+      "task": "cwe(common=5)",
+      "target": 8192,
+      "actual_tokens": 8199,
+      "ok": true,
+      "prediction": "Based on the list provided, the 5 most common words are:\n\n1. **temple** (appears 9 times)\n2. **ancho",
+      "gold": [
+        "quiver",
+        "anchor",
+        "needle",
+        "jungle",
+        "temple"
+      ],
+      "secs": 4.7
+    },
+    {
+      "task": "sniah(key=apple)",
+      "target": 32768,
+      "actual_tokens": 32776,
+      "ok": true,
+      "prediction": "61173",
+      "gold": [
+        "61173"
+      ],
+      "secs": 16.0
+    },
+    {
+      "task": "mkniah(keys=3,query=silver)",
+      "target": 32768,
+      "actual_tokens": 32781,
+      "ok": true,
+      "prediction": "96752",
+      "gold": [
+        "96752"
+      ],
+      "secs": 26.1
+    },
+    {
+      "task": "vartrack(chains=1,hops=4)",
+      "target": 32768,
+      "actual_tokens": 32780,
+      "ok": true,
+      "prediction": "Based on the text, the chain of variable assignments is:\n\n1. `VAR MEFBT = 51467`\n2. `VAR BIBMX = VAR",
+      "gold": [
+        "MEFBT",
+        "BIBMX",
+        "NBNWB",
+        "BWKYO",
+        "PBCRO"
+      ],
+      "secs": 14.1
+    },
+    {
+      "task": "cwe(common=5)",
+      "target": 32768,
+      "actual_tokens": 32775,
+      "ok": true,
+      "prediction": "Based on the list provided, the 5 most common words are:\n\n1. **yellow** (appears 10 times)\n2. **kett",
+      "gold": [
+        "yonder",
+        "yellow",
+        "valley",
+        "mirror",
+        "kettle"
+      ],
+      "secs": 30.7
+    },
+    {
+      "task": "sniah(key=utopia)",
+      "target": 131072,
+      "actual_tokens": 131082,
+      "ok": true,
+      "prediction": "60328",
+      "gold": [
+        "60328"
+      ],
+      "secs": 64.8
+    },
+    {
+      "task": "mkniah(keys=3,query=glacier)",
+      "target": 131072,
+      "actual_tokens": 131084,
+      "ok": true,
+      "prediction": "29342",
+      "gold": [
+        "29342"
+      ],
+      "secs": 54.9
+    },
+    {
+      "task": "vartrack(chains=1,hops=4)",
+      "target": 131072,
+      "actual_tokens": 131084,
+      "ok": true,
+      "prediction": "Based on the chain of variable assignments in the text:\n\n1. `VAR UFUSM = 46347`\n2. `VAR OXDDM = VAR ",
+      "gold": [
+        "UFUSM",
+        "OXDDM",
+        "NOITL",
+        "VXLXL",
+        "EWLTV"
+      ],
+      "secs": 57.0
+    },
+    {
+      "task": "cwe(common=5)",
+      "target": 131072,
+      "actual_tokens": 131079,
+      "ok": true,
+      "prediction": "Based on the list provided, the 5 most common words are:\n\n1. candle\n2. prairie\n3. quartz\n4. orange\n5",
+      "gold": [
+        "orange",
+        "xenon",
+        "quartz",
+        "candle",
+        "prairie"
+      ],
+      "secs": 56.0
+    },
+    {
+      "task": "sniah(key=willow)",
+      "target": 262144,
+      "actual_tokens": 262168,
+      "ok": true,
+      "prediction": "73464",
+      "gold": [
+        "73464"
+      ],
+      "secs": 151.8
+    },
+    {
+      "task": "mkniah(keys=3,query=river)",
+      "target": 262144,
+      "actual_tokens": 262148,
+      "ok": true,
+      "prediction": "78765",
+      "gold": [
+        "78765"
+      ],
+      "secs": 531.0
+    },
+    {
+      "task": "vartrack(chains=1,hops=4)",
+      "target": 262144,
+      "actual_tokens": 262148,
+      "ok": true,
+      "prediction": "According to the chain(s) of variable assignment in the text above, 5 variables are assigned the val",
+      "gold": [
+        "VHJHS",
+        "DBBHY",
+        "QTCAH",
+        "MIZGW",
+        "CBMPR"
+      ],
+      "secs": 665.1
+    },
+    {
+      "task": "cwe(common=5)",
+      "target": 262144,
+      "actual_tokens": 262150,
+      "ok": true,
+      "prediction": "The top 5 words that appear most often in the list are: feather, kettle, quiver, yellow, ember.",
+      "gold": [
+        "yellow",
+        "ember",
+        "feather",
+        "quiver",
+        "kettle"
+      ],
+      "secs": 582.2
+    }
+  ]
+}

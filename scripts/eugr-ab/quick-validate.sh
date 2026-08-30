@@ -37,7 +37,9 @@ models=$(curl -sS --max-time 10 "$BASE/v1/models" || true)
 check "models endpoint serves $MODEL" "$MODEL" "$models"
 
 say "== engine identity (virtual TP must be active for TP=3) =="
-vtp=$(docker logs vllm_node 2>&1 | grep -m1 "virtual TP padding.*72" || true)
+# The virtual_tp warning is printed by the APIServer, which streams to the
+# LAUNCHER's stdout (our ~/eugr-ab-launch*.log), not the container log.
+vtp=$(grep -h -m1 "virtual TP padding" $(ls -t ~/eugr-ab-launch*.log 2>/dev/null | head -1) 2>/dev/null || docker logs vllm_node 2>&1 | grep -m1 "virtual TP padding" || true)
 check "virtual-TP plan activated (heads 64->72)" "output groups 8 -> 9" "$vtp"
 
 say "== acceptance items (docs/patch.md; 400-token budget on reasoning) =="

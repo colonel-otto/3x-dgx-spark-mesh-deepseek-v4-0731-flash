@@ -1,0 +1,18 @@
+PASS sniah(key=prairie)             ctx=    8200 (    3s) gold=['24592'] pred='24592'
+PASS mkniah(keys=3,query=river)     ctx=    8204 (    7s) gold=['28289'] pred='28289'
+PASS vartrack(chains=1,hops=4)      ctx=    8204 (    5s) gold=['CTOPA', 'CGPOS', 'SKLHW', 'TEKHF', 'TCJJI'] pred='Based on the text, the chain of assignments is:\n\n1. `VAR CTOPA = 44671`  \n2. `VAR CGPOS = VAR CTOPA`'
+PASS cwe(common=5)                  ctx=    8199 (    5s) gold=['quiver', 'anchor', 'needle', 'jungle', 'temple'] pred='Based on the list provided, the 5 most common words are:\n\n1. **temple** (appears 9 times)\n2. **ancho'
+PASS sniah(key=apple)               ctx=   32776 (   16s) gold=['61173'] pred='61173'
+PASS mkniah(keys=3,query=silver)    ctx=   32781 (   26s) gold=['96752'] pred='96752'
+PASS vartrack(chains=1,hops=4)      ctx=   32780 (   14s) gold=['MEFBT', 'BIBMX', 'NBNWB', 'BWKYO', 'PBCRO'] pred='Based on the text, the chain of variable assignments is:\n\n1. `VAR MEFBT = 51467`\n2. `VAR BIBMX = VAR'
+PASS cwe(common=5)                  ctx=   32775 (   31s) gold=['yonder', 'yellow', 'valley', 'mirror', 'kettle'] pred='Based on the list provided, the 5 most common words are:\n\n1. **yellow** (appears 10 times)\n2. **kett'
+PASS sniah(key=utopia)              ctx=  131082 (   65s) gold=['60328'] pred='60328'
+PASS mkniah(keys=3,query=glacier)   ctx=  131084 (   55s) gold=['29342'] pred='29342'
+PASS vartrack(chains=1,hops=4)      ctx=  131084 (   57s) gold=['UFUSM', 'OXDDM', 'NOITL', 'VXLXL', 'EWLTV'] pred='Based on the chain of variable assignments in the text:\n\n1. `VAR UFUSM = 46347`\n2. `VAR OXDDM = VAR '
+PASS cwe(common=5)                  ctx=  131079 (   56s) gold=['orange', 'xenon', 'quartz', 'candle', 'prairie'] pred='Based on the list provided, the 5 most common words are:\n\n1. candle\n2. prairie\n3. quartz\n4. orange\n5'
+PASS sniah(key=willow)              ctx=  262168 (  152s) gold=['73464'] pred='73464'
+PASS mkniah(keys=3,query=river)     ctx=  262148 (  531s) gold=['78765'] pred='78765'
+PASS vartrack(chains=1,hops=4)      ctx=  262148 (  665s) gold=['VHJHS', 'DBBHY', 'QTCAH', 'MIZGW', 'CBMPR'] pred='According to the chain(s) of variable assignment in the text above, 5 variables are assigned the val'
+PASS cwe(common=5)                  ctx=  262150 (  582s) gold=['yellow', 'ember', 'feather', 'quiver', 'kettle'] pred='The top 5 words that appear most often in the list are: feather, kettle, quiver, yellow, ember.'
+
+=== RULER-lite: 16/16 passed ===

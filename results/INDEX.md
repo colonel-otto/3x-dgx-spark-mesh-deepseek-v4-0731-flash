@@ -11,12 +11,12 @@ and diagnostic baseline values.
 
 | Item | Count |
 |---|---:|
-| Result bundles | 41 |
-| `CURRENT` | 27 |
-| `VOID` | 9 |
+| Result bundles | 44 |
+| `CURRENT` | 28 |
+| `VOID` | 11 |
 | `SUPERSEDED` | 5 |
 | Own passing fabric gate | 15 |
-| Gate absent | 21 |
+| Gate absent | 23 |
 | Predates the gate | 5 |
 
 `CURRENT` means useful within the caveats recorded for that bundle. An absent
@@ -54,6 +54,7 @@ quality evidence or a methodology-only control.
 | [20260829-issue36-dspark-proposer-long-horizon](20260829-issue36-dspark-proposer-long-horizon/) | 2026-08-29 | 3 / 3 | `ABSENT` | Issue #36 DSpark proposer long-generation acceptance audit (256, 512, 1024, 1536 tokens). Evaluates whether sliding-window cross-attention KV staleness causes draft acceptance decay. Confirms rock-solid 76.7%-80.4% acceptance (tau=2.55) and 52-57 tok/s decode through 1,536 tokens. |
 | [20260829-issue38-kernel-profiling](20260829-issue38-kernel-profiling/) | 2026-08-29 | 3 / 3 | `ABSENT` | Issue #38 First comprehensive kernel profiling trace (CUDA kernels, NCCL AllReduce, MoE GEMM, FlashInfer MLA Attention) on 3-Node DGX Spark TP=3 cluster. Captures 8K decode (16 tokens) and 131K deep prefill forward passes. Identifies decode communication bound (87.5% NCCL AllReduce time over 100 Gbps RoCE) and prefill compute balance (39.2% MoE GEMM, 34.1% NCCL, 16.2% FlashInfer MLA). |
 | [20260830T130300Z-rerun-inconclusive](20260830T130300Z-rerun-inconclusive/) | 2026-08-30 | [2, 3] / [2, 3] | `PRESENT-PASS` | Re-measurement at n=30 of the TWO cells that did not resolve in 20260830T101053Z-llama-benchy-2v3 (8K decode, cc=1 decode). BOTH RESOLVED, three nodes faster: 8K decode +12.7% (Welch t=3.76, 95% CI +6.1% to +19.3%) and cc=1 decode +14.8% (t=4.24, CI +8.0% to +21.7%). This takes the parent run to 16 of 16 cells resolved, all favouring three nodes. |
+| [20260830T194550Z-engine-ab-eugr](20260830T194550Z-engine-ab-eugr/) | 2026-08-30 | 3 / 3 | `ABSENT` | ENGINE A/B arm 1: eugr/spark-vllm-b12x (vLLM main dev g b5f995e73, digest 7dc02f16) on 3 nodes TP=3 with the SAME official 0731 checkpoint as every anemll row. Correctness gate PASSED on the byte-identical 2-node-repo suite: quick gate 7/7, tool battery 6/7 (forced_choice emitted valid JSON; API semantics), deep-context 8/8, garble ALL CLEAN, RULER-lite 16/16 incl. 262K. Proves the image's native virtual-TP (heads 64->72, groups 8->9) is correct at TP=3; our padding patch is NOT applied. Throughput (bench-miaai, synthetic-numbered-words, 256 tok) vs anemll tp3-seqs16: c=1 82.1 vs 80.4 (parity); c=4 agg 162.7 vs 115.2 (+41%); c=8 171.7 vs 143.6 (+20%); c=16 133.9 vs 161.0 (-17%) - a scheduling cliff (TTFT 7.0s vs 1.9s at c=8) that the engine attributes to nst=5 draft slots. Config deltas: dspark nst=5 (not MTP K=2), kv fp8 (not nvfp4_ds_mla), V2 model runner, --no-cache-dirs (20 post-start b12x JIT compiles contaminated cold runs; warm reruns reported). NOT a same-day matched A/B - the anemll engine was down; comparison values are the 2026-08-21 rows. |
 
 ## Superseded evidence
 
@@ -78,6 +79,8 @@ quality evidence or a methodology-only control.
 | [20260824-prefill](20260824-prefill/) | 2026-08-24 | [2, 3] / [2, 3] | `ABSENT` | The long prefill investigation — 45 files chasing a ~2x prefill "gap" that was in fact one degraded node. |
 | [20260826-decode-depth-2v3](20260826-decode-depth-2v3/) | 2026-08-26 | [2, 3] / [2, 3] | `PRESENT-PASS` | Long-context decode, 2 vs 3 nodes, 2K-262K at cc=1. The headline result on the depth axis; 70 measured reps, matched arms. |
 | [20260827-decode-2node-failed](20260827-decode-2node-failed/) | 2026-08-27 | 2 / 2 | `PRESENT-PASS` | Failed corrected TP=2 attempt retained because all benchmark requests returned HTTP 404 after the engine passed a live correctness request. |
+| [20260829-matched-2v3-ABORTED](20260829-matched-2v3-ABORTED/) | 2026-08-29 | [2, 3] / [2, 3] | `ABSENT` | Matched 2-vs-3-node attempt aborted mid-transition by operator error; retained as a diagnostic baseline. Do not cite any number here; the settled result is 20260830-matched-2v3-powered. |
+| [20260830-llama-benchy-ABORTED](20260830-llama-benchy-ABORTED/) | 2026-08-30 | [2, 3] / [2, 3] | `PRESENT-FAIL` | First llama-benchy 2v3 attempt, aborted on the fabric gate before any measurement. No numbers. The completed run is 20260830T101053Z-llama-benchy-2v3. |
 
 VOID bundles remain committed because their values fingerprint known failures.
 They must not be cited as current performance.

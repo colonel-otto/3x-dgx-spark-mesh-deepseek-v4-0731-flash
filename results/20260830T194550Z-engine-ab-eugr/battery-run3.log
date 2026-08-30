@@ -1,0 +1,16 @@
+=== garble START 2026-08-30T15:50:33-04:00
+=== garble EXIT 0 2026-08-30T15:53:53-04:00
+ctx=131072 run=1: CLEAN [] (3.1s)
+
+result: ALL CLEAN -> /home/sparkmain/eugr-ab-results/garble.json
+=== ruler START 2026-08-30T15:53:53-04:00
+=== ruler EXIT 0 2026-08-30T16:31:47-04:00
+PASS vartrack(chains=1,hops=4)      ctx=  131084 (   57s) gold=['UFUSM', 'OXDDM', 'NOITL', 'VXLXL', 'EWLTV'] pred='Based on the chain of variable assignments in the text:\n\n1. `VAR UFUSM = 46347`\n2. `VAR OXDDM = VAR '
+PASS cwe(common=5)                  ctx=  131079 (   56s) gold=['orange', 'xenon', 'quartz', 'candle', 'prairie'] pred='Based on the list provided, the 5 most common words are:\n\n1. candle\n2. prairie\n3. quartz\n4. orange\n5'
+PASS sniah(key=willow)              ctx=  262168 (  152s) gold=['73464'] pred='73464'
+PASS mkniah(keys=3,query=river)     ctx=  262148 (  531s) gold=['78765'] pred='78765'
+PASS vartrack(chains=1,hops=4)      ctx=  262148 (  665s) gold=['VHJHS', 'DBBHY', 'QTCAH', 'MIZGW', 'CBMPR'] pred='According to the chain(s) of variable assignment in the text above, 5 variables are assigned the val'
+PASS cwe(common=5)                  ctx=  262150 (  582s) gold=['yellow', 'ember', 'feather', 'quiver', 'kettle'] pred='The top 5 words that appear most often in the list are: feather, kettle, quiver, yellow, ember.'
+
+=== RULER-lite: 16/16 passed ===
+GARBLE-RULER-DONE
