@@ -6,7 +6,11 @@ current-state page made the repository harder to trust.
 
 Use these canonical pages instead:
 
-- [Current handoff](HANDOFF-2026-08-27.md) — live state, reliable findings, and open work.
+- **[Current handoff](HANDOFF-2026-08-29-EVENING.md) — START HERE.** Live cluster state
+  (including a `systemctl`-says-failed / engine-is-healthy trap), the significance finding
+  that withdraws four of five published 2v3 decode deltas, five harness bugs fixed, and the
+  exact next command.
+- [Previous handoff](HANDOFF-2026-08-27.md) — superseded by the above for 2v3 conclusions.
 - [Setup](setup.md) — build, start, verify, and switch cluster shapes.
 - [Benchmark policy](BENCHMARK-POLICY.md) — required measurement gates.
 - [Decisions](DECISIONS.md) — settled configuration choices.
