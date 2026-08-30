@@ -272,7 +272,13 @@ for n in "${NODES[@]}"; do
   fi
 done
 
-engine_up() { ssh_node "$1" 'sudo docker ps --format "{{.Names}}" 2>/dev/null | grep -q vllm-dspark'; }
+# Match BOTH engines' container names. The anemll engine ran as `vllm-dspark`;
+# the eugr engine (2026-08-30 onward) runs as `vllm_node`. Matching only the
+# old name made a live eugr engine look like an idle cluster, so `--nccl=auto`
+# would fire NCCL all_gather containers at GPUs a serving engine already owns
+# (contention + a false gate result), and 3e below would skip its RDMA log
+# check with "no engine running" while an engine was in fact serving.
+engine_up() { ssh_node "$1" 'sudo docker ps --format "{{.Names}}" 2>/dev/null | grep -qE "vllm[-_](dspark|node)"'; }
 
 # ---- 3e. RDMA completion errors in a RUNNING engine -------------------------
 # NCCL init succeeding does NOT mean the fabric is healthy. On 2026-08-25 all
@@ -295,7 +301,13 @@ for n in "${NODES[@]}"; do
   # carries 192/64/32/128/96 from an earlier failed enable, frozen and harmless.
   # Absolute values would false-positive forever; the log reports only live events.
   # If you ever check sysfs directly, compare DELTAS across the window, not totals.
-  errs=$(ssh_node "$n" "sudo docker logs --tail 2000 \$(sudo docker ps --format '{{.Names}}' | grep vllm-dspark | head -1) 2>&1 \
+  # Same both-engines match as engine_up(): vllm-dspark (anemll) or vllm_node (eugr).
+  # NOTE for the eugr engine: run-recipe.py streams the engine's own output to the
+  # LAUNCHER's stdout (~/eugr-*.log), so `docker logs` is comparatively sparse there.
+  # RDMA/NCCL completion errors still surface here because NCCL writes to the
+  # container's stderr, but treat a clean result as necessary, not sufficient --
+  # cross-check the launcher log when investigating a suspected fabric fault.
+  errs=$(ssh_node "$n" "sudo docker logs --tail 2000 \$(sudo docker ps --format '{{.Names}}' | grep -E 'vllm[-_](dspark|node)' | head -1) 2>&1 \
       | grep -cE 'IBV_WC_RETRY_EXC_ERR|IBV_WC_[A-Z_]*ERR|GID table changed'" </dev/null 2>/dev/null)
   errs=${errs:-0}
   if [[ "$errs" -gt 0 ]] 2>/dev/null; then

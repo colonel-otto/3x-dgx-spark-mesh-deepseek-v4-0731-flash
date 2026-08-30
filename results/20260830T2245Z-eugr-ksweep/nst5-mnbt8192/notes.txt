@@ -1,0 +1,1 @@
+# c=1 re-measured fully-warm (median-of-7); original warm-up-contaminated value was 67.8

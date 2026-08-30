@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# eugr-boot.sh — launch the eugr engine with persistent kernel caches, the LAN
-# gateway port/names restored, and a settable speculative depth.
+# eugr-boot.sh — launch the eugr engine with persistent kernel caches, the local
+# benchmark port/model aliases, and a settable speculative depth.
 #
 # Implements steps 1-3 of the post-arm-1 plan (docs/ENGINE-AB-3NODE.md) in one boot:
 #   1. persistent uniform kernel-cache mounts (kills the JIT contamination)
 #   2. num_speculative_tokens settable -> the K sweep
-#   3. port 8100 + BOTH served names so the LAN gateway route works unchanged
+#   3. port 8100 + BOTH served names for local compatibility with existing clients
 #
 # Usage: eugr-boot.sh <nst> [max_num_batched_tokens] [logfile]
 #
@@ -19,6 +19,7 @@ set -euo pipefail
 NST="${1:?usage: eugr-boot.sh <nst> [mnbt] [logfile]}"
 MNBT="${2:-8192}"
 LOG="${3:-$HOME/eugr-boot-nst${NST}-mnbt${MNBT}.log}"
+PIDFILE="${EUGR_PIDFILE:-$HOME/.eugr-launcher.pid}"
 
 # The three WIRED (enP7s7, 10G) addresses -- head first. NOT the wifi addresses
 # that hosts.json lists; the launcher SSHes workers by bare IP.
@@ -62,7 +63,7 @@ done
 
 # ---- generate the sweep-point recipe ---------------------------------------
 # Only two scalars change vs the base recipe; the served-name line gains the
-# legacy gateway name so bigdog's LiteLLM route resolves without client edits.
+# legacy model alias so local clients can continue using the existing name.
 python3 - "$BASE_RECIPE" "$GEN_RECIPE" "$NST" "$MNBT" <<'PY'
 import re, sys
 src, dst, nst, mnbt = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
@@ -77,8 +78,7 @@ def set_default(text, key, val):
 t = set_default(t, 'num_speculative_tokens', nst)
 t = set_default(t, 'max_num_batched_tokens', mnbt)
 
-# Serve BOTH names: the legacy gateway name first (LiteLLM/manifest route to
-# it) plus the A/B name used by the arm-1 rows.
+# Serve BOTH names: the legacy model alias plus the A/B name used by arm-1 rows.
 t, n = re.subn(r'--served-model-name deepseek-v4-flash-eugr-ab',
                '--served-model-name deepseek-v4-flash-dspark-abliterated deepseek-v4-flash-eugr-ab',
                t, count=1)
@@ -103,7 +103,7 @@ DRY=$(HF_HOME=/tmp/hfcache python3 run-recipe.py "$GEN_RECIPE_NAME" \
 
 # Fail loudly rather than boot a subtly-wrong 8-minute config.
 echo "$DRY" | grep -q -- "--port 8100"                        || { echo "DRYRUN FAIL: port"; echo "$DRY" | tail -40; exit 1; }
-echo "$DRY" | grep -q "deepseek-v4-flash-dspark-abliterated"  || { echo "DRYRUN FAIL: gateway name"; exit 1; }
+echo "$DRY" | grep -q "deepseek-v4-flash-dspark-abliterated"  || { echo "DRYRUN FAIL: legacy model alias"; exit 1; }
 echo "$DRY" | grep -q "deepseek-v4-flash-eugr-ab"             || { echo "DRYRUN FAIL: ab name"; exit 1; }
 echo "$DRY" | grep -q "\"num_speculative_tokens\":${NST}"     || { echo "DRYRUN FAIL: nst"; exit 1; }
 echo "$DRY" | grep -q -- "--max-num-batched-tokens ${MNBT}"   || { echo "DRYRUN FAIL: mnbt"; exit 1; }
@@ -131,5 +131,7 @@ HF_HOME=/tmp/hfcache nohup python3 run-recipe.py "$GEN_RECIPE_NAME" \
   -e NCCL_TIMEOUT=3600 \
   > "$LOG" 2>&1 &
 
-echo "  launched pid $! -> $LOG"
+echo "$!" > "$PIDFILE"
+chmod 600 "$PIDFILE"
+echo "  launched pid $! (recorded in $PIDFILE) -> $LOG"
 echo "  watch: tail -f $LOG   (expect ~8 min cold, faster once caches warm)"

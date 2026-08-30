@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+# eugr-service-stop — idempotent, best-effort teardown of the eugr cluster.
+#
+# Runs from BOTH ExecStop and ExecStopPost (see eugr.service for why: a stop
+# issued during the ~8 min cold start SIGTERMs ExecStart and ExecStop is never
+# reached, orphaning all three containers holding ~100 GiB/node — observed on
+# dsv4.service 2026-08-30 11:28:47). Must therefore be safe to run twice, and
+# safe to run when nothing is up.
+set -uo pipefail
+
+[ -f "$HOME/.eugr-nodes" ] && . "$HOME/.eugr-nodes"
+NODE0="${NODE0:-192.168.10.10}"
+NODE1="${NODE1:-192.168.10.11}"
+NODE2="${NODE2:-192.168.10.12}"
+CONTAINER="${EUGR_CONTAINER:-vllm_node}"
+PIDFILE="${EUGR_PIDFILE:-$HOME/.eugr-launcher.pid}"
+
+# 1. Stop only the launcher recorded by eugr-boot.sh.
+#    NEVER use a broad `pkill -f run-recipe`: the pattern can match the SSH
+#    command itself or an unrelated deployment on sparkmain. Older manual
+#    nohup launches have no pidfile and must be stopped once, manually, by the
+#    operator who can identify their exact PID from `ps -eo pid,args`.
+if [ -r "$PIDFILE" ]; then
+  pid=$(tr -d '[:space:]' < "$PIDFILE")
+  if [[ "$pid" =~ ^[0-9]+$ ]] && args=$(ps -p "$pid" -o args= 2>/dev/null) \
+     && echo "$args" | grep -q 'run-recipe\.py'; then
+    echo "eugr-stop: killing recorded launcher pid: $pid"
+    kill "$pid" 2>/dev/null || true
+    sleep 5
+    if kill -0 "$pid" 2>/dev/null; then
+      echo "eugr-stop: SIGKILL recorded launcher pid: $pid"
+      kill -9 "$pid" 2>/dev/null || true
+    fi
+  elif [ -n "$pid" ]; then
+    echo "eugr-stop: pidfile is stale or not an eugr launcher; leaving pid $pid alone"
+  fi
+  rm -f "$PIDFILE"
+fi
+
+# 2. Remove the container on EVERY node, then VERIFY. The leaked-container
+#    lesson: never report success from the head node's view alone.
+rc=0
+for n in "$NODE0" "$NODE1" "$NODE2"; do
+  ssh -o ConnectTimeout=15 -o BatchMode=yes "$n" \
+    "docker rm -f '$CONTAINER' >/dev/null 2>&1 || true" || true
+  left=$(ssh -o ConnectTimeout=15 -o BatchMode=yes "$n" \
+          "docker ps -a --filter name='^${CONTAINER}\$' --format '{{.Names}}'" 2>/dev/null || echo UNREACHABLE)
+  if [ -n "$left" ]; then
+    echo "eugr-stop: WARNING $n still shows: $left"
+    rc=1
+  else
+    echo "eugr-stop: $n clean"
+  fi
+done
+
+exit $rc

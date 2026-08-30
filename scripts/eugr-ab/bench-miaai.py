@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """Faithful replica of MiaAI's 2026-08-14 matrix methodology:
-unique cold prefix per request, thinking=false, min_tokens=max_tokens=128,
-ignore_eos, numbered-word instruction. Reports median per-stream decode tok/s
-after first token (their cell value) + acceptance-ish stats from server logs are
-read separately.  Usage: bench_miaai.py --base-url ... --prompt 256 --concurrency 1
+unique cold prefix per request, thinking=false, an exact configurable completion
+window (128 by default for arm-1 reproduction), ignore_eos, numbered-word
+instruction. Reports median per-stream decode tok/s after first token (their cell
+value) + acceptance-ish stats from server logs are read separately. Use
+--output-tokens 256 for publishable sweeps. Usage:
+bench_miaai.py --base-url ... --prompt 256 --concurrency 1
 """
 import argparse, asyncio, json, statistics, time, urllib.error, urllib.request
 
@@ -31,14 +33,14 @@ def build_prompt(base_url, model, target, nonce):
             return text
         text += unit * max(1, (target - count) // 3)
 
-def stream_one(base_url, model, prompt):
-    instruction = "\nReturn exactly 128 numbered lowercase English words, then stop."
+def stream_one(base_url, model, prompt, output_tokens):
+    instruction = f"\nReturn exactly {output_tokens} numbered lowercase English words, then stop."
     body = {
         "model": model,
         "messages": [{"role": "user", "content": prompt + instruction}],
         "stream": True, "stream_options": {"include_usage": True},
         "temperature": 0.6, "top_p": 0.95,
-        "max_tokens": 128, "min_tokens": 128, "ignore_eos": True,
+        "max_tokens": output_tokens, "min_tokens": output_tokens, "ignore_eos": True,
         "chat_template_kwargs": {"thinking": False},
     }
     req = urllib.request.Request(f"{base_url}/chat/completions", data=json.dumps(body).encode(),
@@ -61,21 +63,30 @@ def stream_one(base_url, model, prompt):
             if event.get("usage"):
                 usage = event["usage"]
     finished = time.perf_counter()
-    output_tokens = (usage or {}).get("completion_tokens", 0)
+    actual_output_tokens = (usage or {}).get("completion_tokens")
+    if actual_output_tokens is None:
+        raise RuntimeError("server did not return completion_tokens; refusing an unverified decode window")
+    if actual_output_tokens != output_tokens:
+        raise RuntimeError(
+            f"decode window collapsed: expected {output_tokens} completion tokens, "
+            f"got {actual_output_tokens}"
+        )
     ttft = (first or finished) - started
     return {"ttft_s": ttft, "elapsed_s": finished - started,
-            "output_tokens": output_tokens,
-            "output_tok_s": output_tokens / max(0.001, finished - (first or finished)),
+            "output_tokens": actual_output_tokens,
+            "output_tok_s": actual_output_tokens / max(0.001, finished - (first or finished)),
             "prompt_tokens": (usage or {}).get("prompt_tokens", 0)}
 
-async def run_case(base_url, model, target_prompt_tokens, concurrency, nonce_base):
+async def run_case(base_url, model, target_prompt_tokens, concurrency, nonce_base, output_tokens):
     prompts = await asyncio.gather(*[
         asyncio.to_thread(build_prompt, base_url, model, target_prompt_tokens,
                           f"p{target_prompt_tokens}-c{concurrency}-{nonce_base}-r{index}")
         for index in range(concurrency)
     ])
     started = time.perf_counter()
-    results = await asyncio.gather(*[asyncio.to_thread(stream_one, base_url, model, p) for p in prompts])
+    results = await asyncio.gather(*[
+        asyncio.to_thread(stream_one, base_url, model, p, output_tokens) for p in prompts
+    ])
     elapsed = time.perf_counter() - started
     total = sum(r["output_tokens"] for r in results)
     return {"concurrency": concurrency, "elapsed_s": elapsed,
@@ -91,13 +102,19 @@ async def main():
     ap.add_argument("--prompt", type=int, default=256)
     ap.add_argument("--concurrency", type=int, default=1)
     ap.add_argument("--repeat", type=int, default=5, help="how many sequential trials (unique nonces)")
+    ap.add_argument(
+        "--output-tokens", type=int, default=128,
+        help="exact completion window; 128 preserves arm-1 compatibility, use 256 for publishable sweeps",
+    )
     args = ap.parse_args()
     rows = []
     for rep in range(args.repeat):
-        case = await run_case(args.base_url, args.model, args.prompt, args.concurrency, rep)
+        case = await run_case(
+            args.base_url, args.model, args.prompt, args.concurrency, rep, args.output_tokens
+        )
         rows.append(case)
         med = case["median_output_tok_s"]
-        print(f"trial {rep}: c={case['concurrency']} p={args.prompt} "
+        print(f"trial {rep}: c={case['concurrency']} p={args.prompt} out={args.output_tokens} "
               f"median_decode={med:.1f} tok/s agg={case['aggregate_tok_s']:.1f} "
               f"ttft={case['median_ttft_s']*1000:.0f}ms n={[r['output_tokens'] for r in case['requests']]}", flush=True)
     if args.repeat > 1:
