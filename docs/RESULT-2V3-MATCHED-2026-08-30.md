@@ -86,6 +86,26 @@ arm never ran Profile B, whose `LONG_PREFILL_TOKEN_THRESHOLD=1024` and
 > were warmed identically, so the comparison is valid; the absolute numbers are not
 > "cold-start" figures.
 
+## 1c. Concurrency: the "two nodes win aggregate at cc≥8" claim is also REVERSED
+
+The published table says **two nodes win aggregate throughput at cc=16 by 6.5 %**. Matched,
+three nodes win every concurrency level, with **complete separation at all three**:
+
+| cc | TP=3 agg | TP=2 agg | Delta | p | Cliff's δ |
+|---:|---:|---:|---:|---:|---:|
+| 4 | **41.85** | 35.28 | **+18.6 %** | 3.4×10⁻⁶ | **+1.000** |
+| 8 | **49.83** | 40.76 | **+22.3 %** | 3.4×10⁻⁶ | **+1.000** |
+| 16 | **54.20** | 44.45 | **+21.9 %** | 3.4×10⁻⁶ | **+1.000** |
+
+n=15 per cell, 8K prompts, 3 warm batches per shape discarded. **δ = +1.000 at every
+level: every one of the 15 TP=3 reps beat every one of the 15 TP=2 reps.**
+
+Draft acceptance is essentially identical across node counts (TP=3 66.3/66.6/66.5 %,
+TP=2 65.5/65.9/66.3 %), so the throughput gap is not a speculation artefact.
+
+The published cc=16 result was measured with both arms at `MTP=5` **and** the 2-node arm
+missing Profile B entirely. It does not survive matching.
+
 ## 2. KV cache: 2.11×, not 2.6×
 
 Read from each arm's own init log, same instrument, same MTP depth:
@@ -146,16 +166,29 @@ convention.
 
 ## 6. What to tell users
 
-> **Run three nodes if you have them.** On matched configuration, three-node `TP=3` decodes
-> faster than two nodes at **every tested depth from 2K to 262K** — **+6.7 %** at 2K and
-> **+13 % to +20 %** from 8K through 262K — with complete or near-complete separation
-> across 30 reps per cell (12 at 262K). It also pools **2.11×** the KV cache. Every result
-> is measured with node count as the only variable.
+> **Run three nodes if you have them. There is no measured workload where two nodes win.**
+>
+> On matched configuration — node count the only variable, n=30 per cell — three-node
+> `TP=3` beats two-node `TP=2` on **every metric tested**:
+> - **Decode: +6.7 % to +20.2 %** across 2K–262K, all five depths significant.
+> - **Time to first token: 12 % to 27 % sooner from 32K up**, with complete separation
+>   (δ = −1.000) at 32K, 131K and 262K — at 262K the *worst* three-node TTFT beats the
+>   *best* two-node one by 27.4 s. At 2K and 8K three nodes are also ahead (−7.9 %,
+>   −11.8 %) but the arms **overlap** (δ = −0.200, −0.467), so treat those two shallow
+>   cells as a tie, not a win.
+> - **Aggregate throughput: +18.6 % to +22.3 %** at cc=4/8/16, complete separation.
+> - **KV cache: 2.11× larger.**
 
-Remaining caveats to publish alongside:
-- **High-concurrency aggregate is not yet settled.** The older claim that **two nodes win
-  at cc≥8** was measured under all six confounds; the matched arm is appended when it
-  completes.
-- **The deep-prefill TTFT claim is reversed, not merely unsettled** (§1b). Three nodes
-  reach first token sooner at every depth, by 26.6 % at 262K with zero overlap. The
-  published recommendation to prefer two nodes for deep ingestion should be withdrawn.
+**Every "two nodes win" row in the previously published table was an artefact of the six
+confounds — principally that the 2-node arm never ran Profile B.** Both such claims (deep
+prefill TTFT, high-concurrency aggregate) reverse under matched configuration, and both
+reverse with **Cliff's δ = ±1.000**, i.e. zero overlap between arms.
+
+Caveats that remain honest to publish:
+- TTFT figures here are **warm** (3 warm-ups per shape), identically warmed on both arms.
+  They are steady-state, not first-request-after-restart cold start.
+- Raw per-cell spread stays wide because GB10 clocks cannot be locked
+  ([`GPU-CLOCKS-NOT-LOCKABLE.md`](GPU-CLOCKS-NOT-LOCKABLE.md)); n=30 is what makes the
+  comparison resolvable, not tighter hardware.
+- **Prefill throughput** (tok/s at 32K) and the **APC warm path** were not re-tested here;
+  the published parity and ~107× figures stand on their original, still-confounded arms.

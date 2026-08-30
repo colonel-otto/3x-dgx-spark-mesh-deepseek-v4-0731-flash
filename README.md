@@ -73,9 +73,18 @@ no 2-node measurement exists, the cell says so rather than estimating.
 > two nodes untuned*. At n=7 four of its five decode rows also failed a significance test.
 > Its direction was right; its evidence was not.
 >
-> Two rows below remain **open**, not refuted: cold deep-prefill **TTFT** (a different
-> measurement from decode rate) and **high-concurrency aggregate** at cc≥8. Both were
-> measured under the six confounds and are being re-tested matched.
+> **Both "2-node wins" rows below are now REVERSED, not merely open** — each with zero
+> overlap between arms:
+>
+> | Claim in the table below | Matched result |
+> |---|---|
+> | 2 nodes win deep prefill TTFT by 22.3 s at 131K | **3 nodes 14.4 % sooner at 131K, 26.6 % at 262K** (δ = −1.000). At 262K the *worst* 3-node TTFT beats the *best* 2-node one by 27 s |
+> | 2 nodes win aggregate at cc=16 by 6.5 % | **3 nodes +18.6 / +22.3 / +21.9 %** at cc=4/8/16 (δ = +1.000 at all three) |
+>
+> **There is no measured workload where two nodes win.** Draft acceptance is near-identical
+> across node counts (~66 %), so the gaps are not a speculation artefact. Not re-tested and
+> still resting on their original confounded arms: **prefill throughput** and the **APC
+> warm path**. TTFT figures are warm (3 warm-ups/shape, both arms), not cold-start.
 
 | Capability / Metric | 3-Node (`TP=3`) | 2-Node (`TP=2`) | Delta | Source bundle |
 |---|:---:|:---:|:---:|---|
@@ -93,8 +102,8 @@ no 2-node measurement exists, the cell says so rather than estimating.
 1. **Decode favours three nodes at every depth — confirmed matched, 2026-08-30.**
    +6.7 % at 2K and **+13 % to +20 % from 8K through 262K**, all significant, with complete
    separation at 32K and 262K ([RESULT](docs/RESULT-2V3-MATCHED-2026-08-30.md)). The older
-   "+7.3 % to +16.7 %" understated it. Cold **TTFT** at depth is a separate question and is
-   still open.
+   "+7.3 % to +16.7 %" understated it. **TTFT and high-concurrency aggregate also favour
+   three nodes** on the matched arm, reversing both previously published "2-node wins".
 2. **The warm path dwarfs both.** Cold 131K costs ~78 s once; every subsequent turn
    returns in **<0.75 s** via prefix caching, retained across 2 minutes of think-time.
    For interactive coding this effect is ~100x, two orders of magnitude larger than any
