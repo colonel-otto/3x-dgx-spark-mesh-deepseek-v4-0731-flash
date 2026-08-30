@@ -155,6 +155,34 @@ resolvability**, and at n=30 every cell clears its effect size comfortably. This
 power analysis working as designed: n was chosen per cell from CV and effect size, not by
 convention.
 
+## 4b. Software stack — record it when quoting these numbers
+
+Identical on all three nodes, captured live
+([`software-stack.txt`](../results/20260830-matched-2v3-powered/software-stack.txt)):
+
+| | |
+|---|---|
+| NVIDIA driver | **580.173.02** |
+| CUDA | 13.0 |
+| NCCL | 2.28.9 |
+| vLLM | 0.25.2.dev0+g752a3a504.d20260714 |
+| NCCL transport | `NET/IB` (RoCE) on all 4 HCAs — verified `via NET/IB/*`, never `NET/Socket` |
+
+**Driver version is a first-class performance variable on GB10.**
+[r0b0tlab](https://github.com/r0b0tlab/deepseek-v4-flash-nvfp4-gb10-benchmark) documents a
+**~3.5× throughput regression** between driver 580.142 and 580.159.03 on this hardware.
+
+- **Internal validity of this comparison is unaffected** — both arms ran the same driver in
+  the same session, so node count remains the only variable.
+- **External comparability requires it.** A tok/s figure from another Spark cluster cannot
+  be compared to these without both drivers being known. Quote the driver with the number.
+
+That same repository also documents an NCCL RoCE fix restoring IB transport (all-reduce
+424 µs → 22 µs). **We are not affected** — this cluster is already on `NET/IB` across all
+four HCAs, which `DECISIONS.md` and `fabric_gate.sh` were built to guarantee after we hit
+the socket-fallback trap independently (`NET/Socket` measured at 0.44 GB/s and looked
+plausible).
+
 ## 5. Hygiene
 
 - **`EXCLUSIVITY_PASS delta=654 expected=654`** on the TP=2 arm — exact to the request,

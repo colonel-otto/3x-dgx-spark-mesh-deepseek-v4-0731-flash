@@ -1,0 +1,24 @@
+Software stack for the matched 2v3 comparison, 2026-08-30.
+Captured from the live cluster; identical on all three nodes.
+
+  NVIDIA driver   580.173.02
+  CUDA            13.0
+  NCCL            2.28.9
+  vLLM            0.25.2.dev0+g752a3a504.d20260714
+  container       dsv4-3spark:0.1.1 (patch sha256 verified identical, see patch-hashes-*.txt)
+  NCCL transport  NET/IB (RoCE) on all 4 HCAs -- verified "via NET/IB/*", never NET/Socket
+
+WHY THIS FILE EXISTS
+
+Driver version is a first-class performance variable on GB10, not background
+detail. r0b0tlab/deepseek-v4-flash-nvfp4-gb10-benchmark documents a ~3.5x
+throughput regression between driver 580.142 and 580.159.03 on this hardware.
+
+Consequence:
+  - INTERNAL validity of this bundle is unaffected. Both arms ran the same
+    driver in the same session, so node count remains the only variable.
+  - EXTERNAL comparability requires this file. A tok/s number from another
+    Spark cluster cannot be compared to ours without knowing both drivers.
+
+Anyone quoting numbers from this bundle should quote the driver alongside.
+Anyone comparing their own numbers to ours should state theirs.
