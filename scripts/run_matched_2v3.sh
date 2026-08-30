@@ -168,13 +168,24 @@ measure_arm() { # $1 = label (tp3|tp2), $2 = arm dir
   done
 
   log "=== [$label] concurrency sweep cc=$CCS @8K (H2) ==="
+  local CC_REPS=5
   python3 "$HERE/benchmark_mtp_concurrency.py" \
     --url "$API/v1" --metrics-url "$METRICS" --model "$MODEL" \
     --mtp-k $M_MTP --depth 8192 --concurrencies "$CCS" \
-    --reps 5 --max-tokens 256 \
+    --reps $CC_REPS --max-tokens 256 --warmups 2 \
     --out "$dir/concurrency.json" \
     2>&1 | tee "$dir/concurrency.log" | tee -a "$LOG"
   [[ ${PIPESTATUS[0]} -ne 0 ]] && log "WARN: [$label] concurrency sweep exited non-zero"
+
+  # Account for the concurrency harness's own traffic, or Requirement 5 reports
+  # it as foreign. Each cc cell issues cc*(reps + warmups) requests, and the
+  # harness sends `warmups` single-stream requests once up front. Omitting this
+  # made the tp3 arm report 198 phantom "foreign" requests.
+  local cc_issued=0 c
+  for c in ${CCS//,/ }; do
+    cc_issued=$(( cc_issued + c * (CC_REPS + 2) ))
+  done
+  issued=$(( issued + cc_issued + 2 ))
 
   excl_verify "$dir" "$start_total" "$issued" || log "WARN: [$label] exclusivity delta mismatch -- see exclusivity.json"
   telem_stop
