@@ -122,3 +122,38 @@ budgets 45 minutes for exactly this reason — an earlier 15-minute budget abort
 startup that was progressing normally. Do not conclude a start has hung because it
 has been running 10 minutes; check that the container log is still advancing, and
 see "Startup hangs after weight loading" above for what a real hang looks like.
+
+## `systemctl stop dsv4` leaves all three containers running
+
+Fixed 2026-08-30 in the unit; this is what the symptom looked like and why.
+
+`dsv4.service` is `Type=oneshot` with `RemainAfterExit=yes`, and a cold start
+occupies `ExecStart` for ~30 minutes. **`ExecStop` only runs from an `active`
+unit.** A `systemctl stop` issued while the unit is still `activating` instead
+SIGTERMs the start script: the unit goes to `failed (result: signal)` and
+`ExecStop` is never reached, so the head and both worker containers are orphaned
+and keep holding ~100 GiB per node. `systemctl is-active` then reports `failed`
+while `docker ps` shows all three still `Up` — and because the unit is now in
+`failed` state rather than `active`, the *next* `systemctl stop` skips `ExecStop`
+as well.
+
+Two lines fix it:
+
+```ini
+# runs on EVERY exit path: clean stop, failed start, SIGTERM mid-startup
+ExecStopPost=/home/sparkmain/bin/dsv4-service-stop
+# stopping a deliberate startup is an operation, not a fault
+SuccessExitStatus=SIGTERM
+```
+
+`dsv4-service-stop` is idempotent best-effort (it logs and skips a node that is
+already down, and always `exit 0`), so having it in both `ExecStop` and
+`ExecStopPost` is safe.
+
+Verified by starting the cluster, issuing `systemctl stop` ~35 s in while it was
+still `activating`, and confirming the teardown ran on all three nodes, the unit
+reported `Deactivated successfully` / `inactive`, and no `dspark` container
+survived on any node.
+
+If you are on a build without these lines, tear down with
+`~/bin/dsv4-service-stop` directly — `systemctl stop` alone is not sufficient.
