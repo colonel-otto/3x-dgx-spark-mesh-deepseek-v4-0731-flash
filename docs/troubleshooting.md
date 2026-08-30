@@ -92,3 +92,25 @@ cause above.` — the actual `ValueError` is upstream of it, in
 `N/A` and the check reads *free*. A node showing 74 GiB free / 116 GiB available
 has 42 GiB of reclaimable page cache — but vLLM tests the free number, so judge
 headroom by that.
+
+**Dropping caches is not the fix on its own.** `sysctl vm.drop_caches=3` makes the
+*pre-start* free number look healthy, but the shortfall appears *during* startup:
+measured on 2026-08-30, rank 0 had **110.59 GiB free** immediately before a launch
+— 9 GiB more than the 101.61 GiB required, with no cache drop needed — and the
+run still failed with vLLM reporting only **100.94 GiB**. The ~10 GiB goes to the
+CUDA context and NCCL communicator buffers allocated before `request_memory()`
+runs. Drop caches as an *extra* lever when a start is tight; do not rely on it to
+carry a value the node cannot otherwise sustain.
+
+**Leave a deliberate reserve.** The headroom left by `GPU_MEMORY_UTILIZATION` is
+what keeps `sshd` and `open-webui` alive, and SSH is the only way back into a node
+that goes bad. Per node (121.69 GiB total):
+
+| util | engine | reserved for OS + sshd + open-webui |
+|---|---|---|
+| 0.835 | 101.61 GiB | 20.08 GiB |
+| **0.82** | **99.79 GiB** | **21.90 GiB** |
+| 0.80 | 97.35 GiB | 24.34 GiB |
+
+Do not tune this purely for KV pool size. Recovery access is worth more than the
+last GiB of cache.
