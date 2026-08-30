@@ -114,3 +114,11 @@ that goes bad. Per node (121.69 GiB total):
 
 Do not tune this purely for KV pool size. Recovery access is worth more than the
 last GiB of cache.
+
+**A cold start takes ~30 minutes, not 6-8.** Weight loading is only the first
+~3 minutes of it (155 GiB main model ~139 s, then the MTP draft ~26 s); the rest
+is KV profiling, `torch.compile` and CUDA graph capture. `dsv4-service-start`
+budgets 45 minutes for exactly this reason — an earlier 15-minute budget aborted a
+startup that was progressing normally. Do not conclude a start has hung because it
+has been running 10 minutes; check that the container log is still advancing, and
+see "Startup hangs after weight loading" above for what a real hang looks like.
