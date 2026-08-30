@@ -95,13 +95,26 @@ defect the team already caught, which overstated decode 30–39 %.
 
 ## 3. Why the published comparison could not settle it
 
-**Three confounds, not one.** The published arms differ in:
+**SIX confounds, not one.** A full key-by-key diff of `config/tp3.env` against
+`config/head.env` (run 2026-08-29 late, after a TP=2 bringup crash forced a closer look)
+shows the published arms differ in **six** engine settings:
 
 | Knob | TP=2 arm | TP=3 arm | Disclosed before this session? |
 |---|---:|---:|---|
 | `MAX_NUM_SEQS` | 16 | 32 | yes |
 | `MTP_NUM_TOKENS` | 5 | 2 | yes |
 | `GPU_MEMORY_UTILIZATION` | 0.80 | 0.835 | **no** |
+| `LONG_PREFILL_TOKEN_THRESHOLD` | *unset* | 1024 | **no** |
+| `DSPARK_MAX_INFLIGHT_PREFILLS` | *unset* | 2 | **no** |
+| `KV_CACHE_DTYPE` | *unset* (default) | `nvfp4_ds_mla` | **no** |
+
+The last three are **Profile B** settings — the winning profile from Issue #25, credited
+with −10.7 % starvation TTFT and a +35 % KV pool. The 2-node arm was never running
+Profile B at all. **Only two of six confounds were ever disclosed.**
+
+This makes the published comparison weaker still: it is not "3 nodes vs 2 nodes", it is
+"3 nodes on the tuned production profile vs 2 nodes on an untuned one". All six are now
+matched in the TP=2 env files for the next run.
 
 The third was found this session by reading the live env files against the running engine.
 Per Issue #25 that knob alone is worth ~35 % of the KV pool and −10.7 % starvation TTFT. So
@@ -130,6 +143,13 @@ All committed. Each was silently defeating a guard the repo believes is enforced
 | 3 | Same harness **never warmed the shape it measured** — one single-stream warmup, then concurrent batches | **2.5× error**: cc=4 read 15.10 tok/s cold vs 41.63 warm | `8852d5e` |
 | 4 | Orchestrator's exclusivity ledger counted only the depth sweep | False `EXCLUSIVITY_FAIL` claiming 198 foreign requests | `e2b99f7` |
 | 5 | `cluster_tp2.sh` + `dsv4-service-start` waited **15 min** for a cold start that takes **~30 min** | Aborted two healthy bringups; reported a working cluster as failed | `1e1f5ef` |
+| 6 | **TP=2 could not start at all.** `docker-compose.yml:117` passes `VLLM_PREFIX_CACHE_RETENTION_INTERVAL: "${VLLM_PREFIX_CACHE_RETENTION_INTERVAL:-}"` — an **empty default**. `tp3.env` sets it to 4096; the TP=2 env files never set it, so workers received `""` and vLLM's `enable_envs_cache()` died on `int('')` → `ValueError: invalid literal for int() with base 10: ''` | Every TP=2 worker crashed ~4 min into startup, after loading 79.17 GiB of weights. The orchestrator then sat out its full bringup budget waiting on a dead engine. **This, not the timeout, is the likely cause of the earlier "TP=2 bringup failed" too.** | env fix |
+
+On #6: the crash is **latent in the 2-node config**, unrelated to node count, memory, or
+any edit made this session — TP=2 as committed could not have started. Fixed by setting
+the variable in both `head.env` and `worker.env`. Note the failure mode: the engine loads
+the full model first and *then* dies on env parsing, so it looks like a slow startup for
+several minutes before failing.
 
 On #5: raised to 45 min, with `dsv4.service` `TimeoutStartSec` 2400 → 3300 s so the script
 fails first and emits container logs. The exited-container check is untouched, so a real
