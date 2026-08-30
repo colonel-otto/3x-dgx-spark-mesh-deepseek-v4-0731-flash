@@ -20,22 +20,50 @@ under passing fabric gates.
    **+6.7 % to +20.2 %** faster across 2K–262K, all significant. **Read this first.**
 2. [**RESULT: independent llama-benchy 2v3**](docs/RESULT-LLAMA-BENCHY-2V3-2026-08-30.md) —
    the same question re-run on a **third-party harness we did not write**
-   ([`eugr/llama-benchy`](https://github.com/eugr/llama-benchy)). 14 of 16 cells resolved;
-   **all 14 favour three nodes, none favour two.** The claim is no longer self-certified.
-3. [3-Node vs 2-Node Benchmark](docs/BENCHMARK-2V3-NODES.md) — the older matrix, partly
+   ([`eugr/llama-benchy`](https://github.com/eugr/llama-benchy)). **16 of 16 cells resolved;
+   all favour three nodes, none favour two.** The claim is no longer self-certified.
+3. [**RESULT: n=30 re-run of the two unresolved cells**](docs/RESULT-RERUN-INCONCLUSIVE-2026-08-30.md) —
+   both resolved (three nodes faster), **and** the finding that `n=10` mis-estimates variance
+   in either direction. **Read this before quoting any n=10 magnitude.**
+4. [3-Node vs 2-Node Benchmark](docs/BENCHMARK-2V3-NODES.md) — the older matrix, partly
    superseded by the above; still the reference for APC, MTP, and architectural analysis.
-4. [Current handoff](docs/HANDOFF-2026-08-29-EVENING.md) — cluster state, verified findings, and
+5. [Current handoff](docs/HANDOFF-2026-08-29-EVENING.md) — cluster state, verified findings, and
    recipe tuning conclusions.
-5. [Documentation index](docs/README.md) — setup, operations, method, decisions, and
+6. [Documentation index](docs/README.md) — setup, operations, method, decisions, and
    historical investigations.
-6. [Results index](results/README.md) — one readable row per frozen run bundle.
-7. [Provenance index](results/INDEX.md) — status, gate coverage, raw evidence, and caveats.
-8. [Repository and data map](docs/REPOSITORY-MAP.md) — what belongs on GitHub and what
+7. [Results index](results/README.md) — one readable row per frozen run bundle.
+8. [Provenance index](results/INDEX.md) — status, gate coverage, raw evidence, and caveats.
+9. [Repository and data map](docs/REPOSITORY-MAP.md) — what belongs on GitHub and what
    should stay local.
 
-## The 3-Node Value: Multi-Million Token KV Cache & 100x Warm-Path Speedup
+## What the third node actually buys you
 
-The primary operational value of the 3-node cluster (`TP=3`) is **expanded unified memory**:
+**Three nodes are faster than two on every workload this repository has measured** —
+decode, prefill, and concurrency — and that holds on **two independent harnesses**: our
+own matched comparison (n=30/cell) and `eugr/llama-benchy`, a third-party tool we did not
+write. **There is no measured workload where two nodes win.**
+
+| What you are doing | Three nodes vs two | Where it comes from |
+|---|---|---|
+| **Single-stream decode** (one user, any depth) | **+6.7 % to +20.2 %** faster, 2K→262K | [matched, n=30](docs/RESULT-2V3-MATCHED-2026-08-30.md) |
+| **Serving several users at once** | **+18.6 % to +22.3 %** aggregate at cc=4/8/16 | [matched, n=15](docs/RESULT-2V3-MATCHED-2026-08-30.md) |
+| **First token on a deep prompt** (TTFT) | **14.4 % sooner** at 131K, **26.6 %** at 262K | [matched](docs/RESULT-2V3-MATCHED-2026-08-30.md) |
+| **Prefill throughput** | **+12.5 % to +15.8 %**, advantage *grows* with depth | [llama-benchy](docs/RESULT-LLAMA-BENCHY-2V3-2026-08-30.md) |
+| **Long-context capacity** | **2.11×** the KV pool (4,688,072 vs 2,217,166 tokens) | [matched](docs/RESULT-2V3-MATCHED-2026-08-30.md) |
+
+Two earlier claims that two nodes won — deep-prefill TTFT and high-concurrency aggregate —
+were **reversed** once the arms were made configuration-identical. They had compared *three
+nodes tuned against two nodes untuned*.
+
+⚠️ **Honest caveat on magnitude.** The independent harness agrees on direction everywhere
+but lands slightly lower on size: its like-for-like decode figure is **+14.7 %** against
+our **+17–20 %** band. Both are inside the pre-registered tolerance; the third-party number
+sits at the low end. Its 32K and 131K decode magnitudes are **provisional** — see the
+variance finding in the [re-run](docs/RESULT-RERUN-INCONCLUSIVE-2026-08-30.md).
+
+### Capacity and the warm path
+
+Beyond raw speed, the third node expands unified memory:
 - **Multi-Million Token KV Cache Pool**: 3 nodes expand KV capacity to **4,688,072 tokens** (**2.11x** the 2-node pool of 2,217,166, measured matched 2026-08-30) under Profile B (`GPU_MEMORY_UTILIZATION=0.835`, `MTP_NUM_TOKENS=2`) per the engine's init log — 4.44x headroom at 1M tokens per request, with zero KV preemption observed in any benchmark bundle to date. (The `/metrics` endpoint reports a lower figure on the same engine; see [Current evidence](#current-evidence).)
 - **The Warm Multi-Turn Path (APC)**: While Turn 1 of a 131K-token coding session costs ~78s cold, **every subsequent turn responds in <0.75s (a ~107x latency reduction)** via Automatic Prefix Caching, with prefix retention confirmed across 30s and 120s human think-time pauses with zero degradation.
 
@@ -98,14 +126,14 @@ no 2-node measurement exists, the cell says so rather than estimating.
 > community publishes with. Same session, node count the only variable, both arms asserted
 > against the *live* engine before measuring.
 >
-> **14 of 16 cells resolved. All 14 resolved cells favour three nodes. Zero cells favour
+> **16 of 16 cells resolved. All favour three nodes. Zero cells favour
 > two nodes.**
 >
-> | Axis (n=10) | llama-benchy result |
+> | Axis | llama-benchy result |
 > |---|---|
-> | Decode, depth sweep | **+11.9 % to +20.8 %** at depth 0 / 32K / 131K; 8K inconclusive |
+> | Decode, depth sweep | **+11.9 % to +20.8 %** at depth 0 / 32K / 131K (n=10), plus **+12.7 %** at 8K (n=30) |
 > | Prefill, depth sweep | **+12.5 % to +15.8 %**, resolved at **all four** depths, and the advantage *grows* with depth |
-> | Decode, concurrency | **+15.4 % to +20.1 %** aggregate at cc=4/8/16; cc=1 inconclusive |
+> | Decode, concurrency | **+15.4 % to +20.1 %** aggregate at cc=4/8/16 (n=10), plus **+14.8 %** at cc=1 (n=30) |
 >
 > **On magnitude the agreement is good, not perfect.** The like-for-like figure against our
 > +17–20 % band is llama-benchy's **decode-at-depth mean of +15.4 %**, which sits **~1.6 pp
@@ -113,10 +141,16 @@ no 2-node measurement exists, the cell says so rather than estimating.
 > The result document's pooled **+16.7 %** mixes depth-sweep decode with concurrency decode
 > and *"flatters the agreement slightly"*; quote **+15.4 %** against our depth result.
 >
-> **Two cells were INCONCLUSIVE** — 8K decode and cc=1 decode. **Neither favours two nodes**;
-> both are one arm being noisy at n=10 (a ~2.8× variance asymmetry between arms). Their point
-> deltas are not findings in either direction, and a **higher-n re-run of those two cells is
-> in progress**.
+> **The two cells that were inconclusive at n=10 have been re-measured at n=30 and both
+> resolve, three nodes faster** — 8K decode **+12.7 %** (t=3.76), cc=1 decode **+14.8 %**
+> (t=4.24) ([re-run RESULT](docs/RESULT-RERUN-INCONCLUSIVE-2026-08-30.md)). They are not
+> special shapes: both sit inside the range of every other decode cell.
+>
+> ⚠️ That re-run also showed **n=10 mis-estimates variance in *either* direction** — at 8K the
+> two arms swapped, TP=3's std rising 2.4× while TP=2's fell to 0.62×. Applying the measured
+> ratios to the cells still at n=10, **32K (t 2.63→1.94) and 131K (t 2.36→1.29) would not
+> resolve**; concurrency (t 6.7–15.0) and prefill are unaffected. Read the depth-sweep
+> magnitudes at 32K/131K as **provisional**; the direction is robust everywhere.
 >
 > ⚠️ **Cross-harness absolute t/s are not comparable** and are never compared here:
 > `llama-benchy --depth N` prefills *cached* context, our `decode_depth_sweep.py` does not.
@@ -143,7 +177,7 @@ no 2-node measurement exists, the cell says so rather than estimating.
    separation at 32K and 262K ([RESULT](docs/RESULT-2V3-MATCHED-2026-08-30.md)). The older
    "+7.3 % to +16.7 %" understated it. **TTFT and high-concurrency aggregate also favour
    three nodes** on the matched arm, reversing both previously published "2-node wins".
-   **Corroborated on an independent harness the same day** — llama-benchy resolved 14 of 16
+   **Corroborated on an independent harness the same day** — llama-benchy resolved 16 of 16
    cells and every one favours three nodes, with zero cells favouring two
    ([RESULT](docs/RESULT-LLAMA-BENCHY-2V3-2026-08-30.md)).
 2. **The warm path dwarfs both.** Cold 131K costs ~78 s once; every subsequent turn
@@ -174,7 +208,7 @@ the one comparison that would make every row above configuration-matched.
 | Does three-node beat two-node at cc=1 decode? | **Yes — confirmed on a matched arm, 2026-08-30.** With node count as the *only* variable and n=30 per cell: **+6.7%** at 2K, **+17.1%** at 8K, **+20.2%** at 32K, **+18.7%** at 131K, **+13.2%** at 262K. All five significant by two independent tests (p from 6×10⁻⁵ to 3×10⁻¹¹). Cliff's δ = 1.000 at 32K and 262K — every TP=3 rep beat every TP=2 rep. Supersedes the older +7.3–+16.7% figures, which were directionally right but drawn from arms differing in **six** settings at n=7. | [**RESULT**](docs/RESULT-2V3-MATCHED-2026-08-30.md), [Analysis](docs/ANALYSIS-2V3-2026-08-29.md) |
 | Does three-node beat two-node at TTFT? | **Yes, at every depth — this reverses the older answer.** On the matched arm (2026-08-30): 7.9% sooner at 2K, 11.8% at 8K, 11.9% at 32K, **14.4% at 131K** (p=3.0×10⁻¹¹), **26.6% at 262K** (p=3.7×10⁻⁵). Cliff's δ = −1.000 at both deep cells; at 262K the *worst* three-node TTFT (176.8 s) beats the *best* two-node one (204.2 s) by 27 s. The old "two nodes win by 22.3 s" came from arms differing in six settings, including the Profile B long-prefill knobs. These are warm TTFTs, identically warmed on both arms. | [**RESULT**](docs/RESULT-2V3-MATCHED-2026-08-30.md) |
 | Does three-node beat two-node at concurrency? | **Yes at every level — this also reverses the older answer.** Matched, n=15/cell at 8K: **+18.6%** at cc=4 (41.85 vs 35.28), **+22.3%** at cc=8 (49.83 vs 40.76), **+21.9%** at cc=16 (54.20 vs 44.45), all p=3.4×10⁻⁶ with **Cliff's δ = +1.000** — every three-node rep beat every two-node rep. Draft acceptance is near-identical (~66% both arms), so this is not a speculation artefact. The old "TP=2 leads at cc≥8" had both arms at `MTP=5` *and* the 2-node arm missing Profile B. | [**RESULT**](docs/RESULT-2V3-MATCHED-2026-08-30.md) |
-| Does an independent harness agree that three nodes win? | **Yes on direction; at the low end on magnitude.** [`eugr/llama-benchy`](https://github.com/eugr/llama-benchy) `0.4.1.dev1+ge9be34457` — a third-party harness we did not write — was run on both arms the same session at n=10. **14 of 16 cells resolved and all 14 favour three nodes; zero cells favour two.** Prefill resolved on all four depths (+12.5 % to +15.8 %, growing with depth); decode resolved at 0/32K/131K (+11.9 % to +20.8 %) and at cc=4/8/16 (+15.4 % to +20.1 % aggregate). Its like-for-like decode-at-depth mean is **+15.4 %**, ~1.6 pp below our +17–20 % band's floor — inside the ±5 pp pre-registered tolerance, at the low end. Two cells (8K decode, cc=1 decode) were **INCONCLUSIVE**, neither favouring two nodes. ⚠️ **A higher-n re-run of those two found `n=10` mis-estimated the spread, and the two arms moved in *opposite* directions** — at 8K, TP=3's std rose 2.4x while TP=2's *fell* to 0.62x, converging to similar CVs. Under the measured correction the **32K and 131K decode cells would not resolve** (t falls from 2.63→1.94 and 2.36→1.29, having been only just over threshold); the concurrency cells (t = 6.7–15.0) and prefill are unaffected. Read as: **direction robust everywhere; magnitude firm at concurrency and depth 0, provisional at 32K/131K.** No cell flips direction under any inflation tested. **Cross-harness absolute t/s are not comparable** — only the within-harness 2v3 ratio is. | [**RESULT**](docs/RESULT-LLAMA-BENCHY-2V3-2026-08-30.md), [Plan](docs/PLAN-LLAMA-BENCHY-2V3.md), [bundle](results/20260830T101053Z-llama-benchy-2v3/) |
+| Does an independent harness agree that three nodes win? | **Yes on direction; at the low end on magnitude.** [`eugr/llama-benchy`](https://github.com/eugr/llama-benchy) `0.4.1.dev1+ge9be34457` — a third-party harness we did not write — was run on both arms the same session. **16 of 16 cells resolved and all favour three nodes; zero favour two.** Prefill resolved on all four depths (+12.5 % to +15.8 %, growing with depth); decode resolved at 0/32K/131K (+11.9 % to +20.8 %) and at cc=4/8/16 (+15.4 % to +20.1 % aggregate) at n=10, and the two initially-inconclusive cells **resolved at n=30** — 8K decode **+12.7 %**, cc=1 decode **+14.8 %** ([re-run](docs/RESULT-RERUN-INCONCLUSIVE-2026-08-30.md)). Its like-for-like decode-at-depth mean across all four depths is **+14.7 %**, ~2.3 pp below our +17–20 % band's floor — inside the ±5 pp pre-registered tolerance, at the low end. ⚠️ **That re-run also showed `n=10` mis-estimates variance in *either* direction** — at 8K the arms swapped, TP=3's std rising 2.4x while TP=2's fell to 0.62x. Under the measured correction the **32K and 131K decode cells would not resolve** (t falls from 2.63→1.94 and 2.36→1.29, having been only just over threshold); the concurrency cells (t = 6.7–15.0) and prefill are unaffected. Read as: **direction robust everywhere; magnitude firm at concurrency and depth 0, provisional at 32K/131K.** No cell flips direction under any inflation tested. **Cross-harness absolute t/s are not comparable** — only the within-harness 2v3 ratio is. | [**RESULT**](docs/RESULT-LLAMA-BENCHY-2V3-2026-08-30.md), [Plan](docs/PLAN-LLAMA-BENCHY-2V3.md), [bundle](results/20260830T101053Z-llama-benchy-2v3/) |
 | Is the fabric below the published reference? | No. Official `nccl-tests` measured 23.92 GB/s at 16 GiB. | [Controlled NCCL run](results/20260826-nccl-controlled/) |
 | Does four-HCA addressing improve decode throughput? | No measurable benefit despite doubling fabric bandwidth. | [Four-HCA result](results/20260826-four-hca-throughput/) |
 | Does KV dtype change quality? | No material difference in the tested A/B; 23/24 matched cells were byte-identical. | [KV dtype A/B](results/20260826-kv-dtype-ab/) |

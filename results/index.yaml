@@ -68,11 +68,11 @@ meta:
     - ABSENT
     - PRE-DATES-GATE
   fabric_gate_tally:
-    PRESENT-PASS: 14
+    PRESENT-PASS: 15
     PRESENT-FAIL: 0
     ABSENT: 21
     PRE-DATES-GATE: 5
-    total: 40
+    total: 41
   fabric_gate_tally_detail:
     PRESENT-PASS:
       - 20260825-deep-concurrency        # fabric-gate-full.json 13/13, nccl=full
@@ -1726,12 +1726,17 @@ directories:
       INDEPENDENT THIRD-PARTY CORROBORATION of the node-count comparison, on
       eugr/llama-benchy 0.4.1.dev1+ge9be34457 - a harness this project did not
       write. Node count the only variable, both arms asserted against the live
-      engine, same session. 14 of 16 cells resolved and ALL 14 favour three
+      engine, same session. 14 of 16 cells resolved at n=10 and ALL favour three
       nodes; ZERO cells favour two. Prefill resolves on all four depths (+12.5%
       to +15.8%, advantage growing with depth); decode resolves at depth
       0/32K/131K (+11.9% to +20.8%) and at cc=4/8/16 (+15.4% to +20.1%
-      aggregate). Two cells (8K decode, cc=1 decode) were INCONCLUSIVE, neither
-      favouring two nodes.
+      aggregate). The two INCONCLUSIVE cells (8K decode, cc=1 decode) were
+      re-measured at n=30 in 20260830T130300Z-rerun-inconclusive and BOTH
+      resolved, three nodes faster (+12.7% and +14.8%), making it 16 of 16.
+      That re-run also found n=10 MIS-ESTIMATES variance in either direction
+      (at 8K the arms swapped: TP=3 std x2.4, TP=2 std x0.62), under which the
+      32K and 131K decode cells here would not resolve - treat those two
+      magnitudes as PROVISIONAL. Direction is robust everywhere.
     has_readme: false
     nodes: [2, 3]
     nodes_evidence: >
@@ -2391,3 +2396,80 @@ directories:
       decode is 87.5% NCCL AllReduce bound (122 rings per step), proving why DSpark MTP K=2 speculative
       decoding provides a major speedup by eliminating collective barrier roundtrips.
 
+
+  - dir: 20260830T130300Z-rerun-inconclusive
+    date: 2026-08-30
+    description: >
+      Re-measurement at n=30 of the TWO cells that did not resolve in
+      20260830T101053Z-llama-benchy-2v3 (8K decode, cc=1 decode). BOTH RESOLVED,
+      three nodes faster: 8K decode +12.7% (Welch t=3.76, 95% CI +6.1% to
+      +19.3%) and cc=1 decode +14.8% (t=4.24, CI +8.0% to +21.7%). This takes
+      the parent run to 16 of 16 cells resolved, all favouring three nodes.
+    has_readme: false
+    nodes: [2, 3]
+    nodes_evidence: >
+      tp2/engine-config.txt and tp3/engine-config.txt capture live argv
+      (--tensor-parallel-size 2 / 3); the orchestrator asserted TP and the nine
+      matched engine settings plus MoE backend against the RUNNING engine per
+      arm, and spark2 held 0% utilisation / 51C throughout the TP=2 arm.
+    tp_size: [2, 3]
+    kv_pool_tokens: null
+    kv_pool_source: not captured in this bundle; see 20260830-matched-2v3-powered
+    harness: eugr/llama-benchy 0.4.1.dev1+ge9be34457 (commit e9be344), third-party
+    harness_committed: false
+    output_tokens_requested: 256
+    output_tokens_actual: {256: all cells}
+    output_tokens_field: response_size (PER-CELL, asserted via --exact-tg)
+    output_tokens_note: >
+      --exact-tg sends min_tokens + ignore_eos; every cell records
+      response_size 256.
+    reps: 30 runs per cell per arm, 3 warm-up runs per shape discarded
+    reps_verified: true
+    statistic: mean +/- std per cell; Welch t and 95% CI computed in analysis.json
+    fabric_gate: PRESENT-PASS
+    fabric_gate_artifact: tp2/fabric-gate.json
+    fabric_gate_evidence: >
+      TP=3 gate 24 pass, 0 fail, 1 skip; TP=2 gate 14 pass, 0 fail, 1 skip.
+    fabric_gate_note: >
+      NCCL bandwidth skipped in both (engine live), as in the parent run.
+    fabric_gated: true
+    fabric_state: healthy
+    raw_data_committed: true
+    raw_files:
+      - tp2/tp2-depth8k.json
+      - tp2/tp2-cc1.json
+      - tp2/engine-config.txt
+      - tp2/fabric-gate.json
+      - tp3/tp3-depth8k.json
+      - tp3/tp3-cc1.json
+      - tp3/engine-config.txt
+      - tp3/fabric-gate.json
+      - analysis.json
+      - variance-caveat.md
+      - robustness-caveat.md
+      - correction-2x-assumption.md
+    status: CURRENT
+    void_reasons: []
+    superseded_by: null
+    note: >
+      n=30 WAS PRE-COMMITTED in the script header before any of these numbers
+      existed, so a resolving result cannot be mistaken for a stopping rule
+      chosen after the fact. DO NOT RE-RUN THESE CELLS - they are settled.
+      THE HEADLINE FINDING IS NOT THE RESULT BUT THE VARIANCE: n=10
+      MIS-ESTIMATES spread in EITHER direction. At 8K the two arms SWAPPED -
+      TP=3 std rose 2.4x (2.43 -> 5.87) while TP=2 std FELL to 0.62x (6.45 ->
+      4.02) - converging to similar CVs. Means were stable throughout (2.5-5.4%
+      shifts); it was always the spread, never the centre. Applying the measured
+      per-arm ratios to the parent run's cells still at n=10, the 32K
+      (t 2.63 -> 1.94) and 131K (t 2.36 -> 1.29) decode magnitudes would NOT
+      resolve and must be treated as PROVISIONAL; concurrency (t 6.7-15.0) and
+      prefill are unaffected. Direction is robust everywhere - no cell favours
+      two nodes under any inflation tested. This bundle also RETRACTS a claim
+      made in an earlier version of the parent result doc: that these two cells
+      failed to resolve because the effect is genuinely SMALLER at these shapes.
+      Their n=10 CIs excluded +15.4% only because they rested on TP=3 std values
+      2.4x and 1.8x too small; the n=30 CIs INCLUDE +15.4%, and at +12.7% and
+      +14.8% both cells sit inside the range of every other decode cell. See
+      correction-2x-assumption.md for a second, separate correction: the first
+      published version of the robustness analysis inflated BOTH arms 2x from
+      TP=3 data alone, before the TP=2 arm existed.

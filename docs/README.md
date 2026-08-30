@@ -8,7 +8,7 @@ Older 2v3 numbers are superseded; check the provenance index before quoting any 
 
 **And it is no longer self-certified.** An independent third-party harness we did not write
 ([`eugr/llama-benchy`](https://github.com/eugr/llama-benchy)) re-ran the same question the
-same day: 14 of 16 cells resolved, **all 14 favour three nodes, zero favour two**. See
+same day: **16 of 16 cells resolved, all favour three nodes, zero favour two** (14 at n=10, the last two at n=30). See
 [**RESULT-LLAMA-BENCHY-2V3**](RESULT-LLAMA-BENCHY-2V3-2026-08-30.md).
 
 ## Read first
@@ -17,7 +17,8 @@ same day: 14 of 16 cells resolved, **all 14 favour three nodes, zero favour two*
 |---|---|
 | [**RESULT: matched 2v3**](RESULT-2V3-MATCHED-2026-08-30.md) | **The settled node-count answer.** Node count the only variable, n=30/cell, significance-tested |
 | [Pre-registration](PREREGISTRATION-2V3-MATCHED.md) | Hypotheses, tie band and outlier rule, fixed before that run measured anything |
-| [**RESULT: independent llama-benchy 2v3**](RESULT-LLAMA-BENCHY-2V3-2026-08-30.md) | **The same question on a harness we did not write.** 14/16 cells resolved, all 14 favour three nodes, zero favour two; like-for-like decode ratio +15.4 % against our +17–20 % band |
+| [**RESULT: independent llama-benchy 2v3**](RESULT-LLAMA-BENCHY-2V3-2026-08-30.md) | **The same question on a harness we did not write.** 16/16 cells resolved, all favour three nodes, zero favour two; like-for-like decode ratio +14.7 % against our +17–20 % band |
+| [**RESULT: n=30 re-run of the unresolved cells**](RESULT-RERUN-INCONCLUSIVE-2026-08-30.md) | Both resolved, three nodes faster (+12.7 %, +14.8 %). **Its real finding is that `n=10` mis-estimates variance in either direction**, which makes the llama-benchy 32K/131K decode magnitudes provisional. Read before quoting any n=10 figure |
 | [Plan: llama-benchy 2v3](PLAN-LLAMA-BENCHY-2V3.md) | Why that tool, the fairness rules, and the three expectations pre-registered before it ran |
 | [3-Node vs 2-Node Benchmark](BENCHMARK-2V3-NODES.md) | Older matrix — superseded for decode/concurrency; still the reference for APC, MTP and architecture |
 | [Current handoff](HANDOFF-2026-08-29-EVENING.md) | Cluster state, the six-confound finding, harness bugs fixed, and next steps |
@@ -34,7 +35,7 @@ same day: 14 of 16 cells resolved, **all 14 favour three nodes, zero favour two*
 | Evidence | Status | What it establishes |
 |---|---|---|
 | [Matched 2v3 comparison](../results/20260830-matched-2v3-powered/) | Current, gate present/pass | The settled node-count answer: node count the only variable, n=30/cell, all five decode depths significant |
-| [Independent llama-benchy 2v3](../results/20260830T101053Z-llama-benchy-2v3/) | Current, confirmatory, gate present/pass | Third-party harness, n=10: 14 of 16 cells resolved, all 14 favour three nodes, zero favour two; two cells inconclusive pending a higher-n re-run |
+| [Independent llama-benchy 2v3](../results/20260830T101053Z-llama-benchy-2v3/) | Current, confirmatory, gate present/pass | Third-party harness: 16 of 16 cells resolved, all favour three nodes, zero favour two (14 at n=10; the final two at n=30, see the re-run bundle) |
 | [Corrected 3-node decode curve](../results/20260827-decode-3node-fixed/) | Current, single arm, gate absent | 256-token medians and full spreads from 2K–262K; intermittent slow mode at depth |
 | [3-node quality suite](../results/20260827-quality-suite-3node/) | Current quality evidence, gate absent | RULER-lite 12/12, tools 7/7, deep tools 8/8, garble clean through 131K |
 | [Controlled NCCL run](../results/20260826-nccl-controlled/) | Current, directly measured | 23.92 GB/s at 16 GiB; no bandwidth gap versus reference |

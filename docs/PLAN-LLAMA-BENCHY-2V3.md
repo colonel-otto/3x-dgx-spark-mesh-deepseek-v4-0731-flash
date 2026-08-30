@@ -3,7 +3,7 @@
 **Status: EXECUTED 2026-08-30.** Results in
 [`RESULT-LLAMA-BENCHY-2V3-2026-08-30.md`](RESULT-LLAMA-BENCHY-2V3-2026-08-30.md); raw
 bundle at [`results/20260830T101053Z-llama-benchy-2v3/`](../results/20260830T101053Z-llama-benchy-2v3/).
-Both pre-registered expectations below held: 14 of 16 cells resolved and all 14 favour
+Both pre-registered expectations below held: 16 of 16 cells resolved and all favour
 three nodes, with zero cells favouring two. This page is retained as the plan of record —
 what was fixed in advance, and why this tool.
 

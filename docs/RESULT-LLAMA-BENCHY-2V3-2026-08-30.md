@@ -11,8 +11,9 @@ checkpoint exceeds a single GB10's 128 GB.
 A third-party harness we did not write reproduces the direction of
 [`RESULT-2V3-MATCHED-2026-08-30.md`](RESULT-2V3-MATCHED-2026-08-30.md) on every
 resolved cell: **three nodes are faster, on decode and on prefill, at every
-depth and every concurrency that resolved.** 14 of 16 cells resolved; the other
-two were underpowered at n=10, not contrary.
+depth and every concurrency.** 14 of 16 cells resolved at n=10; the remaining two
+were re-measured at n=30 and **both resolved, three nodes faster** (+12.7% and
++14.8%), making it **16 of 16**.
 
 The claim is no longer self-certified.
 
@@ -20,7 +21,7 @@ The claim is no longer self-certified.
 
 | # | Expectation | Outcome |
 |---|---|---|
-| L1 | Three nodes faster in every cell | **HELD** — 14/14 resolved cells; zero cells favour two nodes |
+| L1 | Three nodes faster in every cell | **HELD** — 16/16 cells once the two inconclusive ones were re-measured at n=30; zero cells favour two nodes |
 | L2 | Absolute t/s will not match ours | **As expected**, and never compared (see caveat) |
 | L3 | 2v3 ratio within ~5 pp of our +17–20% | **HELD** — decode pool mean +16.7% |
 
@@ -60,18 +61,25 @@ documents; the 2v3 ratio holds either way, which is the point.
 
 ## ⚠️ Variance correction — read before quoting the depth-sweep magnitudes
 
-A higher-n re-run of the two inconclusive cells (2026-08-30, `n=30`,
-`results/20260830T130300Z-rerun-inconclusive/`) found that **`n=10` understated
-the spread in both cells measured**, in the same direction:
+A higher-n re-run of the two inconclusive cells
+([`RESULT-RERUN-INCONCLUSIVE-2026-08-30.md`](RESULT-RERUN-INCONCLUSIVE-2026-08-30.md),
+`n=30`) found that **`n=10` mis-estimates the spread — in either direction**:
 
-| TP=3 cell | std at n=10 | std at n=30 | mean shift |
+| cell / arm | std at n=10 | std at n=30 | ratio |
 |---|---|---|---|
-| 8K decode | 2.43 (CV 5.7%) | **5.87 (CV 13.5%)** | 2.5% |
-| cc=1 decode | 2.77 (CV 6.0%) | **5.01 (CV 10.5%)** | 3.1% |
+| 8K, TP=3 | 2.43 | 5.87 | **2.4x** |
+| 8K, TP=2 | 6.45 | 4.02 | **0.62x** |
+| cc=1, TP=3 | 2.77 | 5.01 | **1.8x** |
+| cc=1, TP=2 | 5.61 | 6.18 | 1.1x |
 
-The **means were stable**; the upper tail was undersampled (8K reached 61.4
-tok/s at n=30 versus 46.5 at n=10). This is systematic, not a single-cell fluke,
-so it bears on the cells this run *did* resolve.
+At 8K the two arms **swapped**: TP=2 was the noisier arm at n=10 and the quieter
+one at n=30. Means were stable throughout (2.5%–5.4%) — it was always the
+spread, never the centre. Since n=10 can err either way, it bears on the cells
+this run *did* resolve.
+
+**Both re-measured cells resolved at n=30, three nodes faster** — 8K decode
+**+12.7%** (t=3.76), cc=1 decode **+14.8%** (t=4.24). With those two settled,
+this run's tally is **16 of 16 cells resolved, all favouring three nodes.**
 
 **The two arms did not move together.** An earlier version of this section
 assumed both arms' spreads had been understated and inflated both by 2.0x. The
@@ -106,23 +114,41 @@ This does not retract the result — it narrows which parts carry weight. Full
 working: `results/20260830T130300Z-rerun-inconclusive/robustness-caveat.md` and
 `variance-caveat.md`.
 
-## The two inconclusive cells
+## The two inconclusive cells — now RESOLVED at n=30
 
-Neither favours two nodes. Both are **one arm being noisy at n=10**, not the
-arms being equal.
+Both were re-measured at n=30 and **both resolve, three nodes faster**:
 
-**8K decode.** TP=2 measured CV 15.8% there (range 33.24–52.73 tok/s) against
-TP=3's 5.7% — a 2.8x variance asymmetry. The means differ by 1.63 tok/s; a std
-of 6.45 swamps it. Both neighbouring depths resolve (+11.9%, +13.5%) and prefill
-at 8K resolves at +12.5%, so an effect that vanished only at 8K and returned
-either side of it is not a credible physical claim.
+| cell | n=10 (this run) | n=30 (re-run) | verdict |
+|---|---|---|---|
+| 8K decode | +4.0%, inconclusive | **+12.7%**, t=3.76 | 3 nodes faster |
+| cc=1 decode | +6.3%, inconclusive | **+14.8%**, t=4.24 | 3 nodes faster |
 
-**cc=1 decode.** TP=2 std 6.45 against TP=3's 2.77, same pattern. Note cc=1 here
-is a *different measurement* from the depth sweep's cc=1 (pp=8192 vs pp=2048),
-which is why they disagree (+6.3% vs +20.8%).
+Full result: [`RESULT-RERUN-INCONCLUSIVE-2026-08-30.md`](RESULT-RERUN-INCONCLUSIVE-2026-08-30.md).
+**Do not re-run these cells again** — they are settled at n=30.
 
-Per the plan: raise n on these two cells and re-measure. Do **not** report
-+4.0% or +6.3% as findings in either direction.
+### A claim in an earlier version of this document was wrong
+
+That version argued these cells were **not** underpowered, on the grounds that
+their n=10 CIs excluded the +15.4% depth-sweep effect while including zero —
+concluding that "the effect at these two shapes is genuinely smaller" and that
+they were where three nodes help least.
+
+**The n=30 CIs include +15.4%:**
+
+| cell | n=10 CI | n=30 CI |
+|---|---|---|
+| 8K decode | [-6.5%, +14.5%] | **[+6.1%, +19.3%]** |
+| cc=1 decode | [-2.6%, +15.2%] | **[+8.0%, +21.7%]** |
+
+Nothing is special about these two shapes; at +12.7% and +14.8% they sit inside
+the range of every other decode cell (+11.9% to +20.8%). The n=10 CIs excluded
++15.4% only because they were built on TP=3 standard deviations 2.4x and 1.8x
+too small. **A confidence interval is honest about its uncertainty given its
+inputs; it cannot tell you its inputs are wrong.** The reasoning was internally
+valid and the conclusion was still false.
+
+Note also that cc=1 here is a *different measurement* from the depth sweep's
+cc=1 (pp=8192 vs pp=2048), which is why they differed (+6.3% vs +20.8%).
 
 ## Where our pre-registration was wrong
 

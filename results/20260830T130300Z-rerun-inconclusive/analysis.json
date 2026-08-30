@@ -1,0 +1,26 @@
+[
+  {
+    "label": "Cell A -- 8K decode (depth-sweep shape: pp=2048, depth=8192)",
+    "pct": 12.685439854158801,
+    "t": 3.7649169754264005,
+    "resolved": true,
+    "ci_pct": [
+      6.081453026179597,
+      19.289426682138
+    ],
+    "excludes_depth_effect": false,
+    "excludes_zero": true
+  },
+  {
+    "label": "Cell B -- cc=1 decode (concurrency-sweep shape: pp=8192, depth=0, --no-cache)",
+    "pct": 14.81249379201789,
+    "t": 4.2364995977932205,
+    "resolved": true,
+    "ci_pct": [
+      7.959551365804041,
+      21.665436218231736
+    ],
+    "excludes_depth_effect": false,
+    "excludes_zero": true
+  }
+]

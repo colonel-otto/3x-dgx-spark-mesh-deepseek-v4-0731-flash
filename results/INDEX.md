@@ -11,11 +11,11 @@ and diagnostic baseline values.
 
 | Item | Count |
 |---|---:|
-| Result bundles | 40 |
-| `CURRENT` | 26 |
+| Result bundles | 41 |
+| `CURRENT` | 27 |
 | `VOID` | 9 |
 | `SUPERSEDED` | 5 |
-| Own passing fabric gate | 14 |
+| Own passing fabric gate | 15 |
 | Gate absent | 21 |
 | Predates the gate | 5 |
 
@@ -41,7 +41,7 @@ quality evidence or a methodology-only control.
 | [20260827-decode-3node-fixed](20260827-decode-3node-fixed/) | 2026-08-27 | 3 / 3 | `ABSENT` | Corrected 3-node decode depth curve with a forced and verified 256-token window. Supersedes the TP=3 arm of 20260826-decode-depth-2v3. |
 | [20260827-quality-suite-3node](20260827-quality-suite-3node/) | 2026-08-27 | 3 / 3 | `ABSENT` | The 2-node repository's quality scripts, vendored unmodified and run on the 3-node TP=3 deployment through 131K context. |
 | [20260830-matched-2v3-powered](20260830-matched-2v3-powered/) | 2026-08-30 | [2, 3] / [2, 3] | `PRESENT-PASS` | THE SETTLED NODE-COUNT COMPARISON. Configuration-identical, same-session, thermally-equalised, power-analysis-sized. Three nodes win decode at every depth (+6.7% to +20.2%), aggregate throughput at every concurrency (+18.6% to +22.3%), warm TTFT from 32K up, and KV pool (2.11x). No measured workload favours two nodes. |
-| [20260830T101053Z-llama-benchy-2v3](20260830T101053Z-llama-benchy-2v3/) | 2026-08-30 | [2, 3] / [2, 3] | `PRESENT-PASS` | INDEPENDENT THIRD-PARTY CORROBORATION of the node-count comparison, on eugr/llama-benchy 0.4.1.dev1+ge9be34457 - a harness this project did not write. Node count the only variable, both arms asserted against the live engine, same session. 14 of 16 cells resolved and ALL 14 favour three nodes; ZERO cells favour two. Prefill resolves on all four depths (+12.5% to +15.8%, advantage growing with depth); decode resolves at depth 0/32K/131K (+11.9% to +20.8%) and at cc=4/8/16 (+15.4% to +20.1% aggregate). Two cells (8K decode, cc=1 decode) were INCONCLUSIVE, neither favouring two nodes. |
+| [20260830T101053Z-llama-benchy-2v3](20260830T101053Z-llama-benchy-2v3/) | 2026-08-30 | [2, 3] / [2, 3] | `PRESENT-PASS` | INDEPENDENT THIRD-PARTY CORROBORATION of the node-count comparison, on eugr/llama-benchy 0.4.1.dev1+ge9be34457 - a harness this project did not write. Node count the only variable, both arms asserted against the live engine, same session. 14 of 16 cells resolved at n=10 and ALL favour three nodes; ZERO cells favour two. Prefill resolves on all four depths (+12.5% to +15.8%, advantage growing with depth); decode resolves at depth 0/32K/131K (+11.9% to +20.8%) and at cc=4/8/16 (+15.4% to +20.1% aggregate). The two INCONCLUSIVE cells (8K decode, cc=1 decode) were re-measured at n=30 in 20260830T130300Z-rerun-inconclusive and BOTH resolved, three nodes faster (+12.7% and +14.8%), making it 16 of 16. That re-run also found n=10 MIS-ESTIMATES variance in either direction (at 8K the arms swapped: TP=3 std x2.4, TP=2 std x0.62), under which the 32K and 131K decode cells here would not resolve - treat those two magnitudes as PROVISIONAL. Direction is robust everywhere. |
 | [20260827-issue25-profile-b](20260827-issue25-profile-b/) | 2026-08-27 | 3 / 3 | `PRESENT-PASS` | Profile B evaluation for issue #25 applying published recipe deltas: GPU_MEMORY_UTILIZATION=0.835, LONG_PREFILL_TOKEN_THRESHOLD=1024, DSPARK_MAX_INFLIGHT_PREFILLS=2, VLLM_PREFIX_CACHE_RETENTION_INTERVAL=4096, and concurrency hotfixes. |
 | [20260827-tp3-131k-15rep](20260827-tp3-131k-15rep/) | 2026-08-27 | 3 / 3 | `PRESENT-PASS` | 15-repetition single-stream decode and TTFT evaluation at 131K on TP=3 (Profile B) with live restoration completion check for issue #24. |
 | [20260827-issue28-speed-bt16384](20260827-issue28-speed-bt16384/) | 2026-08-27 | 3 / 3 | `PRESENT-PASS` | Speed profile sweep testing MAX_NUM_BATCHED_TOKENS=16384 on 3-node TP=3 for Issue #28. 7 reps per depth from 2K to 262K with 256 tokens asserted and 5 starvation trials. Shows +11.5% decode speedup at 262K (51.39 tok/s) but degrades 131K and 262K TTFT (+22-29%). Mechanism uncharacterized: the bus-saturation hypothesis is withdrawn as arithmetically infeasible and untested. Confounded by MAX_MODEL_LEN=460800 vs 1048576. The +11.5% sits inside a 32.2% run spread. |
@@ -53,6 +53,7 @@ quality evidence or a methodology-only control.
 | [20260828-issue36-locked-clocks-suite](20260828-issue36-locked-clocks-suite/) | 2026-08-28 | 3 / 3 | `ABSENT` | Issue #36 comprehensive master benchmark suite under locked 3003 MHz GPU clocks and verified PCIe Gen5 x4 ConnectX-7 links. Covers logprob parity (all <=7.5% spread), MTP K=2 concurrency (54.3 tok/s at cc=16 with 65.8% draft acceptance), prefill depth (2K-131K), and multi-turn APC (0.76s at 131K). |
 | [20260829-issue36-dspark-proposer-long-horizon](20260829-issue36-dspark-proposer-long-horizon/) | 2026-08-29 | 3 / 3 | `ABSENT` | Issue #36 DSpark proposer long-generation acceptance audit (256, 512, 1024, 1536 tokens). Evaluates whether sliding-window cross-attention KV staleness causes draft acceptance decay. Confirms rock-solid 76.7%-80.4% acceptance (tau=2.55) and 52-57 tok/s decode through 1,536 tokens. |
 | [20260829-issue38-kernel-profiling](20260829-issue38-kernel-profiling/) | 2026-08-29 | 3 / 3 | `ABSENT` | Issue #38 First comprehensive kernel profiling trace (CUDA kernels, NCCL AllReduce, MoE GEMM, FlashInfer MLA Attention) on 3-Node DGX Spark TP=3 cluster. Captures 8K decode (16 tokens) and 131K deep prefill forward passes. Identifies decode communication bound (87.5% NCCL AllReduce time over 100 Gbps RoCE) and prefill compute balance (39.2% MoE GEMM, 34.1% NCCL, 16.2% FlashInfer MLA). |
+| [20260830T130300Z-rerun-inconclusive](20260830T130300Z-rerun-inconclusive/) | 2026-08-30 | [2, 3] / [2, 3] | `PRESENT-PASS` | Re-measurement at n=30 of the TWO cells that did not resolve in 20260830T101053Z-llama-benchy-2v3 (8K decode, cc=1 decode). BOTH RESOLVED, three nodes faster: 8K decode +12.7% (Welch t=3.76, 95% CI +6.1% to +19.3%) and cc=1 decode +14.8% (t=4.24, CI +8.0% to +21.7%). This takes the parent run to 16 of 16 cells resolved, all favouring three nodes. |
 
 ## Superseded evidence
 

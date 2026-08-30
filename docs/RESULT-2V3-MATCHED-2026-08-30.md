@@ -9,7 +9,7 @@ hypotheses, tie band, outlier rule, and adjudication test all fixed **before** m
 **Independently corroborated.** The same question was re-run the same day on
 [`eugr/llama-benchy`](https://github.com/eugr/llama-benchy), a third-party harness we did
 not write — see [**`RESULT-LLAMA-BENCHY-2V3-2026-08-30.md`**](RESULT-LLAMA-BENCHY-2V3-2026-08-30.md).
-At n=10 it resolved 14 of 16 cells and **all 14 favour three nodes, with zero cells
+It resolved **16 of 16 cells and all favour three nodes, with zero cells
 favouring two.** Its like-for-like decode-at-depth ratio is **+15.4 %**, ~1.6 pp below this
 run's +17–20 % band at 8K–131K — inside the pre-registered ±5 pp tolerance, but at the low
 end. Two of its cells were inconclusive at n=10 (neither favouring two nodes) and are being
@@ -219,7 +219,7 @@ plausible).
 > - **KV cache: 2.11× larger.**
 >
 > And it is not our harness alone saying so: an independent third-party harness
-> ([llama-benchy](RESULT-LLAMA-BENCHY-2V3-2026-08-30.md)) resolved 14 of 16 cells the same
+> ([llama-benchy](RESULT-LLAMA-BENCHY-2V3-2026-08-30.md)) resolved 16 of 16 cells the same
 > day and **every one favours three nodes**.
 
 **Every "two nodes win" row in the previously published table was an artefact of the six

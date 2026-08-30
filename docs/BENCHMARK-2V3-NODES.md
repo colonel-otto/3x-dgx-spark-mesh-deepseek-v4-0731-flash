@@ -33,7 +33,7 @@
 > **Independently corroborated the same day** on
 > [`eugr/llama-benchy`](https://github.com/eugr/llama-benchy), a third-party harness we did
 > not write — see [**RESULT-LLAMA-BENCHY-2V3-2026-08-30**](RESULT-LLAMA-BENCHY-2V3-2026-08-30.md).
-> At n=10, **14 of 16 cells resolved and all 14 favour three nodes; zero cells favour two.**
+> **16 of 16 cells resolved and all favour three nodes; zero cells favour two.** (14 at n=10; the last two re-measured at n=30.)
 > It also resolves **aggregate throughput at cc=4/8/16 (+15.4 % to +20.1 %)** for three
 > nodes — the axis this document once awarded to two — and **prefill throughput on all four
 > depths (+12.5 % to +15.8 %, growing with depth)**, where this document reported parity.
