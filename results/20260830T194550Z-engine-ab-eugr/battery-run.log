@@ -1,0 +1,21 @@
+=== tool-battery START 2026-08-30T15:47:04-04:00
+=== tool-battery EXIT 1 2026-08-30T15:47:26-04:00
+  forced_choice   FAIL  ['get_weather:VALID_JSON', 'get_weather:VALID_JSON']
+
+6/7 tool-calling checks PASSED
+=== deepctx-tool-battery START 2026-08-30T15:47:26-04:00
+=== deepctx-tool-battery EXIT 0 2026-08-30T15:49:21-04:00
+=== HIGH-CONTEXT TOOL SUMMARY ===
+  ctx=  32768: single=True multiturn=True complex=True issue55=True
+  ctx= 131072: single=True multiturn=True complex=True issue55=True
+=== context-garble-sweep START 2026-08-30T15:49:21-04:00
+=== context-garble-sweep EXIT 2 2026-08-30T15:49:21-04:00
+usage: context-garble-sweep.py [-h] [--url URL] [--model MODEL]
+                               [--lengths LENGTHS] [--runs RUNS] [--out OUT]
+context-garble-sweep.py: error: unrecognized arguments: http://127.0.0.1:8000/v1/chat/completions deepseek-v4-flash-eugr-ab
+=== ruler-lite START 2026-08-30T15:49:21-04:00
+=== ruler-lite EXIT 2 2026-08-30T15:49:21-04:00
+                     [--output OUTPUT] [--thinking-key THINKING_KEY]
+                     [--max-tokens MAX_TOKENS] [--request-timeout SECONDS]
+ruler-lite.py: error: unrecognized arguments: http://127.0.0.1:8000/v1/chat/completions deepseek-v4-flash-eugr-ab
+ALL-BATTERIES-DONE

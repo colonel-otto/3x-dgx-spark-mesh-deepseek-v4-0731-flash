@@ -1,0 +1,14 @@
+# Context Garble Sweep — 2026-08-30 15:50
+
+model: deepseek-v4-flash-eugr-ab | endpoint: http://127.0.0.1:8000/v1 | runs/length: 2 | cold prefill: forced (unique nonce)
+
+| ctx_len | run | verdict | finish | secs | reasoning_ch | tool_calls | flags | content |
+|---|---|---|---|---|---|---|---|---|
+| 2048 | 0 | CLEAN | stop | 2.6 | 162 | - | - | 'The capital of Idaho is **Boise**. Its rough population is about **235' |
+| 2048 | 1 | CLEAN | stop | 2.0 | 158 | - | - | 'The capital of Idaho is **Boise**. Its city proper population is rough' |
+| 8192 | 0 | CLEAN | stop | 3.6 | 116 | - | - | 'Boise is the capital of Idaho. Its metro area population is roughly 80' |
+| 8192 | 1 | CLEAN | stop | 1.5 | 116 | - | - | 'Boise is the capital of Idaho. Its metro area population is roughly 80' |
+| 32768 | 0 | CLEAN | stop | 10.3 | 0 | - | - | 'The capital of Idaho is **Boise**, with a metro-area population of rou' |
+| 32768 | 1 | CLEAN | stop | 1.4 | 114 | - | - | 'Boise is the capital of Idaho. Its metro area population is roughly 80' |
+| 131072 | 0 | CLEAN | stop | 175.0 | 114 | - | - | 'Boise is the capital of Idaho, with a metro-area population of roughly' |
+| 131072 | 1 | CLEAN | stop | 3.1 | 118 | - | - | 'Boise is the capital of Idaho, with a metro-area population of roughly' |

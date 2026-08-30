@@ -1,0 +1,22 @@
+[2026-08-30T09:17:08-04:00] Config verified identical across both ranks:
+    GPU_MEMORY_UTILIZATION=0.835
+    MAX_MODEL_LEN=1048576
+    MAX_NUM_BATCHED_TOKENS=8192
+    MAX_NUM_SEQS=32
+    MTP_NUM_TOKENS=2
+[2026-08-30T09:17:09-04:00] Starting worker spark1 (rank 1) ...
+ Container dspark-vllm-gx10-vllm-dspark-1 Creating 
+ Container dspark-vllm-gx10-vllm-dspark-1 Created 
+ Container dspark-vllm-gx10-vllm-dspark-1 Starting 
+ Container dspark-vllm-gx10-vllm-dspark-1 Started 
+[2026-08-30T09:17:24-04:00] Starting head sparkmain (rank 0) ...
+ Container dspark-vllm-gx10-vllm-dspark-1 Creating 
+ Container dspark-vllm-gx10-vllm-dspark-1 Created 
+ Container dspark-vllm-gx10-vllm-dspark-1 Starting 
+ Container dspark-vllm-gx10-vllm-dspark-1 Started 
+[2026-08-30T09:17:26-04:00] Waiting for http://127.0.0.1:8100 (cold start measured ~30 min; budget 45 min) ...
+[2026-08-30T09:22:54-04:00] READY after ~310s
+--gpu-memory-utilization 0.835
+--max-model-len 1048576
+--max-num-seqs 32
+--tensor-parallel-size 2

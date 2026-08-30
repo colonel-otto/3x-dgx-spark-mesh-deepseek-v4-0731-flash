@@ -97,7 +97,7 @@ pull request:
 |---|---|
 | What should a new reader believe now? | Root `README.md` |
 | Do two or three nodes serve this model faster? | `RESULT-2V3-MATCHED-2026-08-30.md`, with `RESULT-LLAMA-BENCHY-2V3-2026-08-30.md` as the independent third-party corroboration |
-| What is running and what remains open? | `HANDOFF-2026-08-27.md` until a newer dated handoff replaces it |
+| What is running and what remains open? | `HANDOFF-2026-08-30-ENGINE-AB.md` (latest dated handoff) |
 | How do I build and start it? | `setup.md`, with `topology.md` and `patch.md` as focused dependencies |
 | How must benchmarks be run? | `BENCHMARK-POLICY.md` |
 | What is the status of a run? | `results/index.yaml`, rendered concisely in `results/INDEX.md` |

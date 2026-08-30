@@ -1,0 +1,15 @@
+Using launch script: /tmp/tmpqllui8og.sh
+Auto-detecting interfaces...
+  Mesh mode: all 4 CX7 interfaces active.
+  Detected IB_IF: rocep1s0f0,roceP2p1s0f0,rocep1s0f1,roceP2p1s0f1
+  Detected ETH_IF: enP7s7
+  Detected Local IP: 192.168.10.70 (192.168.10.70/24)
+Head Node: 192.168.10.70
+Worker Nodes: 192.168.10.6 192.168.10.66
+Container Name: vllm_node
+Image Name: eugr/spark-vllm-b12x:latest
+Action: exec
+Checking SSH connectivity to worker nodes...
+
+# NOTE: management-network addresses in this bundle are rewritten to the documented
+# placeholder range 192.168.10.x (repo policy, scripts/check_no_sensitive.py). Head=.70, workers=.6/.66.

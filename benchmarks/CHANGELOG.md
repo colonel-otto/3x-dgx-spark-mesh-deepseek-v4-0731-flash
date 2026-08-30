@@ -401,3 +401,14 @@ KV cache 19.52 GiB / 1,771,152 tokens / 3.84x max concurrency. See PR #2.
 MiaAI-Lab's published 2-node TP=2 figures (2026-08-14): `max_model_len 1048576`,
 `max_num_seqs 6`, `mtp_num_tokens 5`. Recorded for comparison only; we did not measure
 these and cannot vouch for the conditions beyond the harness they documented.
+
+## `eugr-tp3-seqs16-dspark5` — engine A/B arm 1 (NEW ENGINE)
+
+3 nodes, `tp_size 3`, image `eugr/spark-vllm-b12x` digest `sha256:7dc02f16…` (vLLM main
+`0.1.dev20133+gb5f995e73`, FlashInfer 0.6.18), same official DeepSeek-V4-Flash-0731
+checkpoint. `max_model_len 1048576` (auto), `max_num_seqs 16`, `max_num_batched_tokens
+8192`, `gpu_memory_utilization 0.82`, **speculative dspark nst=5 probabilistic** (not
+MTP), **kv-cache-dtype fp8** (not nvfp4_ds_mla), V2 model runner, native virtual-TP
+(no padding patch). KV cache 2,415,674 tokens / 2.30x max concurrency at 1M.
+`engine=eugr-spark-vllm-b12x` — never compare its rows to anemll rows except cell-by-cell
+per [`ENGINE-AB-3NODE.md`](../docs/ENGINE-AB-3NODE.md).

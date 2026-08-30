@@ -1,0 +1,8 @@
+USAGE
+  scripts/fabric_gate.sh configs/3spark.env                  # full gate
+  scripts/fabric_gate.sh configs/3spark.env --nccl=skip      # engine is up
+  scripts/fabric_gate.sh configs/3spark.env --nccl=pairs     # pairs only
+  scripts/fabric_gate.sh configs/3spark.env --json OUT.json
+
+From another script, gate a run in one line:
+  scripts/fabric_gate.sh "$CONFIG" || exit 1

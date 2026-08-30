@@ -1,0 +1,27 @@
+[2026-08-30T06:07:17-04:00] ### llama-benchy 2v3 -> /home/sparkmain/bench-repo/results/20260830T100717Z-llama-benchy-2v3
+[2026-08-30T06:07:17-04:00] plan: docs/PLAN-LLAMA-BENCHY-2V3.md ; arm order TP=3 then TP=2 (see header)
+[2026-08-30T06:07:17-04:00] === Step 0: preconditions ===
+[transformers] PyTorch was not found. Models won't be available and only tokenizers, configuration and file/data utilities can be used.
+class=TokenizersBackend
+vocab_size=129280
+probe_len=10
+TOKENIZER_OK
+stamp=20260830T100717Z
+benchy_commit=e9be344
+benchy_version=llama-benchy 0.4.1.dev1+ge9be34457
+--- sparkmain ---
+580.173.02, NVIDIA GB10
+6.17.0-1029-nvidia
+--- spark1 ---
+580.173.02, NVIDIA GB10
+6.17.0-1029-nvidia
+--- spark2 ---
+580.173.02, NVIDIA GB10
+6.17.0-1029-nvidia
+--- image ---
+dsv4-3spark:0.1.1
+[2026-08-30T06:07:22-04:00] === Step 0b: stop open-webui (Requirement 5) ===
+[2026-08-30T06:07:32-04:00] open-webui stopped.
+[2026-08-30T06:07:32-04:00] === Step 1: TP=3 arm ===
+[2026-08-30T06:07:33-04:00] WARN: fabric gate returned non-zero (see tp3/fabric-gate.log)
+[2026-08-30T06:07:33-04:00] Restoring open-webui ...

@@ -16,6 +16,16 @@
 > prompt that produced it, and `tests/test_benchmark_schemas.py` fails the build
 > if a new measurement omits them.
 
+> The same rule now applies to the **engine**: every row carries an `engine`
+> column, and the same cell on a different engine is a different measurement.
+> Everything through 2026-08-30 is `anemll-v0.25.1` (the Anemll
+> dspark-vllm-gx10 image / our rebuild of it). The new-engine arm
+> (`eugr-spark-vllm-b12x`, 3-node only) is defined in
+> [`../docs/ENGINE-AB-3NODE.md`](../docs/ENGINE-AB-3NODE.md) — including the
+> **hard gate**: TP=3 on an unpatched engine silently serves garbage, so no
+> eugr 3-node number is valid before the padding patch is ported, applied, and
+> the 14/14 correctness validation passes on that image.
+
 ---
 
 ## Three files, three different grains
@@ -125,6 +135,7 @@ band.
 |---|---|
 | `timestamp_utc` | When the measurement was taken |
 | `config_id` | Stable id for the engine configuration (see `CHANGELOG.md`) |
+| `engine` | Which serving image produced the row: `anemll-v0.25.1` (all rows through 2026-08-30) or `eugr-spark-vllm-b12x`. New engines must be added to `VALID_ENGINE` in the schema test deliberately, with an `ENGINE-AB-3NODE.md` entry. |
 | `nodes`, `tp_size`, `pp_size` | Cluster shape |
 | `max_model_len`, `max_num_seqs`, `mtp_num_tokens`, `gpu_mem_util` | Engine settings |
 | `kv_cache_gib`, `kv_cache_tokens`, `max_concurrency_x` | Engine-reported capacity at startup |
@@ -141,8 +152,9 @@ band.
 
 ### `summary.csv` (generated)
 
-`result_id`, `source_file`, `config_id`, `metric`, `statistic`, `value`,
-`prompt_shape`, `harness`, `comparability`, `evidence_status`, `notes`.
+`result_id`, `source_file`, `config_id`, `engine`, `metric`, `statistic`,
+`value`, `prompt_shape`, `harness`, `comparability`, `evidence_status`,
+`notes`.
 
 Every summarized result carries a stable `result_id`, the `source_file` it came
 from, and an explicit `statistic` and `comparability`.

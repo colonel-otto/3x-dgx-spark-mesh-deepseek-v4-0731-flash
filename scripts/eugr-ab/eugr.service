@@ -1,0 +1,36 @@
+[Unit]
+Description=DeepSeek-V4 Flash on the eugr/spark-vllm-b12x engine (TP=3, 3 nodes)
+Documentation=file:///home/sparkmain/eugr-boot.sh
+After=network-online.target docker.service
+Wants=network-online.target docker.service
+# The two engines cannot coexist: they both claim all three GPUs.
+Conflicts=dsv4.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+User=sparkmain
+Group=sparkmain
+Environment="HOME=/home/sparkmain"
+Environment="PATH=/home/sparkmain/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+# The winning sweep point. Change these two, not the script, to re-tune.
+Environment="EUGR_NST=5"
+Environment="EUGR_MNBT=8192"
+ExecStart=/home/sparkmain/eugr-service-start
+ExecStop=/home/sparkmain/eugr-service-stop
+# ExecStop only runs from an *active* unit. A `systemctl stop` during the ~8 min
+# cold start instead SIGTERMs ExecStart: the unit goes failed/signal, ExecStop is
+# never reached, and all three containers are orphaned holding ~100 GiB/node
+# (observed on dsv4.service 2026-08-30 11:28:47). ExecStopPost runs on every exit
+# path and the stop script is idempotent, so both slots is safe.
+ExecStopPost=/home/sparkmain/eugr-service-stop
+# Stopping a long startup is a normal operation here, not a fault. Without this
+# the unit lands in failed state, and the NEXT stop then skips ExecStop too.
+SuccessExitStatus=SIGTERM
+# Workers can take 10-20 min to open SSH after a cold boot; the cluster itself
+# needs ~8 min cold (faster once /opt/eugrcache-* is warm).
+TimeoutStartSec=3300
+TimeoutStopSec=300
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,10 @@
+ctx=  2048 run=0: CLEAN [] (2.6s)
+ctx=  2048 run=1: CLEAN [] (2.0s)
+ctx=  8192 run=0: CLEAN [] (3.6s)
+ctx=  8192 run=1: CLEAN [] (1.5s)
+ctx= 32768 run=0: CLEAN [] (10.3s)
+ctx= 32768 run=1: CLEAN [] (1.4s)
+ctx=131072 run=0: CLEAN [] (175.0s)
+ctx=131072 run=1: CLEAN [] (3.1s)
+
+result: ALL CLEAN -> /home/sparkmain/eugr-ab-results/garble.json

@@ -1,0 +1,20 @@
+=== sweep point nst=5 mnbt=8192 -> /home/sparkmain/eugr-sweep/nst5-mnbt8192 ===
+warmup: cute.compile disk-cache-miss count before = 6
+warmup: cute.compile disk-cache-miss count after  = 10
+WARNING: JIT misses still growing during warmup (6 -> 10).
+         Numbers below may still be contaminated; warming further.
+after extra warmup = 11
+--- measuring c=1
+    c=1 decode=67.8 agg=56.2 ttft=325ms
+--- measuring c=4
+    c=4 decode=53.2 agg=152.8 ttft=826ms
+--- measuring c=8
+    c=8 decode=44.1 agg=252.9 ttft=1110ms
+--- measuring c=16
+    c=16 decode=15.5 agg=198.8 ttft=1755ms
+=== done: /home/sparkmain/eugr-sweep/nst5-mnbt8192/rows.tsv ===
+nst	mnbt	c	median_decode_tok_s	agg_tok_s	ttft_ms
+5	8192	1	67.8	56.2	325
+5	8192	4	53.2	152.8	826
+5	8192	8	44.1	252.9	1110
+5	8192	16	15.5	198.8	1755

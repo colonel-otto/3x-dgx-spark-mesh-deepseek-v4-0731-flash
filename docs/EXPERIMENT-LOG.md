@@ -92,6 +92,26 @@ Every new performance claim should retain:
 The PR #6 medians predate this complete artifact policy. Where raw output was not
 retained, this repository says so rather than reconstructing it from summaries.
 
+## 2026-08-30 — engine A/B arm 1: eugr/spark-vllm-b12x on three nodes
+
+Interrogated the community image vLLM's own recipe site recommends for DSV4 on DGX Spark
+and found it carries a native, generalized virtual-TP plan that reproduces our R2 padding
+design (heads 64→72, o_groups 8→9, heads-per-group 8) — so our patch is not needed and
+must not be stacked on it. Booted it at TP=3 on the official 0731 weights via eugr's
+launcher (seven attempts; every failure a distinct, now-documented cause: wired-vs-wifi
+node addresses, symlink bind mounts, head-`$HOME` on workers, mesh NCCL env not reaching
+the container, the 0.85 memory check, and a teardown race). Correctness gate passed on the
+byte-identical suite (garble ALL CLEAN, RULER-lite 16/16 incl. 262K, deep-context 8/8,
+tools 6/7 with a valid-JSON `forced_choice` semantics difference). Throughput vs the
+anemll tp3-seqs16 rows: c=1 parity, **c=4 +41 %, c=8 +20 % aggregate**, c=16 −17 % from a
+scheduling cliff the engine attributes to nst=5 draft slots. Twenty post-start B12X JIT
+compiles contaminated cold runs (no persisted kernel cache); warm reruns reported, both
+kept. User decision the same evening: anemll retired as serving engine, its overnight
+timers disabled, history frozen in a separate baseline repo. Bundle
+[`20260830T194550Z-engine-ab-eugr`](../results/20260830T194550Z-engine-ab-eugr/);
+protocol [`ENGINE-AB-3NODE.md`](ENGINE-AB-3NODE.md); state
+[`HANDOFF-2026-08-30-ENGINE-AB.md`](HANDOFF-2026-08-30-ENGINE-AB.md).
+
 ## Merge policy
 
 PRs #1–#7 are merged. Retain the individual experiment commits: **do not squash a

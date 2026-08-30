@@ -1,0 +1,38 @@
+== fabric gate: 3 nodes from 3spark-live.env ==
+-- ssh liveness
+  [32mPASS[0m  sparkmain -> node0
+  [32mPASS[0m  spark1 -> node1
+  [32mPASS[0m  spark2 -> node2
+-- fabric mesh (all directed pairs) + latency
+  [32mPASS[0m  sparkmain -> spark1 (192.168.100.2) rtt 0.596ms
+  [32mPASS[0m  sparkmain -> spark2 (192.168.101.2) rtt 0.705ms
+  [32mPASS[0m  spark1 -> sparkmain (192.168.200.1) rtt 0.690ms
+  [32mPASS[0m  spark1 -> spark2 (192.168.101.2) rtt 0.748ms
+  [32mPASS[0m  spark2 -> sparkmain (192.168.200.1) rtt 0.311ms
+  [32mPASS[0m  spark2 -> spark1 (192.168.100.2) rtt 0.767ms
+-- peer egress device (RDMA/model data must leave via the fabric)
+  [32mPASS[0m  sparkmain: all peer FABRIC routes egress the fabric
+  [32mPASS[0m  spark1: all peer FABRIC routes egress the fabric
+  [32mPASS[0m  spark2: all peer FABRIC routes egress the fabric
+-- fabric addressing (duplicate/overlapping subnets)
+  [32mPASS[0m  sparkmain fabric addressing clean: enp1s0f0np0=192.168.100.1/30 enp1s0f1np1=192.168.101.1/30 enP2p1s0f0np0=192.168.110.1/30 enP2p1s0f1np1=192.168.111.1/30 
+  [32mPASS[0m  spark1 fabric addressing clean: enp1s0f0np0=192.168.102.1/30 enp1s0f1np1=192.168.100.2/30 enP2p1s0f0np0=192.168.112.1/30 enP2p1s0f1np1=192.168.110.2/30 
+  [32mPASS[0m  spark2 fabric addressing clean: enp1s0f0np0=192.168.101.2/30 enp1s0f1np1=192.168.102.2/30 enP2p1s0f0np0=192.168.111.2/30 enP2p1s0f1np1=192.168.112.2/30 
+-- fabric arp (peer on correct port)
+  [32mPASS[0m  sparkmain: every fabric peer on its cabled port
+  [32mPASS[0m  spark1: every fabric peer on its cabled port
+  [32mPASS[0m  spark2: every fabric peer on its cabled port
+-- fabric config persistence (survives reboot?)
+  [32mPASS[0m  sparkmain: fabric addressing persisted and netplan generates
+  [32mPASS[0m  spark1: fabric addressing persisted and netplan generates
+  [32mPASS[0m  spark2: fabric addressing persisted and netplan generates
+-- engine rdma health (if running)
+  [32mPASS[0m  sparkmain: engine log clean of RDMA completion errors
+  [32mPASS[0m  spark1: engine log clean of RDMA completion errors
+  [32mPASS[0m  spark2: engine log clean of RDMA completion errors
+-- nccl collective bandwidth
+  [33mSKIP[0m  bandwidth not measured (engine up, or --nccl=skip). THIS IS THE CHECK THAT MATTERS -- run it when the engine is down.
+
+== 24 passed, 0 failed, 1 skipped ==
+wrote /home/sparkmain/bench-repo/results/20260830T101053Z-llama-benchy-2v3/tp3/fabric-gate.json
+GATE PASSED (with skips). Bandwidth unverified -- see above.

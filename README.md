@@ -8,6 +8,19 @@ The three-node deployment is working, passes all correctness and quality suites,
 fully benchmarked with a forced 256-token assertion against matched two-node baselines
 under passing fabric gates.
 
+> [!IMPORTANT]
+> **Engine status (2026-08-30).** The serving engine is now
+> [`eugr/spark-vllm-b12x`](https://github.com/eugr/spark-vllm-docker) (vLLM main), which
+> carries DeepSeek-V4 TP=3 natively via its virtual-TP plan — **our padding patch is not
+> applied to it and must not be.** The Anemll-based engine every result below was measured
+> on is **retired as the serving engine and kept as the reference arm**; its history is also
+> frozen in [`3x-dgx-spark-deepseek-v4-v0.25-anemll-baseline`](https://github.com/colonel-otto/3x-dgx-spark-deepseek-v4-v0.25-anemll-baseline).
+> Every benchmark row now carries an `engine` column. Arm-1 results for the new engine
+> (correctness gate passed; +20–41 % aggregate at c=4–8, a fixable cliff at c=16) are in
+> [`ENGINE-AB-3NODE.md`](docs/ENGINE-AB-3NODE.md) and the
+> [current handoff](docs/HANDOFF-2026-08-30-ENGINE-AB.md). **Unless a row says otherwise,
+> numbers in this README are anemll-engine numbers.**
+
 > [!NOTE]
 > Older decode runs that requested 256 output tokens but returned only 25–26 (due to prompt
 > instructions) have been retired and marked `VOID-25-token-window` in the
@@ -27,7 +40,9 @@ under passing fabric gates.
    in either direction. **Read this before quoting any n=10 magnitude.**
 4. [3-Node vs 2-Node Benchmark](docs/BENCHMARK-2V3-NODES.md) — the older matrix, partly
    superseded by the above; still the reference for APC, MTP, and architectural analysis.
-5. [Current handoff](docs/HANDOFF-2026-08-29-EVENING.md) — cluster state, verified findings, and
+5. [Current handoff](docs/HANDOFF-2026-08-30-ENGINE-AB.md) — engine switch, arm-1 A/B results,
+   gateway route to restore, and the speculative-depth sweep; the
+   [previous handoff](docs/HANDOFF-2026-08-29-EVENING.md) keeps cluster state, verified findings, and
    recipe tuning conclusions.
 6. [Documentation index](docs/README.md) — setup, operations, method, decisions, and
    historical investigations.

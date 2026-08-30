@@ -20,7 +20,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 BENCH = os.path.join(os.path.dirname(HERE), "benchmarks")
 
 MEASUREMENT_COLS = [
-    "timestamp_utc", "config_id", "nodes", "tp_size", "pp_size", "max_model_len",
+    "timestamp_utc", "config_id", "engine", "nodes", "tp_size", "pp_size", "max_model_len",
     "max_num_seqs", "mtp_num_tokens", "gpu_mem_util", "kv_cache_gib",
     "kv_cache_tokens", "max_concurrency_x", "observation_type", "statistic",
     "source", "reverted", "harness", "prompt_shape", "prompt_tokens",
@@ -28,9 +28,17 @@ MEASUREMENT_COLS = [
     "accept_rate_pct", "accept_len", "notes",
 ]
 SUMMARY_COLS = [
-    "result_id", "source_file", "config_id", "metric", "statistic", "value",
-    "prompt_shape", "harness", "comparability", "evidence_status", "notes",
+    "result_id", "source_file", "config_id", "engine", "metric", "statistic",
+    "value", "prompt_shape", "harness", "comparability", "evidence_status",
+    "notes",
 ]
+
+# The engine is part of a measurement's identity, exactly like the prompt: the
+# same cell on a different engine is a DIFFERENT measurement. Everything
+# through 2026-08-30 ran on the Anemll v0.25.1-based image; new-engine rows
+# must say which engine produced them. Cross-engine comparison is only valid
+# when every other column that moves throughput is matched (see docs/ENGINE-AB-3NODE.md).
+VALID_ENGINE = {"anemll-v0.25.1", "eugr-spark-vllm-b12x"}
 
 # deepconc.py is a SEPARATE harness from bench-miaai, not a re-label of it. It
 # reproduces bench-miaai's sampling and prompt shape but is a different script
@@ -43,13 +51,23 @@ SUMMARY_COLS = [
 # server-side from token IDs, so its tok/s is a PREFILL rate and must never be
 # divided against the decode rates the other harnesses produce.
 VALID_HARNESS = {"bench-miaai", "benchmark_tp3", "ours-bench.py", "deepconc.py",
-                 "benchmark_prefill.py"}
+                 "benchmark_prefill.py",
+                 # decode_depth_sweep.py: the issue-28 depth sweep script
+                 # (results/20260827-issue28-speed-bt16384).
+                 "decode_depth_sweep.py",
+                 # probe_proposer_long_gen.py: the issue-36 long-horizon DSpark
+                 # proposer probe (results/20260829-issue36-dspark-proposer-*).
+                 "probe_proposer_long_gen.py"}
 # random-token-ids: upstream's prefill harness feeds pseudo-random token IDs
 # (seeded per size/trial so no two requests share a prefix). Not natural text at
 # all, which is the point -- it defeats the prefix cache and makes prefill cost
 # depend only on depth.
 VALID_PROMPT = {"code-brief", "dense-prose", "synthetic-numbered-words",
-                "random-token-ids"}
+                "random-token-ids",
+                # architectural-spec: the issue-36 long-generation prompt (write
+                # an extended architecture document); drives multi-thousand-token
+                # continuous generation, unlike the short-answer shapes above.
+                "architectural-spec"}
 VALID_STATISTIC = {"median", "single-observation", "mean", "engine-reported", ""}
 VALID_OBSERVATION = {"sweep-point", "acceptance-observation", "correctness-check"}
 VALID_SOURCE = {"local-measurement", "external-published"}
@@ -92,6 +110,9 @@ def test_measurements():
                   "%s: throughput value must state a statistic (got %r)"
                   % (where, r["statistic"]))
 
+        check(r["engine"] in VALID_ENGINE,
+              "%s: bad engine %r (add new engines to VALID_ENGINE deliberately, "
+              "with a docs/ENGINE-AB-3NODE.md entry)" % (where, r["engine"]))
         check(r["prompt_shape"] != "unrecorded",
               "%s: 'unrecorded' is reserved for historical-summary.csv" % where)
         check(r["observation_type"] in VALID_OBSERVATION,
