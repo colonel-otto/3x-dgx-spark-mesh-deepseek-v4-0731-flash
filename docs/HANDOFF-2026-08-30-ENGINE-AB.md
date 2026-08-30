@@ -1,5 +1,19 @@
 # Handoff — 2026-08-30, engine A/B arm 1 (eugr/spark-vllm-b12x)
 
+> **⚠️ SUPERSEDED the same day by
+> [HANDOFF-2026-08-30-EVENING-KSWEEP.md](HANDOFF-2026-08-30-EVENING-KSWEEP.md).**
+> Read that one for current cluster state. Two things below are now WRONG:
+> - the **"c=16 scheduling cliff"** attributed to speculative draft slots was mostly
+>   **JIT contamination** — persistent kernel caches alone took c=16 aggregate
+>   133.9 → 198.8 and TTFT 7000ms → 1755ms at identical nst=5. Every throughput
+>   number in this file was taken under `--no-cache-dirs` and is a **LOWER BOUND**,
+>   not engine capability.
+> - the planned **nst=2** sweep point is **impossible**: the checkpoint sets
+>   `dspark_block_size: 5` and nst<5 is rejected as producing incorrect output.
+>   The sweep ran {5,7}; nst=5 won every cell.
+>
+> The correctness results, config deltas, and traps below remain valid.
+
 Written for a fresh conversation with no prior context. Supersedes
 [HANDOFF-2026-08-29-EVENING.md](HANDOFF-2026-08-29-EVENING.md) for cluster state.
 
@@ -21,12 +35,11 @@ in the repo as the reference arm; every measurement row before 2026-08-30 carrie
   endpoint `http://<sparkmain wired mgmt IP>:8000`, served name `deepseek-v4-flash-eugr-ab`.
   It runs under a `nohup`'d `run-recipe.py` on sparkmain (log `~/eugr-ab-launch7.log`); it
   is NOT a systemd service yet — a reboot leaves the cluster with no engine.
-- **The LAN gateway's DSv4 route is currently DEAD.** bigdog's LiteLLM (:4000) and the
-  manifest service (`~/bin/models-manifest-serve`, :8771) route DSv4 to sparkmain **:8100**
-  under the served name `deepseek-v4-flash-dspark-abliterated`; nothing listens on :8100 now.
-  Fix on the next eugr boot by serving both names on the old port
-  (`--served-model-name deepseek-v4-flash-dspark-abliterated deepseek-v4-flash-eugr-ab`,
-  `--port 8100`) so no client changes; or repoint the manifest.
+- **The LAN gateway route is LIVE as of 2026-08-30 evening** (it was dead when this
+  file was written, and briefly treated as out of scope). bigdog's LiteLLM (:4000)
+  and the manifest (:8771) now resolve DSv4 to sparkmain **:8100**. It is not a
+  prerequisite for benchmarking the engine, but it IS what LAN clients use — see the
+  evening handoff.
 - Weights: official `deepseek-ai/DeepSeek-V4-Flash-0731` @ 7872f01b at `~/dsv4/hf-…` on each
   node (156G, per-node home paths differ). The "abliterated" in old served names is legacy
   labeling; the weights are the official checkpoint and always were.
@@ -60,26 +73,26 @@ Weight load 78s (InstantTensor) vs 199s. Boot to serving ≈ 8 min with cold ker
 
 ## 3. Next steps, in order (one variable each; protocol in ENGINE-AB-3NODE.md)
 
-1. **Persist kernel caches.** Replace `--no-cache-dirs` with explicit uniform mounts
-   (`mkdir` on every node, then `-v /tmp/eugrcache-vllm:/root/.cache/vllm
-   -v /tmp/eugrcache-flashinfer:/root/.cache/flashinfer -v /tmp/eugrcache-triton:/root/.triton
-   -v /tmp/eugrcache-tilelang:/root/.tilelang`). Confirm the `cute.compile disk-cache-miss`
-   count stops growing across boots. Faster boots, uncontaminated cold numbers.
+1. **Persist kernel caches.** Keep `--no-cache-dirs` to suppress the launcher's broken
+   `$HOME`-relative worker mounts, then pre-create uniform reboot-persistent directories
+   on every node and pass them explicitly:
+   `-v /opt/eugrcache-vllm:/root/.cache/vllm
+   -v /opt/eugrcache-flashinfer:/root/.cache/flashinfer -v /opt/eugrcache-triton:/root/.triton
+   -v /opt/eugrcache-tilelang:/root/.tilelang`. Do not use `/tmp`: systemd-tmpfiles wipes it
+   on reboot. Confirm the `cute.compile disk-cache-miss` count stops growing across boots.
 2. **Speculative-depth sweep on this engine** — the open question "K=2 or bump to 5/7?":
    nst ∈ {2, 3, 5, 7} × c ∈ {1, 4, 8, 16}, same harness, median-of-≥5 on single-stream
    cells (33% noise band). Also the alternative lever at nst=5: `max_num_batched_tokens
    16384` — a KV trap on anemll (−43% KV, no gain), but the engine explicitly recommends
    it here and fp8 KV prices differently; measure, do not assume. Expect the winner to
    depend on concurrency exactly as it did on anemll (K=2 won at concurrency, K=5 single).
-3. **Restore the gateway route** on the same boot (port 8100 + both served names), then
-   verify through bigdog:4000.
-4. **Make eugr the service**: a systemd unit wrapping `run-recipe.py` with the working
+3. **Make eugr the service**: a systemd unit wrapping `run-recipe.py` with the working
    flags (or eugr's own launcher teardown), with `ExecStopPost` teardown and a `docker ps`
    check on all nodes — carry over the leaked-container lesson.
-5. **Remaining A/B cells**: 131K-context decode, the code-brief / dense-prose prompt-effect
+4. **Remaining A/B cells**: 131K-context decode, the code-brief / dense-prose prompt-effect
    pair, deep-concurrency 4×200K, then a proper fabric-gated run and — if ever wanted — a
    matched same-day A/B by booting anemll back for one session.
-6. kv dtype: try `nvfp4_ds_mla` on this build to remove the KV-capacity delta, if supported.
+5. kv dtype: try `nvfp4_ds_mla` on this build to remove the KV-capacity delta, if supported.
 
 ## 4. Traps learned today (all in troubleshooting.md)
 

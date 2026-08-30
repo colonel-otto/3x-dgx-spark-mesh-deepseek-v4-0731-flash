@@ -194,16 +194,35 @@ Next boot, in this order (one variable each):
    only in volatile `/tmp`; now vendored).
    Note on framing: depth-5 drafts were accepted ~4.7-4.9/5, so deep drafts are NOT being
    wasted — the c=16 penalty is scheduler budget (`max_num_scheduled_tokens=8128`), not
-   acceptance. Expect low K to win at concurrency and high K single-stream; the gateway
+   acceptance. Expect low K to win at concurrency and high K single-stream; the service
    serves the winner.
+
+   **RESULT 2026-08-30 — this step is DONE and both expectations above were wrong.**
+   The sweep space is only {5,7}: the checkpoint sets `dspark_block_size: 5` and nst<5 is
+   REJECTED ("produce incorrect output"), so K=2 parity with anemll MTP is impossible.
+   nst=5 won EVERY cell — including single-stream — so "high K wins single-stream" does
+   not transfer from anemll. `mnbt=16384` was measured and rejected: +8% on c=4/c=16,
+   −4% on c=8, for −52% KV cache. And the "c=16 penalty is scheduler budget" framing in
+   the paragraph above is itself RETRACTED — it was mostly JIT contamination (see
+   step 1). Full matrix and evidence: `results/20260830T2245Z-eugr-ksweep/`.
 3. Restore the LAN gateway route on the same boot — folded into `eugr-boot.sh`:
    `--port 8100` plus BOTH served names
    (`deepseek-v4-flash-dspark-abliterated deepseek-v4-flash-eugr-ab`), so bigdog's LiteLLM
-   (:4000) and the manifest service (:8771) resolve with no client changes. The generated
-   recipe carries both names; the boot script's dry-run gate asserts both are present.
-   Verify end-to-end through bigdog:4000 after the boot, not just on :8100 locally.
+   (:4000) and the manifest service (:8771) resolve with no client changes.
+
+   **DONE 2026-08-30, and the route needed more than a port.** The DSv4 block had been
+   DELETED from bigdog's LiteLLM config (only its header comment survived), so restoring
+   the port alone would not have helped. Block restored → :8100, LiteLLM restarted (it is
+   a bare nohup process, so a config edit needs a manual restart), verified end-to-end
+   with a real completion round-trip. `scripts/eugr-ab/verify-gateway.sh` checks all four
+   hops and passes 4/4.
 4. Make eugr a systemd service wrapping this boot command, with `ExecStopPost` teardown
    and a `docker ps` check on all three nodes (leaked-container history).
+
+   **DONE 2026-08-30**: `eugr.service`, enabled + active, pinned to the sweep winner via
+   `EUGR_NST=5` / `EUGR_MNBT=8192`. It blocks until :8100 actually serves both names, and
+   `ExecStopPost` proved itself on the nst=2 failure — all three nodes torn down, zero
+   leaked containers.
 5. Only then consider `--kv-cache-dtype nvfp4_ds_mla` if this build supports it, to remove the KV delta.
 6. The matched A/B proper: same day, anemll engine live, same harness, both arms — per
    feedback "measure our own A/B first".
