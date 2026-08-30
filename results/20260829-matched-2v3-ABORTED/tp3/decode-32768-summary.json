@@ -1,0 +1,14 @@
+[
+  {
+    "label": "tp3",
+    "target_depth": 32768,
+    "actual_prompt_tokens": 32268,
+    "n": 7,
+    "median_decode_tok_s": 51.38,
+    "min": 46.02,
+    "max": 54.9,
+    "spread_pct": 17.3,
+    "cache_hits": 0,
+    "median_ttft_s": 17.31
+  }
+]
