@@ -1737,7 +1737,7 @@ directories:
       (at 8K the arms swapped: TP=3 std x2.4, TP=2 std x0.62), under which the
       32K and 131K decode cells here would not resolve - treat those two
       magnitudes as PROVISIONAL. Direction is robust everywhere.
-    has_readme: false
+    has_readme: true
     nodes: [2, 3]
     nodes_evidence: >
       tp2/engine-config.txt and tp3/engine-config.txt capture live argv
@@ -2405,7 +2405,7 @@ directories:
       three nodes faster: 8K decode +12.7% (Welch t=3.76, 95% CI +6.1% to
       +19.3%) and cc=1 decode +14.8% (t=4.24, CI +8.0% to +21.7%). This takes
       the parent run to 16 of 16 cells resolved, all favouring three nodes.
-    has_readme: false
+    has_readme: true
     nodes: [2, 3]
     nodes_evidence: >
       tp2/engine-config.txt and tp3/engine-config.txt capture live argv
