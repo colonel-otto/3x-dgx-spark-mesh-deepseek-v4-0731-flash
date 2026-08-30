@@ -62,6 +62,17 @@ no 2-node measurement exists, the cell says so rather than estimating.
 > clock telemetry is in progress; its hypotheses and tie band were fixed in advance in
 > [`PREREGISTRATION-2V3-MATCHED.md`](docs/PREREGISTRATION-2V3-MATCHED.md). **Treat the
 > deltas below as provisional until it lands.**
+>
+> 3. **Four of the five decode deltas below are not statistically significant.** An exact
+>    Mann-Whitney U test on the committed per-rep data (n=7 vs n=7, α=0.05) gives
+>    p = 0.097 (2K), **0.0006 (8K)**, 0.073 (32K), **0.535 (131K)**, 0.209 (262K). Only
+>    the 8K row separates — and it carries all three confounds above. Every delta is
+>    smaller than the spread of at least one arm it came from. Full working:
+>    [`ANALYSIS-2V3-2026-08-29.md`](docs/ANALYSIS-2V3-2026-08-29.md).
+>
+> **The supportable claim today:** three-node TP=3 works, is numerically correct, and
+> reproduces within ~±8 % across days. **We cannot currently claim a decode speedup over
+> two nodes.**
 
 | Capability / Metric | 3-Node (`TP=3`) | 2-Node (`TP=2`) | Delta | Source bundle |
 |---|:---:|:---:|:---:|---|
@@ -103,7 +114,7 @@ the one comparison that would make every row above configuration-matched.
 | Does TP=3 serve correct output? | Yes; the attention-group padding patch is required and hermetically baked into `dsv4-3spark:0.1.1`. | [Patch](docs/patch.md), [quality suite](results/20260827-quality-suite-3node/) |
 | Does three-node quality hold at long context? | Yes in the tested suite: RULER-lite 12/12, tool battery 7/7, deep-context tools 8/8, garble sweep clean through 131K. | [Quality suite](results/20260827-quality-suite-3node/) |
 | What is corrected three-node decode speed? | Median 50.1–59.8 tok/s from 2K–262K with 256 asserted output tokens under winning Profile B. | [Profile B](results/20260827-issue25-profile-b/) |
-| Does three-node beat two-node at cc=1 decode? | Yes across all depths: +7.3% to +16.7%, **47.65 vs 44.40 tok/s at 131K** in the matched 7-rep arm. (The separate 15-rep TP=3-only run measured 51.0 tok/s at 131K; it has no TP=2 counterpart, so the matched pair above is the comparison.) | [Matched 2v3](results/20260827-decode-2v3-fixed/), [15-rep 131K](results/20260827-tp3-131k-15rep/) |
+| Does three-node beat two-node at cc=1 decode? | **Unresolved — do not claim a win.** The +7.3% to +16.7% figures come from arms that differed in three engine settings, and **four of the five rows fail an exact Mann-Whitney U test** at n=7 (131K: p=0.535; 2K: p=0.097). Only 8K separates (p=0.0006), and it carries the same confounds. A matched arm is staged but not yet run. | [Analysis](docs/ANALYSIS-2V3-2026-08-29.md), [Matched 2v3](results/20260827-decode-2v3-fixed/) |
 | Does three-node beat two-node at TTFT? | Three nodes wins below 32K (13% sooner at 2K, 12% at 8K); **two nodes wins deep cold prefill** — 70.43 s vs 92.73 s at 131K in the matched arm. Warm turns are sub-second on three nodes and unmeasured on two. | [Matched 2v3](results/20260827-decode-2v3-fixed/) |
 | Does three-node beat two-node at concurrency? | **Not at `MTP=5`** — TP=2 led at `cc=8` and `cc=16` (56.20 vs 52.77 tok/s). Moving to `MTP=2` raised the 3-node `cc=16` figure to 55.10 tok/s against its own `MTP=5` arm, but **no 2-node arm was run at `MTP=2`**, so the gap is narrowed on one side only, not closed. | [Concurrency 2v3](results/20260827-decode-concurrency-2v3-fixed/), [MTP sweep](results/20260828-issue32-mtp-concurrency-sweep/) |
 | Is the fabric below the published reference? | No. Official `nccl-tests` measured 23.92 GB/s at 16 GiB. | [Controlled NCCL run](results/20260826-nccl-controlled/) |

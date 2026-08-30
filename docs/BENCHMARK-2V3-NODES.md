@@ -7,6 +7,25 @@
 
 ---
 
+> ## ⚠️ SUPERSEDED IN PART — read [`ANALYSIS-2V3-2026-08-29.md`](ANALYSIS-2V3-2026-08-29.md) first
+>
+> An exact Mann-Whitney U test on this document's own committed per-rep data shows
+> **four of the five decode rows below are not statistically significant** at n=7:
+>
+> | Depth | Delta claimed | p | |
+> |---:|---:|---:|---|
+> | 2K | +16.7 % | 0.0973 | not significant |
+> | 8K | +14.2 % | 0.0006 | significant |
+> | 32K | +11.0 % | 0.0728 | not significant |
+> | 131K | +7.3 % | 0.5350 | not significant |
+> | 262K | +10.0 % | 0.2086 | not significant |
+>
+> Every delta is smaller than the spread of at least one arm it was computed from (the 2K
+> TP=3 cell spans 38.22–64.54 tok/s). The one surviving row, 8K, is still confounded by
+> **three** engine settings — `MAX_NUM_SEQS`, `MTP_NUM_TOKENS`, and
+> `GPU_MEMORY_UTILIZATION` (0.80 vs 0.835), the last of which is disclosed nowhere in this
+> document. **Do not quote the decode deltas below as node-count wins.**
+
 ## 1. Executive Summary
 
 This document presents the definitive, empirical performance comparison between serving **DeepSeek-V4 Flash** on a **3-Node DGX Spark cluster (`TP=3`)** versus a **2-Node DGX Spark cluster (`TP=2`)**. All measurements are drawn directly from audited, frozen repository benchmark bundles under verified passing fabric gates and asserted 256-token completion windows.
@@ -119,6 +138,13 @@ That is why speculation pays off disproportionately here:
 2. The main model verifies multiple candidates in a single forward pass.
 3. Measured acceptance is **76.7% to 80.4%** at **~1.55 accepted tokens per step**
    ([long-horizon probe](../results/20260829-issue36-dspark-proposer-long-horizon/)).
+
+   > ⚠️ **That is the single-stream figure only.** Measured at concurrency on
+   > 2026-08-29 (`MTP=2`, 8K, n=5 per cell), acceptance is **66.7–67.7 %** at
+   > **1.33–1.35** accepted tokens per step across cc=4/8/16 — matching Issue #32's
+   > 66.3 %, not the 76.7–80.4 % quoted here. Any barrier-reduction arithmetic built on
+   > ~1.55 overstates the effect at concurrency by roughly 15 %. State the concurrency
+   > with the acceptance rate.
 4. Each accepted draft token avoids a forward pass and its collectives. **The "66.7% of
    barriers eliminated" figure is withdrawn** — that would require accepting the full
    `K=2` draft every single step; at the measured ~1.55 tokens/step the real reduction is
