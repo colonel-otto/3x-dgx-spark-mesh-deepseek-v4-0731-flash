@@ -70,8 +70,15 @@ case "${1:-}" in
     log "Starting head $HEAD (rank 0) ..."
     compose_on "$HEAD" config/head.env up -d >/dev/null
 
-    log "Waiting for $URL (cold start is ~7 min) ..."
-    for i in $(seq 1 180); do
+    # Cold start measured at ~30 min on 2026-08-29, not the ~7 min this comment
+    # used to claim. The 15-minute budget (180 x 5 s) aborted a bringup that was
+    # progressing normally -- FlashInfer autotuning alone ran 8 minutes, then
+    # CUDA graph capture, then API startup. The engine came up fine ~15 min
+    # AFTER the wait gave up, so the run was lost to the timeout, not a fault.
+    # 45 min with the same 5 s poll. A genuinely wedged cluster still fails,
+    # just later; a slow-but-healthy one now survives.
+    log "Waiting for $URL (cold start measured ~30 min; budget 45 min) ..."
+    for i in $(seq 1 540); do
       if ssh -n "$HEAD" "curl -sf -m 5 -o /dev/null $URL/health" 2>/dev/null; then
         log "READY after ~$((i*5))s"
         ssh -n "$HEAD" "ps -eo args | grep -oE '\-\-tensor-parallel-size [0-9]+|--max-model-len [0-9]+|--max-num-seqs [0-9]+|--gpu-memory-utilization [0-9.]+' | sort -u"
