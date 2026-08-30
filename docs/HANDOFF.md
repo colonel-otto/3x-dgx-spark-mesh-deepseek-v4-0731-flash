@@ -6,7 +6,9 @@ current-state page made the repository harder to trust.
 
 Use these canonical pages instead:
 
-- **[Current handoff](HANDOFF-2026-08-29-EVENING.md) — START HERE.** Live cluster state
+- **[Current handoff](HANDOFF-2026-08-30-ENGINE-AB.md) — START HERE.** anemll retired,
+  eugr engine up, arm-1 results, gateway route to fix, K sweep next.
+- [Previous handoff](HANDOFF-2026-08-29-EVENING.md) — Live cluster state
   (including a `systemctl`-says-failed / engine-is-healthy trap), the significance finding
   that withdraws four of five published 2v3 decode deltas, five harness bugs fixed, and the
   exact next command.
