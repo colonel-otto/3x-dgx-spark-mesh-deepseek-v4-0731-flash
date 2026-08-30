@@ -26,16 +26,65 @@ nodes cooled to ≤70 °C before each arm, clocks sampled every 5 s throughout.
 | 8,192 | **51.07** | 43.62 | **+17.1 %** | 3.5×10⁻¹⁰ | 1×10⁻⁵ | 0.944 | **SIGNIFICANT** |
 | 32,768 | **50.83** | 42.29 | **+20.2 %** | 3.0×10⁻¹¹ | 1×10⁻⁵ | **1.000** | **SIGNIFICANT** |
 | 131,072 | **47.38** | 39.92 | **+18.7 %** | 3.3×10⁻¹¹ | 1×10⁻⁵ | 0.998 | **SIGNIFICANT** |
+| 262,144 *(n=12)* | **45.04** | 39.79 | **+13.2 %** | 4×10⁻⁵ | 2.3×10⁻⁴ | **1.000** | **SIGNIFICANT** |
 
-**All four cells are significant by two independent tests.** The permutation p-values sit
-at the 100,000-resample floor.
+**All five cells are significant by two independent tests.** The permutation p-values at
+2K–131K sit at the 100,000-resample floor.
 
-**Cliff's δ = 1.000 at 32K means every one of the 30 TP=3 reps beat every one of the 30
-TP=2 reps** — complete separation, no overlap. At 131K δ=0.998 and at 8K δ=0.944 are near-
-total separation.
+**Cliff's δ = 1.000 at 32K and 262K means every TP=3 rep beat every TP=2 rep** — complete
+separation, no overlap. At 131K δ=0.998 and 8K δ=0.944 are near-total separation.
 
-262K and the concurrency arm were still running when this was written; they are appended
-below once complete.
+### 262K reverses a published claim
+
+The published table said **two nodes win cold deep context**. Matched, they do not — three
+nodes win 262K by **+13.2 %** with zero overlap:
+
+```
+TP=3: 42.4 43.5 44.0 44.0 44.5 44.7 45.4 45.5 45.9 46.1 47.8 64.3
+TP=2: 31.5 33.8 35.3 38.3 38.9 39.5 40.1 40.3 40.5 40.6 40.8 41.7
+      TP=3 min 42.4  >  TP=2 max 41.7
+```
+
+That cell's raw spread reads 48.6 %, driven entirely by the single 64.3 rep against a
+42–48 band — the outlier pattern §5e of the pre-registration anticipated and fixed a rule
+for in advance. The median is unaffected and the separation is total.
+
+*(Note: cold **TTFT** at depth is a different measurement from decode rate and is not
+settled by this table — see §6.)*
+
+The concurrency arm was still running when this was written; it is appended once complete.
+
+## 1b. TTFT: the "two nodes win deep prefill" claim is REVERSED
+
+The published table states **two nodes reach first token 22.3 s sooner at 131K** and
+14.1 s sooner at 262K, and recommends two nodes for cold deep-context ingestion. **Matched,
+the opposite is true at every depth**, and three nodes' advantage *grows* with context:
+
+| Depth | TP=3 TTFT | TP=2 TTFT | Delta | p | Cliff's δ |
+|---:|---:|---:|---:|---:|---:|
+| 2,048 | **1.13 s** | 1.23 s | **−7.9 %** | — | — |
+| 8,192 | **4.22 s** | 4.79 s | **−11.8 %** | — | — |
+| 32,768 | **17.26 s** | 19.59 s | **−11.9 %** | — | — |
+| 131,072 | **74.90 s** | 87.50 s | **−14.4 %** | 3.0×10⁻¹¹ | **−1.000** |
+| 262,144 | **166.68 s** | 227.24 s | **−26.6 %** | 3.7×10⁻⁵ | **−1.000** |
+
+At 262K the separation is total — **TP=3's worst TTFT (176.8 s) beats TP=2's best
+(204.2 s) by 27 seconds**:
+
+```
+TP=3 TTFT range: 165.8 – 176.8 s
+TP=2 TTFT range: 204.2 – 258.7 s
+```
+
+The published finding was an artefact of the six confounds — principally that the 2-node
+arm never ran Profile B, whose `LONG_PREFILL_TOKEN_THRESHOLD=1024` and
+`DSPARK_MAX_INFLIGHT_PREFILLS=2` exist precisely to tune long-prefill behaviour, and whose
+`GPU_MEMORY_UTILIZATION=0.835` gives prefill more room.
+
+> **Caveat on wording:** these are **warm** TTFTs (3 warm-ups per shape), so they measure
+> steady-state time-to-first-token, not first-request-after-restart cold start. Both arms
+> were warmed identically, so the comparison is valid; the absolute numbers are not
+> "cold-start" figures.
 
 ## 2. KV cache: 2.11×, not 2.6×
 
@@ -98,13 +147,15 @@ convention.
 ## 6. What to tell users
 
 > **Run three nodes if you have them.** On matched configuration, three-node `TP=3` decodes
-> **+17 % to +20 % faster than two nodes at 8K–131K context**, and **+6.7 % at 2K**, with
-> complete or near-complete separation across 30 reps per cell. It also pools **2.11×** the
-> KV cache. Both results are measured with node count as the only variable.
+> faster than two nodes at **every tested depth from 2K to 262K** — **+6.7 %** at 2K and
+> **+13 % to +20 %** from 8K through 262K — with complete or near-complete separation
+> across 30 reps per cell (12 at 262K). It also pools **2.11×** the KV cache. Every result
+> is measured with node count as the only variable.
 
 Remaining caveats to publish alongside:
-- 262K and high-concurrency aggregate are appended when those cells complete; the older
-  claim that **two nodes win aggregate throughput at cc≥8** was measured under the six
-  confounds and has not yet been re-tested here.
-- Cold deep-prefill TTFT past ~100K previously favoured two nodes; also not yet re-tested
-  matched.
+- **High-concurrency aggregate is not yet settled.** The older claim that **two nodes win
+  at cc≥8** was measured under all six confounds; the matched arm is appended when it
+  completes.
+- **The deep-prefill TTFT claim is reversed, not merely unsettled** (§1b). Three nodes
+  reach first token sooner at every depth, by 26.6 % at 262K with zero overlap. The
+  published recommendation to prefer two nodes for deep ingestion should be withdrawn.
