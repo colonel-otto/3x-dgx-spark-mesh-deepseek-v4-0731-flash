@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Resume the matched 2v3 comparison: run the TP=2 arm ONLY.
+# Matched 2v3 comparison at power-analysis-derived n: TP=2 arm, then TP=3 arm.
 #
 # The TP=3 arm completed and its bundle is intact (5 depth cells, concurrency
 # sweep, clock telemetry). The orchestrator then died mid-Step-4 because the
@@ -38,11 +38,26 @@ die() { log "FATAL: $*"; exit 1; }
 API="http://127.0.0.1:8100"
 METRICS="$API/metrics"
 MODEL="deepseek-v4-flash-0731"
-DEPTHS="2048 8192 32768 131072 262144"
 CCS="4,8,16"
-REPS=7
-CC_REPS=5
-WARMUPS=2
+# Reps are scaled PER CELL by power analysis, not applied uniformly. Two-sample,
+# alpha=0.05, power=0.80, n = 2*(1.96+0.84)^2 * CV^2 / delta^2, using CVs measured
+# on the cooled+telemetered TP=3 arm against the effect sizes the published table
+# claims:
+#   2K   CV 3.8% vs +16.7% -> n~1    262K CV 6.0% vs +10.0% -> n~6
+#   8K   CV 2.6% vs +14.2% -> n~1    131K CV 7.5% vs  +7.3% -> n~17  <- binding
+#   32K  CV 2.3% vs +11.0% -> n~1
+#
+# Uniform n=30 would cost 5.8 h for both arms, with 262K alone taking 95 min/arm
+# for a cell needing n~6. Scaling instead: cheap shallow cells get n=30 (they cost
+# ~3 min each and buy margin if CVs degrade toward the published arms' 16-19%);
+# 131K gets n=30 (~2x its n~17 requirement); 262K gets n=12 (2x its n~6) because
+# each rep costs ~173 s.
+#
+# Total: ~1.6 h per arm rather than 2.9 h, with MORE power where it matters.
+DEPTH_REPS="2048:30 8192:30 32768:30 131072:30 262144:12"
+DEPTHS=$(echo "$DEPTH_REPS" | tr ' ' '\n' | cut -d: -f1 | tr '\n' ' ')
+CC_REPS=15
+WARMUPS=3
 M_SEQS=32; M_MTP=2; M_GPUMEM=0.835
 COOL_TARGET_C=70; COOL_MAX_S=900
 
@@ -165,16 +180,17 @@ start_total=$(echo "$excl_out" | sed -n 's/^IDLE_OK start_request_success_total=
 log "exclusivity start_total=$start_total"
 
 issued=0
-log "=== [tp2] depth sweep ==="
-for d in $DEPTHS; do
-  log "--- [tp2] depth $d ---"
+log "=== [tp2] depth sweep (per-cell n from power analysis) ==="
+for pair in $DEPTH_REPS; do
+  d="${pair%%:*}"; r="${pair##*:}"
+  log "--- [tp2] depth $d (n=$r) ---"
   python3 "$HERE/decode_depth_sweep.py" \
     --base-url "$API/v1" --model "$MODEL" --depths "$d" \
-    --max-tokens 256 --warmups $WARMUPS --reps $REPS --label tp2 \
+    --max-tokens 256 --warmups $WARMUPS --reps "$r" --label tp2 \
     --output "$RUN_DIR/tp2/decode-${d}.jsonl" \
     2>&1 | tee "$RUN_DIR/tp2/decode-${d}.log" | tee -a "$LOG"
   [[ ${PIPESTATUS[0]} -ne 0 ]] && log "WARN: [tp2] depth $d exited non-zero"
-  issued=$(( issued + REPS + WARMUPS ))
+  issued=$(( issued + r + WARMUPS ))
 done
 
 log "=== [tp2] concurrency sweep cc=$CCS @8K (H2) ==="
@@ -223,7 +239,89 @@ for i in $(seq 1 180); do
   curl -sf -m 5 -o /dev/null "$API/health" 2>/dev/null && { ok=1; break; }
   sleep 10
 done
-[[ $ok -eq 1 ]] && log "3-node cluster healthy." || log "WARNING: 3-node not healthy in 30 min -- CHECK MANUALLY"
+[[ $ok -eq 1 ]] && log "3-node cluster healthy." || die "3-node not healthy in 30 min -- TP=3 arm cannot run"
+
+# --- Step 7: re-measure TP=3 at the SAME n --------------------------------
+# The existing tp3 arm is n=7. Comparing n=7 against n=30 would defeat the
+# purpose: the whole point of raising n is that both arms get the same
+# statistical power. The n=7 arm is preserved as tp3-n7 rather than deleted.
+log "=== Step 7: re-measure TP=3 at matched n ==="
+if [[ -d "$RUN_DIR/tp3" && ! -d "$RUN_DIR/tp3-n7" ]]; then
+  mv "$RUN_DIR/tp3" "$RUN_DIR/tp3-n7"
+  log "preserved the n=7 TP=3 arm as tp3-n7/"
+fi
+mkdir -p "$RUN_DIR/tp3"
+
+live3=$(ps -eo args | grep -m1 '[v]llm.*tensor-parallel-size' || true)
+echo "$live3" > "$RUN_DIR/tp3/engine-config.txt"
+log "live: $live3"
+echo "$live3" | grep -q 'tensor-parallel-size 3'       || die "not TP=3 after restore"
+echo "$live3" | grep -q 'max-num-seqs 32'              || die "TP=3 not at seqs=32"
+echo "$live3" | grep -q 'gpu-memory-utilization 0.835' || die "TP=3 not at gpumem=0.835"
+echo "$live3" | grep -q '"num_speculative_tokens":2'   || die "TP=3 not at MTP=2"
+log "TP=3 config confirmed; both arms now identical except node count."
+
+sudo docker logs dspark-vllm-gx10-vllm-dspark-1 2>&1 \
+  | grep -iE 'GPU KV cache size|maximum concurrency' | tail -5 > "$RUN_DIR/tp3/kv-pool-initlog.txt" || true
+
+out=$(curl -sf -m 90 -X POST "$API/v1/chat/completions" -H 'Content-Type: application/json' \
+  -d "{\"model\":\"$MODEL\",\"messages\":[{\"role\":\"user\",\"content\":\"What is 17 times 23? Reply with only the number.\"}],\"max_tokens\":16,\"temperature\":0}")
+echo "$out" | grep -q 391 || die "TP=3 correctness failed after restore"
+log "TP=3 correctness 391 OK"
+
+cooldown "$COOL_TARGET_C" "$COOL_MAX_S"
+telem_start "$RUN_DIR/tp3"
+
+excl_out=$(python3 "$HERE/exclusivity.py" --url "$METRICS" --check-idle --timeout 60 2>&1)
+echo "$excl_out" >> "$LOG"
+start_total=$(echo "$excl_out" | sed -n 's/^IDLE_OK start_request_success_total=\([0-9.]*\).*/\1/p' | tail -1)
+[[ -z "$start_total" ]] && die "TP=3 cluster not idle: $excl_out"
+log "[tp3] exclusivity start_total=$start_total"
+
+issued=0
+log "=== [tp3] depth sweep (matched n) ==="
+for pair in $DEPTH_REPS; do
+  d="${pair%%:*}"; r="${pair##*:}"
+  log "--- [tp3] depth $d (n=$r) ---"
+  python3 "$HERE/decode_depth_sweep.py" \
+    --base-url "$API/v1" --model "$MODEL" --depths "$d" \
+    --max-tokens 256 --warmups $WARMUPS --reps "$r" --label tp3 \
+    --output "$RUN_DIR/tp3/decode-${d}.jsonl" \
+    2>&1 | tee "$RUN_DIR/tp3/decode-${d}.log" | tee -a "$LOG"
+  [[ ${PIPESTATUS[0]} -ne 0 ]] && log "WARN: [tp3] depth $d exited non-zero"
+  issued=$(( issued + r + WARMUPS ))
+done
+
+log "=== [tp3] concurrency sweep cc=$CCS @8K (H2) ==="
+python3 "$HERE/benchmark_mtp_concurrency.py" \
+  --url "$API/v1" --metrics-url "$METRICS" --model "$MODEL" \
+  --mtp-k $M_MTP --depth 8192 --concurrencies "$CCS" \
+  --reps $CC_REPS --max-tokens 256 --warmups $WARMUPS \
+  --out "$RUN_DIR/tp3/concurrency.json" \
+  2>&1 | tee "$RUN_DIR/tp3/concurrency.log" | tee -a "$LOG"
+[[ ${PIPESTATUS[0]} -ne 0 ]] && log "WARN: [tp3] concurrency sweep exited non-zero"
+
+cc_issued=0
+for c in ${CCS//,/ }; do cc_issued=$(( cc_issued + c * (CC_REPS + WARMUPS) )); done
+issued=$(( issued + cc_issued + WARMUPS ))
+log "[tp3] expected request ledger: $issued"
+python3 "$HERE/exclusivity.py" --url "$METRICS" --verify \
+  --start-total "$start_total" --expected "$issued" \
+  --out "$RUN_DIR/tp3/exclusivity.json" 2>&1 | tee -a "$LOG"
+
+telem_stop
+for h in sparkmain spark1 spark2; do
+  [[ -s "$RUN_DIR/tp3/clocks-$h.csv" ]] || continue
+  awk -F', *' '{gsub(/ MHz/,"",$2); gsub(/ W/,"",$4);
+                if($2+0>0){n++; s+=$2; if($2+0>mx||n==1)mx=$2+0; if($2+0<mn||n==1)mn=$2+0;
+                           ts+=$3; if($3+0>tmx||n==1)tmx=$3+0}}
+    END{if(n)printf "  %s: clock mean %.0f MHz (min %d, max %d), temp mean %.0f C (max %d), n=%d\n",
+                     H, s/n, mn, mx, ts/n, tmx, n}' H="$h" "$RUN_DIR/tp3/clocks-$h.csv" | tee -a "$LOG"
+done
+log "=== [tp3] arm complete ==="
 
 restore_webui
-log "### DONE. Both arms in: $RUN_DIR"
+log "### DONE. Both arms at matched n in: $RUN_DIR"
+log "###   tp2/     n=30/30/30/30/12 + cc n=15"
+log "###   tp3/     n=30/30/30/30/12 + cc n=15"
+log "###   tp3-n7/  the earlier n=7 arm, preserved"
