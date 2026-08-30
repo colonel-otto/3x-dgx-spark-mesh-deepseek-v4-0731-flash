@@ -261,3 +261,69 @@ Two distinct effects, verified 2026-08-30 on the arm-1 run:
    the speculative decoding settings` — nst=5 draft slots × 16 seqs. Lower `num_speculative_tokens` or
    raise the batched-token budget and re-measure; do not read the c=16 cell as an engine regression until
    that is separated.
+
+## eugr launcher: the built-in cache mounts are `$HOME`-relative and break on workers
+
+Verified 2026-08-30 while implementing the "persist kernel caches" step.
+
+`launch-cluster.sh` mounts kernel caches **by default** (`MOUNT_CACHE_DIRS=true`);
+`--no-cache-dirs` opts *out*. So the obvious fix — "just drop `--no-cache-dirs`" — is
+wrong here, and this is why arm 1 passed that flag in the first place:
+
+```bash
+# launch-cluster.sh ~line 404
+DOCKER_ARGS="$DOCKER_ARGS -v $HOME/.cache/vllm:/root/.cache/vllm"      # + flashinfer, .triton, .tilelang
+CACHE_DIRS_TO_CREATE+=("$HOME/.cache/vllm")
+```
+
+`$HOME` expands on the **head** and the resulting absolute path is shipped verbatim to
+the workers (`ssh "$worker" "mkdir -p ${CACHE_DIRS_TO_CREATE[*]}"`, then the same
+`-v` string in the worker's `docker run`). Our homes are not uniform:
+
+| node | user | `$HOME` |
+|---|---|---|
+| sparkmain | `sparkmain` | `/home/sparkmain` |
+| spark1 | `spark1` | `/home/spark1` |
+| spark2 | `spark2` | `/home/spark2` |
+
+So the workers would get `/home/sparkmain/.cache/vllm` created and mounted on a box where
+that path belongs to nobody — a root-owned junk dir, and no shared cache identity.
+Same root cause as the recorded trap "the launcher expands head `$HOME` on workers".
+
+**Fix that works:** keep `--no-cache-dirs` (to suppress the broken `$HOME` mounts) and
+pass *uniform absolute* paths with `-v`, which `launch-cluster.sh` forwards unchanged
+(`for mapping in "${VOLUME_MAPPINGS[@]}"; do DOCKER_ARGS="$DOCKER_ARGS -v $mapping"; done`):
+
+```bash
+-v /opt/eugrcache-vllm:/root/.cache/vllm \
+-v /opt/eugrcache-flashinfer:/root/.cache/flashinfer \
+-v /opt/eugrcache-triton:/root/.triton \
+-v /opt/eugrcache-tilelang:/root/.tilelang
+```
+
+Use `/opt`, not `/tmp`: `/tmp` here is on the root NVMe (not tmpfs, so no RAM cost either
+way) but systemd-tmpfiles wipes it on reboot, which would silently re-cold every kernel
+cache after any node restart. `-v` passthrough does NOT mkdir on the workers, so
+pre-create the four dirs on every node (`sudo mkdir -p … && chmod 777 …`);
+`scripts/eugr-ab/eugr-boot.sh` does this as a precondition step.
+
+## eugr recipes: override sweep parameters in the recipe, not via `--` passthrough
+
+`run-recipe.py` **appends** post-`--` args after template substitution
+(`command = command + " " + extra_args_str`). For a scalar that already exists in the
+recipe this leaves the flag on the line **twice** and relies on argparse last-wins.
+Confirmed with `--dry-run` for the K sweep:
+
+```
+--speculative-config '{"…","num_speculative_tokens":5,…}' --speculative-config '{"…","num_speculative_tokens":2,…}'
+```
+
+That is a silent-misconfiguration trap for a JSON blob, and `--served-model-name` is
+worse (`nargs="+"`, so a second one may merge rather than replace). Since
+`params = {**recipe["defaults"], **overrides}` substitutes `{num_speculative_tokens}` and
+`{max_num_batched_tokens}` from `defaults:`, generate a per-sweep-point recipe instead —
+one substitution site, exactly one flag on the command line, and the config that ran is
+left on disk as `recipes/dsv4-tp3-nst<K>-mnbt<N>.yaml`. `eugr-boot.sh` generates it and
+then **gates the launch on `--dry-run` assertions** (port, both served names, nst, mnbt,
+and `grep -c -- '--speculative-config' == 1`) so a wrong config fails in seconds rather
+than after an 8-minute boot.

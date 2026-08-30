@@ -173,11 +173,37 @@ cliff (TTFT 7.0s vs 1.9s at c=8) that the engine itself attributes to speculativ
 (`max_num_scheduled_tokens is set to 8128 … decrease num_speculative_tokens or max_num_seqs`).
 
 Next boot, in this order (one variable each):
-1. Persist kernel caches: replace `--no-cache-dirs` with explicit uniform mounts
-   (`-v /tmp/eugrcache-vllm:/root/.cache/vllm -v /tmp/eugrcache-flashinfer:/root/.cache/flashinfer` …
-   after `mkdir` on every node) so the 20 post-start `cute.compile` disk-cache misses stop recurring.
-2. `num_speculative_tokens: 2` — matches our MTP K=2 (removes the speculator delta) and frees the draft-slot
-   budget at c=16. Re-run c=1/4/8/16.
-3. Only then consider `--kv-cache-dtype nvfp4_ds_mla` if this build supports it, to remove the KV delta.
-4. The matched A/B proper: same day, anemll engine live, same harness, both arms — per
+1. Persist kernel caches. **STAGED AND DRY-RUN VALIDATED 2026-08-30** as
+   `scripts/eugr-ab/eugr-boot.sh` — but NOT the way this list originally said. Two
+   corrections, both in docs/troubleshooting.md:
+   - `--no-cache-dirs` must **stay on**. The launcher mounts caches by default and that
+     default is `$HOME`-relative, which breaks on the workers (homes are
+     `/home/sparkmain`|`spark1`|`spark2`). Keep the flag to suppress the broken mounts and
+     supply uniform absolute paths with `-v`, which the launcher forwards unchanged.
+   - `/opt/eugrcache-*`, not `/tmp/eugrcache-*` — systemd-tmpfiles wipes `/tmp` on reboot,
+     which would silently re-cold every kernel cache after any node restart.
+   Dirs are pre-created on all three nodes; the boot script re-creates them as a
+   precondition. Verify after the boot that `grep -c 'cute.compile.*disk-cache-miss'`
+   stops growing across boots.
+2. The K sweep: nst ∈ {2,3,5,7} × c ∈ {1,4,8,16}, plus `max_num_batched_tokens 16384`
+   at nst=5 as the alternative lever on the same cliff. nst=2 first (it matches our MTP
+   K=2, removing the speculator delta from the cross-engine comparison). Driver:
+   `scripts/eugr-ab/eugr-sweep.sh`, which warms the caches, asserts the JIT miss counter
+   has frozen before recording, then runs median-of-5 per cell into `rows.tsv`.
+   Harness `scripts/eugr-ab/bench-miaai.py` is the byte-identical arm-1 harness (it lived
+   only in volatile `/tmp`; now vendored).
+   Note on framing: depth-5 drafts were accepted ~4.7-4.9/5, so deep drafts are NOT being
+   wasted — the c=16 penalty is scheduler budget (`max_num_scheduled_tokens=8128`), not
+   acceptance. Expect low K to win at concurrency and high K single-stream; the gateway
+   serves the winner.
+3. Restore the LAN gateway route on the same boot — folded into `eugr-boot.sh`:
+   `--port 8100` plus BOTH served names
+   (`deepseek-v4-flash-dspark-abliterated deepseek-v4-flash-eugr-ab`), so bigdog's LiteLLM
+   (:4000) and the manifest service (:8771) resolve with no client changes. The generated
+   recipe carries both names; the boot script's dry-run gate asserts both are present.
+   Verify end-to-end through bigdog:4000 after the boot, not just on :8100 locally.
+4. Make eugr a systemd service wrapping this boot command, with `ExecStopPost` teardown
+   and a `docker ps` check on all three nodes (leaked-container history).
+5. Only then consider `--kv-cache-dtype nvfp4_ds_mla` if this build supports it, to remove the KV delta.
+6. The matched A/B proper: same day, anemll engine live, same harness, both arms — per
    feedback "measure our own A/B first".
