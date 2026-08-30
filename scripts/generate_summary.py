@@ -36,9 +36,14 @@ import os
 HERE = os.path.dirname(os.path.abspath(__file__))
 BENCH = os.path.join(os.path.dirname(HERE), "benchmarks")
 
-OUT_COLS = ["result_id", "source_file", "config_id", "metric", "statistic",
-            "value", "prompt_shape", "harness", "comparability",
+OUT_COLS = ["result_id", "source_file", "config_id", "engine", "metric",
+            "statistic", "value", "prompt_shape", "harness", "comparability",
             "evidence_status", "notes"]
+
+# Every measurement in this repo's history through 2026-08-30 ran on the same
+# engine, so legacy rows (which predate the column) carry it as a constant.
+# Unlike the prompt, the engine IS recoverable for legacy rows.
+LEGACY_ENGINE = "anemll-v0.25.1"
 
 
 def read(name):
@@ -55,6 +60,7 @@ def build():
             "result_id": r["configuration"] + "-legacy",
             "source_file": "historical-summary.csv",
             "config_id": r["configuration"],
+            "engine": LEGACY_ENGINE,
             "metric": "decode_tok_s",
             "statistic": "median",
             "value": r["decode_median_tok_s"],
@@ -101,6 +107,7 @@ def build():
             "result_id": cfg + "-c1-decode",
             "source_file": "measurements.csv",
             "config_id": cfg,
+            "engine": r.get("engine", LEGACY_ENGINE),
             "metric": "decode_tok_s",
             "statistic": r["statistic"],
             "value": r["decode_tok_s"],
@@ -120,6 +127,7 @@ def build():
                 "result_id": cfg + "-peak-aggregate",
                 "source_file": "measurements.csv",
                 "config_id": cfg,
+                "engine": r.get("engine", LEGACY_ENGINE),
                 "metric": "aggregate_tok_s",
                 "statistic": r["statistic"],
                 "value": r["aggregate_tok_s"],
@@ -141,6 +149,7 @@ def build():
                 "result_id": rid,
                 "source_file": "measurements.csv",
                 "config_id": "tp3-seqs8",
+                "engine": r.get("engine", LEGACY_ENGINE),
                 "metric": "decode_tok_s",
                 "statistic": r["statistic"],
                 "value": r["decode_tok_s"],
@@ -167,6 +176,7 @@ def build():
                 "result_id": rid,
                 "source_file": "measurements.csv",
                 "config_id": cfg,
+                "engine": r.get("engine", LEGACY_ENGINE),
                 "metric": "aggregate_tok_s",
                 "statistic": r["statistic"],
                 "value": r["aggregate_tok_s"],
@@ -216,6 +226,7 @@ def build():
             "result_id": rid,
             "source_file": "measurements.csv",
             "config_id": cfg,
+            "engine": r.get("engine", LEGACY_ENGINE),
             "metric": "decode_tok_s",
             "statistic": r["statistic"],
             "value": r["decode_tok_s"],
@@ -261,6 +272,7 @@ def build():
                 "result_id": rid,
                 "source_file": "measurements.csv",
                 "config_id": cfg,
+                "engine": r.get("engine", LEGACY_ENGINE),
                 "metric": "decode_tok_s",
                 "statistic": r["statistic"],
                 "value": r["decode_tok_s"],
@@ -280,6 +292,7 @@ def build():
                 "result_id": cfg + "-kv-tokens",
                 "source_file": "measurements.csv",
                 "config_id": cfg,
+                "engine": rs[-1].get("engine", LEGACY_ENGINE),
                 "metric": "kv_cache_tokens",
                 "statistic": "engine-reported",
                 "value": rs[-1]["kv_cache_tokens"],
