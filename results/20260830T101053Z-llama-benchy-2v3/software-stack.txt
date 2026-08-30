@@ -1,0 +1,14 @@
+stamp=20260830T101053Z
+benchy_commit=e9be344
+benchy_version=llama-benchy 0.4.1.dev1+ge9be34457
+--- sparkmain ---
+580.173.02, NVIDIA GB10
+6.17.0-1029-nvidia
+--- spark1 ---
+580.173.02, NVIDIA GB10
+6.17.0-1029-nvidia
+--- spark2 ---
+580.173.02, NVIDIA GB10
+6.17.0-1029-nvidia
+--- image ---
+dsv4-3spark:0.1.1
