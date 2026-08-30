@@ -40,8 +40,14 @@ if [ -n "$reply" ]; then ok "gateway completion returned: ${reply:0:40}"
 else bad "no completion through the gateway (route lists but does not serve)"; fi
 
 echo "== 4. manifest service on $GW:8771 =="
-man=$(curl -fsS -m 10 "http://$GW:8771/v1/models" 2>/dev/null) || bad "manifest :8771 unreachable"
-echo "$man" | grep -q "$LEGACY_NAME" && ok "manifest lists $LEGACY_NAME" || bad "manifest does not list $LEGACY_NAME"
+# models-manifest-serve does NOT expose /v1/models -- it publishes named JSON
+# documents and serves any other path as a static file (so a wrong path returns
+# an HTML directory listing and looks like a broken service when it is fine).
+# The gateway-backed document is opencode.gateway.json, which the exporter
+# resolves LIVE from the gateway's own /v1/models -- so once section 2 passes,
+# this should follow within the 3s cache TTL with no manual edit.
+man=$(curl -fsS -m 15 "http://$GW:8771/opencode.gateway.json" 2>/dev/null) || bad "manifest :8771 unreachable"
+echo "$man" | grep -q "$LEGACY_NAME" && ok "manifest advertises $LEGACY_NAME (auto-discovered)"                                      || bad "manifest does not advertise $LEGACY_NAME"
 
 echo
 [ "$fail" -eq 0 ] && echo "GATEWAY ROUTE VERIFIED" || echo "GATEWAY ROUTE INCOMPLETE (see FAILs)"

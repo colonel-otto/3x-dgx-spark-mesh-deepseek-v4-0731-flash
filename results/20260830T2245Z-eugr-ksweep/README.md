@@ -51,9 +51,39 @@ caches the same cell rises and holds (78.4 -> 91.4 -> 84.5 -> 78.3, median 84.3)
 **Any arm-1 throughput row taken under `--no-cache-dirs` should be treated as a
 lower bound, not as engine capability.**
 
+## Headline 3 — the sweep verdict: nst=5 / mnbt=8192 wins. Serve it.
+
+Complete matrix (aggregate tok/s; c=1 column is single-stream decode):
+
+| c | nst=5 mnbt=8192 | nst=7 mnbt=8192 | nst=5 mnbt=16384 |
+|---|---:|---:|---:|
+| 1 (decode) | **84.3** | 79.5 | 83.5 |
+| 4 | 152.8 | 151.2 | **165.0** |
+| 8 | **252.9** | 208.8 | 241.8 |
+| 16 | 198.8 | 197.2 | **214.3** |
+| **KV cache tokens** | **2,415,674** | 2,415,674 | **1,165,679** |
+| max concurrency @1M ctx | **2.30x** | 2.30x | 1.11x |
+
+- **nst=7 loses everywhere.** It never wins a cell and costs 21% at c=8. The
+  anemll-derived expectation "high K wins single-stream" does NOT transfer:
+  nst=5 wins single-stream too. With the block-size floor at 5, the legal range
+  is {5,7} and 5 is simply better — the depth question is settled, not open.
+- **mnbt=16384 is the anemll KV trap again.** It wins c=4 (+8%) and c=16 (+8%)
+  but costs **52% of the KV cache** (2.42M -> 1.17M tokens; max concurrency at 1M
+  context falls 2.30x -> 1.11x). It also loses c=8 by 4%. Trading half the KV
+  capacity for ~8% on two cells is a bad trade for a 1M-context server, so this
+  confirms the anemll finding on a different engine and different KV dtype —
+  measured, not assumed, as the plan required.
+  (One thing it DOES fix: the `max_num_scheduled_tokens is set to 8128` warning
+  disappears at 16384. The warning was real but the cure costs more than the
+  disease.)
+
+**`eugr.service` is pinned to EUGR_NST=5 / EUGR_MNBT=8192** — the winner is what
+the gateway serves.
+
 ## Rows
 
-`nst5-mnbt8192/rows.tsv`. The c=1 row was re-measured (median-of-7) after the
+`nst5-mnbt8192/rows.tsv`, `nst7-mnbt8192/rows.tsv`, `nst5-mnbt16384/rows.tsv`. The c=1 row was re-measured (median-of-7) after the
 JIT counter froze; the sweep's own first pass recorded 67.8 while still warming,
 and that superseded value is noted in `nst5-mnbt8192/notes.txt`.
 

@@ -327,3 +327,82 @@ left on disk as `recipes/dsv4-tp3-nst<K>-mnbt<N>.yaml`. `eugr-boot.sh` generates
 then **gates the launch on `--dry-run` assertions** (port, both served names, nst, mnbt,
 and `grep -c -- '--speculative-config' == 1`) so a wrong config fails in seconds rather
 than after an 8-minute boot.
+
+## DSpark speculative depth has a HARD FLOOR at the checkpoint's block size
+
+Verified 2026-08-30 by a failed boot. `num_speculative_tokens=2` is rejected at
+config validation:
+
+```
+pydantic_core._pydantic_core.ValidationError: 1 validation error for SpeculativeConfig
+  Value error, DSpark requires num_speculative_tokens >= dspark_block_size (5); got 2.
+  Smaller values produce incorrect output. Use num_speculative_tokens=5 or larger (e.g. 7).
+```
+
+`dspark_block_size` is read from the **checkpoint's** `config.json`
+(`dspark_block_size: 5`, alongside `dspark_markov_rank: 256` and
+`dspark_target_layer_ids: [40,41,42]`) — it is not a launch flag and cannot be
+lowered. DSpark is a semi-autoregressive **block** drafter: a speculative length
+below the block size feeds the block/Markov-head machinery an unsupported layout
+and produces garbled output rather than merely lower acceptance, which is why
+vLLM refuses instead of serving it.
+
+Two consequences:
+
+1. Any plan to "match our anemll MTP K=2 to remove the speculator delta from the
+   cross-engine A/B" is **impossible on this engine**. The comparison carries a
+   permanent speculator delta (anemll MTP K=2 vs eugr DSpark K>=5); say so in
+   every row's notes rather than implying a matched speculator.
+2. The K sweep space is {5, 7}, not {2, 3, 5, 7}. Measured: **nst=5 wins every
+   cell**; nst=7 never wins and costs 21% at c=8.
+
+## `--no-cache-dirs` throughput numbers are a LOWER BOUND, not engine capability
+
+Measured 2026-08-30, same engine / harness / node count / nst=5. The only change
+is persistent kernel caches (`/opt/eugrcache-*`) replacing `--no-cache-dirs`:
+
+| c | cold caches (arm 1) | warm caches | Δ |
+|---|---:|---:|---:|
+| 8 | 171.7 agg | 252.9 | **+47%** |
+| 16 | 133.9 agg, TTFT 7000ms | 198.8 agg, TTFT 1755ms | **+48%, 4x TTFT** |
+
+The arm-1 "c=16 scheduling cliff" was therefore mostly JIT compilation, not
+scheduler budget. The tell is in arm-1's own c=1 log: decode **decayed** across
+trials (83.8 → 80.3 → 64.6 → … → 57.8) as each new kernel shape hit the JIT.
+With warm caches the same cell rises and holds (78.4 → 91.4 → 84.5 → 78.3).
+
+So: a monotonic decay across repeated identical trials is a JIT signature, not
+load or thermal drift. Check `grep -c 'cute.compile.*disk-cache-miss' <launcher
+log>` and only record once it stops moving — `scripts/eugr-ab/eugr-sweep.sh`
+automates exactly this and warms further when the counter is still climbing.
+Boot time also halves (~8 min → ~4.3 min).
+
+## `max_num_batched_tokens 16384` is a KV trap on the eugr engine too
+
+The engine's own startup warning recommends raising it
+(`max_num_scheduled_tokens is set to 8128 based on the speculative decoding
+settings … Consider increasing max_num_batched_tokens`). Measured at nst=5:
+
+| | mnbt 8192 | mnbt 16384 |
+|---|---:|---:|
+| c=4 agg | 152.8 | 165.0 (+8%) |
+| c=8 agg | **252.9** | 241.8 (−4%) |
+| c=16 agg | 198.8 | 214.3 (+8%) |
+| KV cache | **2,415,674 tok** | 1,165,679 tok (**−52%**) |
+| max concurrency @1M ctx | **2.30x** | 1.11x |
+
+Raising it does silence the warning, but half the KV capacity for ~8% on two
+cells is a bad trade on a 1M-context server. This reproduces the anemll finding
+on a different engine AND a different KV dtype (fp8 vs nvfp4_ds_mla) — so treat
+that startup warning as a known trap on both engines, and measure before acting
+on it.
+
+## `models-manifest-serve` has no `/v1/models`
+
+It publishes named JSON documents (`opencode.models.json`,
+`opencode.gateway.json`) and serves **any other path as a static file** from its
+directory. So a wrong path returns an HTML *directory listing* with HTTP 200 —
+which reads like "the service is up but broken" when it is perfectly healthy.
+Query `http://<gateway>:8771/opencode.gateway.json`; that document is resolved
+LIVE from the gateway's own `/v1/models` (3s cache TTL), so a model added to
+LiteLLM appears there by itself with no manual edit.
