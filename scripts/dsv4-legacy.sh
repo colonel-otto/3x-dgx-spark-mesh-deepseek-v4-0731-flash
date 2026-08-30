@@ -8,20 +8,32 @@
 # only metadata. It does NOT touch the live dsv4 stack -- different container
 # name, and it runs `sleep infinity`, never `vllm serve`.
 #
+# ⚠️ A parked container is NOT the durable copy: on 2026-08-30 all three were
+# docker-rm'd within minutes by concurrent leaked-container cleanup during an
+# engine sweep. The `save` tarball on sparkmain is the store no docker-level
+# hygiene can touch; the parked containers are the convenience layer. The
+# keep=parked-legacy label marks them deliberate -- cleanup tooling must skip
+# containers carrying it.
+#
 # Usage:
 #   scripts/dsv4-legacy.sh create           # park on all nodes (idempotent)
 #   scripts/dsv4-legacy.sh status           # where is it parked / running?
 #   scripts/dsv4-legacy.sh shell <node>     # start it + drop into bash
 #   scripts/dsv4-legacy.sh stop             # stop after maintenance (keeps it parked)
 #   scripts/dsv4-legacy.sh rm               # unpark everywhere (image stays)
+#   scripts/dsv4-legacy.sh save             # durable tarball -> sparkmain:~/images/
+#   scripts/dsv4-legacy.sh load             # restore image from that tarball
 set -euo pipefail
 
 NODES=(sparkmain spark1 spark-sep)
 IMAGE=dsv4-3spark:0.1.1
 NAME=dsv4-legacy
+TARBALL='$HOME/images/dsv4-3spark-0.1.1.tar'
 
 create_cmd="docker inspect $NAME >/dev/null 2>&1 && echo 'already parked' || \
 docker create --name $NAME \
+  --label keep=parked-legacy \
+  --label info='parked legacy runtime, deliberately stopped -- do not reap; see 3spark-dsv4/scripts/dsv4-legacy.sh' \
   --gpus all --network host --ipc host --shm-size 64gb \
   -v \$HOME/.cache/huggingface:/cache/huggingface \
   -v \$HOME/models/dsv4-flash-dspark-abliterated:/models/dsv4-abliterated:ro \
@@ -38,5 +50,12 @@ case "${1:-status}" in
     node=${2:?usage: dsv4-legacy.sh shell <node>}
     ssh -t "$node" "docker start $NAME >/dev/null && docker exec -it $NAME bash"
     ;;
-  *) echo "usage: $0 {create|status|shell <node>|stop|rm}" >&2; exit 2 ;;
+  save)
+    ssh sparkmain "mkdir -p ~/images && ls -la $TARBALL 2>/dev/null && echo 'tarball already exists' || \
+      { nohup docker save -o $TARBALL $IMAGE >/dev/null 2>&1 && ls -la $TARBALL; }"
+    ;;
+  load)
+    ssh sparkmain "docker load -i $TARBALL"
+    ;;
+  *) echo "usage: $0 {create|status|shell <node>|stop|rm|save|load}" >&2; exit 2 ;;
 esac
