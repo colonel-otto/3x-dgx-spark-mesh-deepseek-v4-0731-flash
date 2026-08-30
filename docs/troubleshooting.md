@@ -175,3 +175,39 @@ survived on any node.
 
 If you are on a build without these lines, tear down with
 `~/bin/dsv4-service-stop` directly — `systemctl stop` alone is not sufficient.
+
+
+## NVIDIA Sync kills a live cluster: netplan apply → GID change → EngineDead
+
+**Root-caused 2026-08-30.** Opening the NVIDIA Sync desktop app while the
+cluster is serving can kill the engine ~5 minutes later with no depth/load
+correlation. Full proven chain, from journals on all three nodes:
+
+1. The Sync app (running on another LAN machine; its mDNS lookup of a
+   node's `.local` name may visibly fail there first) SSHes into each node and runs
+   `sudo python3 ~/.config/NVIDIA/Sync/cache/cluster_node_probe.py
+   --apply-netplan /tmp/netplan-<id>.yaml` — cluster-wide, same second.
+2. netplan apply → NetworkManager device reconfigure ("user-requested" in the
+   NM audit log) → avahi withdraws/re-adds addresses → **RoCE GID tables change
+   on both fabric ports of every node**: `NCCL WARN NET/IB ... GID table changed`
+   (the only warning NCCL gives).
+3. In-flight collectives never complete. All GPUs show the spin signature:
+   **~96 % util at ~20 W**. An in-flight request may return
+   "stream completed without content".
+4. Exactly one RPC timeout later (~5 min): `TimeoutError: RPC call to
+   sample_tokens timed out` → `EngineDeadError`. The API then 500s and finally
+   refuses connections — while `docker ps` shows the container Up and the
+   oneshot unit shows `active (exited), Result=success`. Neither is health.
+
+**Rules:**
+- Never open/refresh NVIDIA Sync while the cluster serves or benchmarks.
+- `GID table changed` in any worker log during a run **voids the run** —
+  benchmark results after that line measure a broken fabric, not the engine.
+- Recovery: full `systemctl stop dsv4` (teardown now reliable via ExecStopPost)
+  then `start`. A plain `start` on the active-but-dead unit is a NO-OP.
+
+**Same-day context (timeline 2026-08-30):** 11:09 and 11:19 engine start
+failures were the separate `GPU_MEMORY_UTILIZATION=0.835` init memory check
+(see above); 11:37 clean 6-min start; 12:55:13 the netplan event; 13:00:12
+EngineDead. Three engine deaths in one day, three distinct causes — check the
+docker log, not the unit state, before attributing.

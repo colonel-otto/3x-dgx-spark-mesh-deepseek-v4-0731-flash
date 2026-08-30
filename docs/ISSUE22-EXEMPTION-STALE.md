@@ -56,8 +56,8 @@ are comparable, but this bundle answers the COLLAPSE question, not tok/s parity.
 | Depth | Status | Decode tok/s (n=7) | TTFT cold | Verdict |
 |---:|---|---|---|---|
 | 262,144 | **DONE** | median ~45.3 (35.7–49.2), all `ptok=257995`, `cached=0` | 182–221 s | **CLEAN** — matches published 45.0 baseline |
-| 409,600 | running | warmup1 45.1 | — | pending (old exemption edge; expects flat) |
-| 524,288 | queued | — | — | **first NEW cell** (danger zone starts here) |
+| 409,600 | **PARTIAL n=4** | median 43.0 (41.6–46.6) | 329–340 s | CLEAN through rep 4; reps 5–7 VOID — fabric killed mid-cell |
+| 524,288 | **VOID — engine dead** | — | — | first NEW cell; re-runs tonight |
 | 716,800 | queued | — | — | pending resume |
 | 870,400 | queued | — | — | pending resume |
 | 1,046,528 | queued | — | — | pending resume |
@@ -68,6 +68,14 @@ the old exemption; 524K is the first data point past it; the 700K–1M cells cos
 ~4–5 h of prefill wall-clock. **A clean 524K does NOT renew the exemption at 1M**
 — MiaAI's collapse signature onset is 600K+, above the stop point. Until the deep
 cells run, the honest claim is "measured clean through 524K; 600K–1M unmeasured."
+
+**RUN KILLED 13:00 EDT by an external network event, NOT by issue #22:** an
+NVIDIA Sync netplan apply at 12:55:13 changed the RoCE GID tables on all three
+nodes under live NCCL (see troubleshooting.md, "NVIDIA Sync kills a live
+cluster"). 262K stands (n=7); 410K is n=4 partial-clean; nothing at or beyond
+524K was measured. The nightly timers below re-run 524K–.. wait — they run the
+three deep cells; 524K must be re-added: the 02:00 job now covers
+`DEPTHS="524288 716800 870400 1046528"`.
 
 **SCHEDULED: the deep cells run automatically at 02:00 EDT 2026-08-31** via a
 one-shot systemd timer on sparkmain (`issue22-deep-cells.timer`, runs as user
