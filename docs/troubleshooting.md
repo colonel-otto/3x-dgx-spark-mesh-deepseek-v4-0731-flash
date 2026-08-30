@@ -1,5 +1,39 @@
 # Troubleshooting
 
+## eugr launcher bring-up (engine A/B, 2026-08-30)
+
+Four issues hit in sequence bringing up `eugr/spark-vllm-b12x` at 3-node TP=3
+via `run-recipe.py` (each fix verified by the next failure moving further):
+
+1. **`Local IP (…) is not in the list of nodes`** — the hosts.json addresses
+   for the Sparks are their **wifi** (`wlP9s9`) IPs. The launcher coordinates
+   over the wired 10G management interface (`enP7s7`); pass THOSE addresses in
+   `-n`, head first. Also map each worker's bare IP to its per-node username in
+   the head's `~/.ssh/config` — the launcher SSHes workers by IP.
+2. **`error while creating mount source path '/tmp/dsv4': mkdir … file exists`**
+   — Docker refuses a symlink as a bind-mount source. Use a hardlink farm
+   instead: `mkdir /tmp/dsv4 && cp -al $HOME/dsv4/hf-… /tmp/dsv4/` (instant,
+   zero space, same filesystem). /tmp is volatile — recreate after reboots.
+3. **`mkdir: cannot create directory '/home/sparkmain': Permission denied` on
+   workers** — the launcher expands the head's `$HOME` cache paths literally in
+   the worker docker args. `--no-cache-dirs` skips them (cost: AOT/FlashInfer
+   caches not persisted between boots), and set `HF_HOME=/tmp/hfcache` so the
+   HF cache mount is a uniform path too.
+4. **`ibv_modify_qp failed with 110 … local GID ::ffff:10.100.164.2, remote GID
+   ::ffff:10.100.162.1` → `NCCL error: unhandled system error`** — NCCL tried
+   to reach a peer through the wrong point-to-point fabric link (each /24 in
+   the triangle reaches exactly one peer). The launcher's mesh detection prints
+   the right plan but its NCCL env did not reach the container. Fix: pass the
+   proven values from `config/tp3.env` explicitly via `-e`:
+   `NCCL_IB_HCA==rocep1s0f0,roceP2p1s0f0,rocep1s0f1,roceP2p1s0f1` (leading `=`
+   = exact match), `NCCL_IB_SUBNET_AWARE_ROUTING=1`, `NCCL_NET_PLUGIN=none`,
+   `NCCL_IB_MERGE_NICS=0`. Verified: the QP error disappeared on the next
+   attempt and startup progressed to the memory check.
+
+Then the known `Free memory … less than desired GPU memory utilization` check
+fired at the recipe's 0.85 (see the dedicated section below) — the standing
+0.82 applies to this engine too: `--gpu-memory-utilization 0.82`.
+
 ## NCCL reports `NET/Socket`
 
 The run is using TCP, even if RDMA link state and ping are healthy.
