@@ -1,5 +1,10 @@
 # eugr engine — K sweep + persistent kernel caches (2026-08-30)
 
+**Status: CURRENT** — healthy fabric (gate 30/30 including NCCL bandwidth) and
+sound methodology (correctness 7/7, warm caches, JIT miss counter frozen before
+recording). This bundle supersedes the throughput conclusions of
+`20260830T194550Z-engine-ab-eugr`.
+
 Engine `eugr-spark-vllm-b12x`, image digest
 `sha256:7dc02f162929943ba2e14514066ed2a04bb7e9ed3592d4eb460ebcbb1f8376bd`,
 3 nodes TP=3, 1M context, kv fp8, `max_num_seqs 16`, `gpu_memory_utilization 0.82`.

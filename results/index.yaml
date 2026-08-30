@@ -72,7 +72,7 @@ meta:
     PRESENT-FAIL: 0
     ABSENT: 21
     PRE-DATES-GATE: 5
-    total: 44
+    total: 45
   fabric_gate_tally_detail:
     PRESENT-PASS:
       - 20260825-deep-concurrency        # fabric-gate-full.json 13/13, nccl=full
@@ -2567,6 +2567,71 @@ directories:
     superseded_by: null
     note: >
       First new-engine arm. Protocol and next steps in docs/ENGINE-AB-3NODE.md.
+  - dir: 20260830T2245Z-eugr-ksweep
+    date: 2026-08-30
+    description: >
+      DSPARK DEPTH SWEEP + persistent kernel caches on the eugr engine (digest
+      7dc02f16), 3 nodes TP=3, same official 0731 checkpoint and the same
+      bench-miaai harness as arm 1. Three engine boots, one variable each:
+      nst=5/mnbt=8192, nst=7/mnbt=8192, nst=5/mnbt=16384. THREE FINDINGS.
+      (1) The sweep space is {5,7}, NOT {2,3,5,7}: num_speculative_tokens below
+      5 is REJECTED at config validation because the CHECKPOINT sets
+      dspark_block_size 5 ("Smaller values produce incorrect output"). DSpark is
+      a semi-autoregressive block drafter; below the block size the Markov-head
+      machinery gets an unsupported layout. So K=2 parity with the anemll MTP
+      arm is IMPOSSIBLE on this engine - the cross-engine A/B carries a
+      permanent speculator delta. nst=5 won EVERY cell (c=1 84.3 vs 79.5 decode;
+      c=4 152.8 vs 151.2; c=8 252.9 vs 208.8; c=16 198.8 vs 197.2 aggregate), so
+      the anemll-derived expectation "high K wins single-stream" does not
+      transfer. (2) Arm 1's c=16 "scheduling cliff" is RETRACTED as mostly JIT
+      contamination: at identical nst=5 the ONLY change (persistent
+      /opt/eugrcache-* mounts replacing --no-cache-dirs) moved c=8 agg
+      171.7->252.9 (+47%) and c=16 agg 133.9->198.8 (+48%) with TTFT
+      7000ms->1755ms. Every arm-1 throughput row is therefore a LOWER BOUND.
+      (3) max_num_batched_tokens 16384 is the anemll KV trap again, now
+      confirmed on fp8 KV: +8% on c=4/c=16, -4% on c=8, for -52% KV cache
+      (2,415,674 -> 1,165,679 tokens; max concurrency at 1M ctx 2.30x -> 1.11x).
+      It does silence the engine's own startup warning recommending it.
+      Winner nst=5/mnbt=8192 is pinned in eugr.service.
+    has_readme: true
+    nodes: 3
+    nodes_evidence: >
+      Each sweep point's engine-config.txt captures the live engine init line
+      (tensor_parallel_size=3) and the virtual-TP plan warning; the fabric gate
+      artifact enumerates all three nodes.
+    tp_size: 3
+    kv_pool_tokens: 2415674
+    kv_pool_source: "nst5-mnbt8192/engine-config.txt (GPU KV cache size line); the mnbt=16384 arm records 1,165,679 in its own engine-config.txt"
+    harness: bench-miaai (vendored this run at scripts/eugr-ab/bench-miaai.py), byte-identical to arm 1
+    harness_committed: true
+    output_tokens_requested: 128
+    output_tokens_actual: {128: all bench-miaai cells}
+    output_tokens_field: "n=[...] per trial line in bench-*.log"
+    output_tokens_note: >
+      bench-miaai forces min_tokens=max_tokens=128 with ignore_eos; every trial
+      line records n=[128,...].
+    reps: 5 trials per cell per sweep point; the nst=5 c=1 cell re-measured with 7 trials after the JIT counter froze
+    reps_verified: true
+    statistic: median-of-trials per bench-miaai
+    fabric_gate: PRESENT-PASS
+    fabric_gate_artifact: nst5-mnbt8192/fabric-gate-preboot.json
+    fabric_gate_evidence: >
+      Full gate run with the engine DOWN (the only window in which the NCCL
+      collective bandwidth check can run): 30 passed, 0 failed, all three pairs
+      9.08-9.27 GB/s @64MiB with correct NIC merging.
+    fabric_gate_note: >
+      The gate initially reported 8 failures against a healthy fabric because
+      configs/3spark-live.env still held pre-NVIDIA-Sync addresses. Fixed, and
+      scripts/discover_fabric_addrs.sh now derives addressing live.
+    fabric_gated: true
+    fabric_state: healthy
+    raw_data_committed: true
+    raw_files: [nst5-mnbt8192/rows.tsv, nst5-mnbt8192/bench-c1.log, nst5-mnbt8192/bench-c4.log, nst5-mnbt8192/bench-c8.log, nst5-mnbt8192/bench-c16.log, nst5-mnbt8192/jit-miss-counter.txt, nst5-mnbt8192/engine-config.txt, nst5-mnbt8192/fabric-gate-preboot.json, nst7-mnbt8192/rows.tsv, nst5-mnbt16384/rows.tsv]
+    status: CURRENT
+    note: >
+      Correctness gate 7/7 at nst=5 on :8100 with the virtual-TP plan confirmed
+      active (heads 64->72, groups 8->9); our TP=3 padding patch stays OFF.
+
   - dir: 20260830-llama-benchy-ABORTED
     date: 2026-08-30
     description: >

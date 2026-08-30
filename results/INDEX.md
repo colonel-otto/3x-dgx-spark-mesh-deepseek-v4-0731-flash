@@ -11,11 +11,11 @@ and diagnostic baseline values.
 
 | Item | Count |
 |---|---:|
-| Result bundles | 44 |
-| `CURRENT` | 28 |
+| Result bundles | 45 |
+| `CURRENT` | 29 |
 | `VOID` | 11 |
 | `SUPERSEDED` | 5 |
-| Own passing fabric gate | 15 |
+| Own passing fabric gate | 16 |
 | Gate absent | 23 |
 | Predates the gate | 5 |
 
@@ -55,6 +55,7 @@ quality evidence or a methodology-only control.
 | [20260829-issue38-kernel-profiling](20260829-issue38-kernel-profiling/) | 2026-08-29 | 3 / 3 | `ABSENT` | Issue #38 First comprehensive kernel profiling trace (CUDA kernels, NCCL AllReduce, MoE GEMM, FlashInfer MLA Attention) on 3-Node DGX Spark TP=3 cluster. Captures 8K decode (16 tokens) and 131K deep prefill forward passes. Identifies decode communication bound (87.5% NCCL AllReduce time over 100 Gbps RoCE) and prefill compute balance (39.2% MoE GEMM, 34.1% NCCL, 16.2% FlashInfer MLA). |
 | [20260830T130300Z-rerun-inconclusive](20260830T130300Z-rerun-inconclusive/) | 2026-08-30 | [2, 3] / [2, 3] | `PRESENT-PASS` | Re-measurement at n=30 of the TWO cells that did not resolve in 20260830T101053Z-llama-benchy-2v3 (8K decode, cc=1 decode). BOTH RESOLVED, three nodes faster: 8K decode +12.7% (Welch t=3.76, 95% CI +6.1% to +19.3%) and cc=1 decode +14.8% (t=4.24, CI +8.0% to +21.7%). This takes the parent run to 16 of 16 cells resolved, all favouring three nodes. |
 | [20260830T194550Z-engine-ab-eugr](20260830T194550Z-engine-ab-eugr/) | 2026-08-30 | 3 / 3 | `ABSENT` | ENGINE A/B arm 1: eugr/spark-vllm-b12x (vLLM main dev g b5f995e73, digest 7dc02f16) on 3 nodes TP=3 with the SAME official 0731 checkpoint as every anemll row. Correctness gate PASSED on the byte-identical 2-node-repo suite: quick gate 7/7, tool battery 6/7 (forced_choice emitted valid JSON; API semantics), deep-context 8/8, garble ALL CLEAN, RULER-lite 16/16 incl. 262K. Proves the image's native virtual-TP (heads 64->72, groups 8->9) is correct at TP=3; our padding patch is NOT applied. Throughput (bench-miaai, synthetic-numbered-words, 256 tok) vs anemll tp3-seqs16: c=1 82.1 vs 80.4 (parity); c=4 agg 162.7 vs 115.2 (+41%); c=8 171.7 vs 143.6 (+20%); c=16 133.9 vs 161.0 (-17%) - a scheduling cliff (TTFT 7.0s vs 1.9s at c=8) that the engine attributes to nst=5 draft slots. Config deltas: dspark nst=5 (not MTP K=2), kv fp8 (not nvfp4_ds_mla), V2 model runner, --no-cache-dirs (20 post-start b12x JIT compiles contaminated cold runs; warm reruns reported). NOT a same-day matched A/B - the anemll engine was down; comparison values are the 2026-08-21 rows. |
+| [20260830T2245Z-eugr-ksweep](20260830T2245Z-eugr-ksweep/) | 2026-08-30 | 3 / 3 | `PRESENT-PASS` | DSPARK DEPTH SWEEP + persistent kernel caches on the eugr engine (digest 7dc02f16), 3 nodes TP=3, same official 0731 checkpoint and the same bench-miaai harness as arm 1. Three engine boots, one variable each: nst=5/mnbt=8192, nst=7/mnbt=8192, nst=5/mnbt=16384. THREE FINDINGS. (1) The sweep space is {5,7}, NOT {2,3,5,7}: num_speculative_tokens below 5 is REJECTED at config validation because the CHECKPOINT sets dspark_block_size 5 ("Smaller values produce incorrect output"). DSpark is a semi-autoregressive block drafter; below the block size the Markov-head machinery gets an unsupported layout. So K=2 parity with the anemll MTP arm is IMPOSSIBLE on this engine - the cross-engine A/B carries a permanent speculator delta. nst=5 won EVERY cell (c=1 84.3 vs 79.5 decode; c=4 152.8 vs 151.2; c=8 252.9 vs 208.8; c=16 198.8 vs 197.2 aggregate), so the anemll-derived expectation "high K wins single-stream" does not transfer. (2) Arm 1's c=16 "scheduling cliff" is RETRACTED as mostly JIT contamination: at identical nst=5 the ONLY change (persistent /opt/eugrcache-* mounts replacing --no-cache-dirs) moved c=8 agg 171.7->252.9 (+47%) and c=16 agg 133.9->198.8 (+48%) with TTFT 7000ms->1755ms. Every arm-1 throughput row is therefore a LOWER BOUND. (3) max_num_batched_tokens 16384 is the anemll KV trap again, now confirmed on fp8 KV: +8% on c=4/c=16, -4% on c=8, for -52% KV cache (2,415,674 -> 1,165,679 tokens; max concurrency at 1M ctx 2.30x -> 1.11x). It does silence the engine's own startup warning recommending it. Winner nst=5/mnbt=8192 is pinned in eugr.service. |
 
 ## Superseded evidence
 
