@@ -1,6 +1,39 @@
 # Engine A/B — 3-node TP=3, anemll-v0.25.1 vs eugr-spark-vllm-b12x
 
-**Status: COMPLETE (2026-08-31) — every cell in the table below is measured on the eugr serving config (`eugr-tp3-seqs16-dspark5-cached`: nst=5, mnbt=8192, persistent caches, port 8100).** Correctness gate passed 2026-08-30; K sweep settled nst=5 (`results/20260830T2245Z-eugr-ksweep/`); remaining cells in `results/20260831T0000Z-eugr-remaining-cells/`. Arm-1 rows (`eugr-tp3-seqs16-dspark5`, `--no-cache-dirs`) are lower bounds, retained.
+**Status: SETTLED (2026-08-31) — the matched same-day A/B is DONE. eugr is the stronger serving engine: +31 % to +61 % aggregate throughput at every concurrency, +38 % single-stream decode.** Both engines were measured back-to-back on 2026-08-31, same harness, same prompt, same window, median-of-5, `max_num_seqs=16` on both arms — one variable. Bundle: `results/20260831T1000Z-matched-engine-ab/`; rows `config_id=tp3-seqs16-matched` (anemll) and `eugr-tp3-seqs16-dspark5-cached` at `2026-08-31T10:00:00Z`.
+
+> **The earlier unmatched table understated eugr.** Before 2026-08-31 this page
+> compared 2026-08-30 eugr rows against **2026-08-21** anemll rows — a 10-day-old
+> boot. Its single-stream deltas (+5 %, +8 %, +11 %) were also all *inside* the
+> repo's 12 % parity tolerance and the 27 % spread of its own noise study, so they
+> were never resolved by the data. Matched measurement moved single-stream decode
+> from "+5 %, unresolved" to **+38 %, decisive**. Keep the matched rows; treat any
+> cross-engine number carrying a 2026-08-21 anemll reference as superseded.
+
+## Verdict (matched, 2026-08-31)
+
+| c | metric | anemll-v0.25.1 | eugr-spark-vllm-b12x | delta |
+|---:|---|---:|---:|---:|
+| 1 | decode | 61.5 | **84.7** | +37.7 % |
+| 4 | decode | 33.0 | **54.4** | +64.8 % |
+| 8 | decode | 29.0 | **44.9** | +54.8 % |
+| 16 | decode | **18.2** | 15.0 | −17.6 % |
+| 1 | aggregate | 53.8 | **70.7** | +31.4 % |
+| 4 | aggregate | 108.0 | **164.5** | +52.3 % |
+| 8 | aggregate | 154.8 | **249.9** | +61.4 % |
+| 16 | aggregate | 141.3 | **187.4** | +32.6 % |
+| — | KV cache tokens | **4,391,722** | 2,357,009 | −46 % |
+
+**What anemll still wins:** KV capacity (1.86× more, because `nvfp4_ds_mla` is
+rejected on MLA in the eugr build — permanent), and per-stream decode at the
+c=16 cap. eugr trades per-stream latency for aggregate there and still moves
++33 % more total tokens in the same cell. anemll was also markedly less stable
+under load: 84 % trial spread at c=16 and TTFT swinging 1.2 s → 8.1 s at c=8,
+against eugr's 14.7 %.
+
+**Permanent confound:** anemll runs MTP K=2, eugr runs DSpark nst=5 and the
+checkpoint *refuses* nst<5. Every cell measures engine+speculator; a pure engine
+A/B is not constructible on this checkpoint.
 Image pulled to all three nodes 2026-08-30 at digest
 `sha256:7dc02f162929943ba2e14514066ed2a04bb7e9ed3592d4eb460ebcbb1f8376bd`
 (24.9GB; vLLM `0.1.dev20133+gb5f995e73.d20260823` — a main-branch build —
@@ -143,26 +176,84 @@ the comparison table then falls out of the data instead of being hand-kept.
 | single-stream decode (256-tok prompt) | bench-miaai | synthetic-numbered-words | 1 | 80.4 (tp3-seqs16) | **84.3** (+5%) |
 | aggregate c=4 | bench-miaai | synthetic-numbered-words | 4 | 115.2 | **152.8** (+33%) |
 | aggregate c=8 | bench-miaai | synthetic-numbered-words | 8 | 143.6 | **252.9** (+76%) |
-| peak useful aggregate (seqs cap) | bench-miaai | synthetic-numbered-words | 16 | 161.0 | **198.8** (+23%) |
-| decode at 131,072-token context | bench-miaai | synthetic-numbered-words | 1 | 83.5 (TTFT 138.1 s) | **90.5** (+8%; TTFT **53.7 s**, 2.6× faster prefill) |
-| prompt-effect: code-brief | ours-bench.py conditions via eugr-remaining-cells.py | code-brief | 1 | 81.8 | **91.0** (+11%) |
-| prompt-effect: dense-prose | ours-bench.py conditions via eugr-remaining-cells.py | dense-prose | 1 | 49.4 | 49.2 (parity; ratio 1.85× vs 1.65×) |
-| deep concurrency 4×~200K (usability) | deepconc.py / eugr-remaining-cells.py | synthetic-numbered-words | 4 | 0.9 (unusable; ~870 s to first token) | 1.26 (still unusable; **TTFT 224 s**, 3.9× faster) |
+| peak useful aggregate (seqs cap) | bench-miaai | synthetic-numbered-words | 16 | 161.0 | **198.8** (+24%) |
+| decode at 131,072-token context | bench-miaai | synthetic-numbered-words | 1 | 83.5 (TTFT 138.1 s) | **90.5** (+8%; TTFT **53.7 s**, 2.6× faster prefill) — matched harness; the earlier 42.3 measured the driver's own filler prompt, see the correction below |
+| prompt-effect: code-brief | ours-bench.py conditions via eugr-remaining-cells-v2 | code-brief | 1 | 81.8 | **89.4** (+9%) |
+| prompt-effect: dense-prose | ours-bench.py conditions via eugr-remaining-cells-v2 | dense-prose | 1 | 49.4 | **49.2** (parity; exact original prompt; ratio 1.85× vs 1.65×) |
+| deep concurrency 4×~200K (usability) | deepconc.py / eugr-remaining-cells — **different harnesses, a second confound** | synthetic-numbered-words | 4 | 0.9 (unusable) | 1.4 (still unusable, TTFT 227s) — **UNMATCHED, [#49](../../issues/49)**: eugr row 08-31, anemll rows 08-25. Both complete with 0 errors; eugr is ~40% faster and both are unusable. Workload-shape limit (~800K prefill), not an engine defect |
 | KV cache tokens (capacity, prompt-independent) | n/a | n/a | n/a | 3,588,422 | 2,357,009 (kv fp8 vs nvfp4_ds_mla delta) |
 
-Arm-1 (`eugr-tp3-seqs16-dspark5`, `--no-cache-dirs`) rows are retained in
-measurements.csv as **lower bounds** — 20 runtime B12X JIT compiles contaminated
-them; the "c=16 scheduling cliff" read from them is retracted (persistent caches
-alone took c=16 from 133.9 to 198.8). The speculator delta is PERMANENT: the
-checkpoint's `dspark_block_size: 5` makes nst<5 illegal on this engine, so no
-K=2 parity arm with anemll's MTP can exist. Every eugr row states nst=5.
-Bundles: `results/20260830T2245Z-eugr-ksweep/` (c=1/4/8/16, K sweep, fabric gate
-30/30) and `results/20260831T0000Z-eugr-remaining-cells/` (131K, prompt pair, deep).
+**The four concurrency cells were REBASELINED on 2026-08-31** from the K-sweep
+bundle `results/20260830T2245Z-eugr-ksweep/` (config
+`eugr-tp3-seqs16-dspark5-mnbt8192`, the tuning `eugr.service` actually serves).
+They previously carried arm-1 values measured under `--no-cache-dirs`, where
+b12x kernels JIT-compiled *during* measurement — lower bounds, not engine
+capability. What changed:
+
+| c | was (arm 1, cold) | now (warm caches) | anemll |
+|---|---:|---:|---:|
+| 1 | 82.1 (+2%) | **84.3 (+5%)** | 80.4 |
+| 4 | 162.7 (+41%) | **152.8 (+33%)** | 115.2 |
+| 8 | 171.7 (+20%) | **252.9 (+76%)** | 143.6 |
+| 16 | 133.9 (**−17%**) | **198.8 (+24%)** | 161.0 |
+
+The c=16 cell is the consequential one: it flipped from an apparent 17%
+*regression* — reported as a "scheduling cliff" — to a 24% win. That cliff is
+**retracted**; it was JIT contamination. On warm caches the new engine wins
+every concurrency cell. The arm-1 rows remain in `measurements.csv` under
+`eugr-tp3-seqs16-dspark5`, marked superseded, because reverted and superseded
+evidence is preserved here rather than deleted.
+
+**A permanent caveat applies to every row above**: the speculator differs and
+CANNOT be matched. anemll runs MTP K=2; eugr runs DSpark nst=5, and nst<5 is
+rejected by the checkpoint (`dspark_block_size: 5`). This is an engine-vs-engine
+comparison at each engine's own working depth, not a controlled single-variable
+A/B. See `docs/troubleshooting.md`.
+
+**All cells are now filled (2026-08-31, bundle
+`results/20260831T0030Z-eugr-remaining-cells/`). Two carry caveats that must
+travel with the numbers:**
+
+- **dense-prose is NOT a matched comparison.** `ours-bench.py` was never
+  committed and no doc records its prompt text, so the prompt used was
+  reconstructed to the recorded ~51-token shape. Quote the *within-engine*
+  ratio (**1.95x** code-brief vs dense-prose, both measured here minutes apart
+  and both recorded in the bundle) — never the cross-engine dense-prose value.
+- **131K is NOT a matched config.** The anemll row ran `max_model_len 460800`;
+  this engine serves `1048576`. And prefill got **2.6x faster** (TTFT 53,721ms
+  vs 138,076ms), so the engine is slower at *decode after* a long prefill, not
+  at long context generally. A first attempt was discarded when TTFT fell
+  58,742ms -> 1,262ms between reps, revealing the prefix cache was serving them;
+  the harness now uses a unique 131K prompt per rep.
 
 Decode rates depend on the speculative path (the prompt-effect pair exists
-because MTP acceptance moves decode 1.65x). If the eugr arm runs a different
+because MTP acceptance moves decode 1.65x on anemll, and **1.85x here** on the exact prompts). If the eugr arm runs a different
 speculative config than MTP K=2, the decode cells measure *engine+speculator*,
 not engine — still useful, but say so in the row notes.
+
+### Correction (2026-08-31, `results/20260831T0525Z-eugr-remaining-cells-matched/`)
+
+Two cells above were first filled from `20260831T0030Z-eugr-remaining-cells` and are
+superseded there, not deleted:
+
+- **131K decode 42.3 → 90.5.** The 42.3 came from the driver's own 131K filler
+  (`"benchmark context datum "` repeated ~44,000 times), not from `bench-miaai`'s
+  numbered-words prompt that produced the anemll 83.5. DSpark acceptance is
+  prompt-dependent (that is the whole prompt-effect finding), so a different filler
+  is a different measurement — the "−49 %" was never a comparison. Re-measured with
+  `bench-miaai --prompt 131072`, byte-identical to the anemll harness: **90.5** median
+  (85.9 / 90.5 / 94.4), TTFT 53.7 s vs 138.1 s. The one remaining delta is
+  `max_model_len` (1,048,576 here vs 460,800 on the 2026-08-21 anemll row).
+- **dense-prose 45.9 → 49.2.** The original prompt was not lost: `git log -S` finds it
+  in commit `b078eb4` (*"Write a detailed technical explanation of how pipeline
+  parallelism differs from tensor parallelism in large language model inference."*).
+  Re-measured on the exact text at `ours-bench.py` conditions (temperature 0,
+  max_tokens 256, streamed): **49.2** vs 49.4, parity; the within-engine ratio is
+  **1.85×** (anemll 1.65×). The 1.95× figure was the reconstruction's ratio.
+
+Lesson recorded in troubleshooting.md: a cell is only matched when the *harness and
+prompt* match the reference row — same engine, same hour, same context length is not
+enough — and search git history before declaring any prompt unrecoverable.
 
 ## Where results go
 

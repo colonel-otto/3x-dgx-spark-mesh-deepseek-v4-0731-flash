@@ -58,12 +58,20 @@ VALID_HARNESS = {"bench-miaai", "benchmark_tp3", "ours-bench.py", "deepconc.py",
                  # probe_proposer_long_gen.py: the issue-36 long-horizon DSpark
                  # proposer probe (results/20260829-issue36-dspark-proposer-*).
                  "probe_proposer_long_gen.py",
-                 # eugr-remaining-cells.py: the engine-A/B remaining cells driver
-                 # (results/20260831T0000Z-eugr-remaining-cells). Its prompt-effect
-                 # cell replicates ours-bench.py conditions (temperature 0, 256 max
-                 # tokens, streamed, decode excludes TTFT) on the exact recovered
-                 # prompts; its deep cell replicates deepconc.py (unique 200K nonces).
-                 "eugr-remaining-cells.py"}
+                 # eugr-remaining-cells.py: closes the last three cross-engine
+                 # A/B cells on the eugr engine (131K decode, the code-brief /
+                 # dense-prose prompt-effect pair, deep concurrency 4x200K). It
+                 # is committed INSIDE its own bundle
+                 # (results/20260831T0030Z-eugr-remaining-cells/) with both
+                 # prompts inline -- deliberately, so the ours-bench.py
+                 # provenance gap it documents cannot recur. Sampling matches
+                 # bench-miaai, but TTFT and the cache-defeat strategy differ,
+                 # so it is a SEPARATE harness, not a re-label.
+                 "eugr-remaining-cells.py",
+                 # eugr-remaining-cells-v2.py: same driver with the EXACT dense-prose
+                 # prompt (git commit b078eb4) and ours-bench.py sampling for the
+                 # prompt-effect cell (results/20260831T0525Z-eugr-remaining-cells-matched).
+                 "eugr-remaining-cells-v2.py"}
 # random-token-ids: upstream's prefill harness feeds pseudo-random token IDs
 # (seeded per size/trial so no two requests share a prefix). Not natural text at
 # all, which is the point -- it defeats the prefix cache and makes prefill cost
@@ -92,6 +100,26 @@ def check(cond, msg):
 def read(name):
     with io.open(os.path.join(BENCH, name), encoding="utf-8") as fh:
         return list(csv.DictReader(fh))
+
+
+def test_field_counts():
+    """Every line must have exactly as many fields as the header.
+
+    csv.DictReader silently absorbs surplus fields under the key None, so a
+    single unquoted comma in `notes` splits that note across two columns and
+    every schema check above still passes. That happened for real: two 2026-08-21
+    deep-concurrency rows carried an unquoted comma from the commit that
+    introduced them, truncating both notes mid-sentence and going unnoticed
+    through every later audit. DictReader cannot see this -- read the raw rows.
+    """
+    for name in ("measurements.csv", "historical-summary.csv"):
+        with io.open(os.path.join(BENCH, name), encoding="utf-8") as fh:
+            raw = list(csv.reader(fh))
+        width = len(raw[0])
+        for i, r in enumerate(raw[1:], start=2):
+            check(len(r) == width,
+                  "%s line %d: %d fields, header has %d -- almost certainly an "
+                  "unquoted comma in the last column" % (name, i, len(r), width))
 
 
 def test_measurements():
@@ -198,6 +226,7 @@ def test_summary_matches_sources():
 
 
 def main():
+    test_field_counts()
     test_measurements()
     test_historical()
     test_summary_is_generated()

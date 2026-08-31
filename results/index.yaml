@@ -68,11 +68,11 @@ meta:
     - ABSENT
     - PRE-DATES-GATE
   fabric_gate_tally:
-    PRESENT-PASS: 16
-    PRESENT-FAIL: 0
-    ABSENT: 21
+    PRESENT-PASS: 19
+    PRESENT-FAIL: 1
+    ABSENT: 24
     PRE-DATES-GATE: 5
-    total: 47
+    total: 49
   fabric_gate_tally_detail:
     PRESENT-PASS:
       - 20260831T0601Z-staggered-spec-acceptance # inherited sweep pre-boot gate 30/30
@@ -108,6 +108,7 @@ meta:
       - 20260828-issue32-mtp-concurrency-sweep
       - 20260828-issue33-deep-prefill-bt-sweep
       - 20260828-issue35-guidellm-concurrency
+      - 20260831T1000Z-matched-engine-ab # engine-swap A/B; no gate run, see note
     PRE-DATES-GATE:
       - 20260821T001024Z-2spark-baseline
       - 20260821T031300Z-3spark-ep3
@@ -2590,8 +2591,8 @@ directories:
       171.7->252.9 (+47%) and c=16 agg 133.9->198.8 (+48%) with TTFT
       7000ms->1755ms. Every arm-1 throughput row is therefore a LOWER BOUND.
       (3) max_num_batched_tokens 16384 is the anemll KV trap again, now
-      confirmed on fp8 KV: +8% on c=4/c=16, -4% on c=8, for -52% KV cache
-      (2,415,674 -> 1,165,679 tokens; max concurrency at 1M ctx 2.30x -> 1.11x).
+      confirmed on fp8 KV: +8% on c=4/c=16, -4% on c=8, for -50.5% KV cache
+      (2,357,009 -> 1,165,679 tokens; max concurrency at 1M ctx 2.25x -> 1.11x).
       It does silence the engine's own startup warning recommending it.
       Winner nst=5/mnbt=8192 is pinned in eugr.service.
     has_readme: true
@@ -2601,8 +2602,8 @@ directories:
       (tensor_parallel_size=3) and the virtual-TP plan warning; the fabric gate
       artifact enumerates all three nodes.
     tp_size: 3
-    kv_pool_tokens: 2415674
-    kv_pool_source: "nst5-mnbt8192/engine-config.txt (GPU KV cache size line); the mnbt=16384 arm records 1,165,679 in its own engine-config.txt"
+    kv_pool_tokens: 2357009
+    kv_pool_source: "nst5-mnbt8192/engine-config.txt (GPU KV cache size line: 2,357,009 tokens, 2.25x @1M); nst7 records 2,405,070 and the mnbt=16384 arm 1,165,679 in their own engine-config.txt"
     harness: bench-miaai (vendored this run at scripts/eugr-ab/bench-miaai.py), byte-identical to arm 1
     harness_committed: true
     output_tokens_requested: 128
@@ -2632,6 +2633,64 @@ directories:
     note: >
       Correctness gate 7/7 at nst=5 on :8100 with the virtual-TP plan confirmed
       active (heads 64->72, groups 8->9); our TP=3 padding patch stays OFF.
+
+  - dir: 20260831T0030Z-eugr-remaining-cells
+    date: 2026-08-31
+    description: >
+      The three A/B cells left open by the K sweep, on the eugr engine at the
+      sweep-winning nst=5/mnbt=8192. PROMPT EFFECT: code-brief 89.4 tok/s vs
+      dense-prose 45.9 = 1.95x on identical hardware minutes apart (anemll
+      recorded 1.65x) - the DSpark/MTP acceptance effect is LARGER on this
+      engine, so no decode number means anything without its prompt shape.
+      CAVEAT: ours-bench.py was never committed and no doc records the
+      dense-prose prompt text, so the prompt here is a RECONSTRUCTION to the
+      recorded ~51-token shape; the cross-engine dense-prose number is NOT
+      matched and only the within-engine ratio is sound. The code-brief prompt
+      IS exact (recovered verbatim from the committed bench_tp3.py default, 18
+      tokens, matching the anemll rows). 131K DECODE: 42.3 tok/s cold vs anemll
+      83.5, but NOT a matched config - anemll ran max_model_len 460800 and this
+      engine serves 1048576 - and prefill is 2.6x FASTER (TTFT 53,721ms vs
+      138,076ms), so it is slower at decode AFTER a long prefill, not at long
+      context generally. A first attempt reusing one 131K prompt was DISCARDED:
+      TTFT fell 58,742ms -> 1,262ms between reps, i.e. the prefix cache served
+      the later reps; the harness now builds a unique 131K prompt per rep and
+      every rep shows a cold 53-56s TTFT. DEEP CONCURRENCY 4x200K: 1.4 tok/s
+      aggregate, median TTFT 226.6s, 0 errors (anemll 0.9) - completes but
+      remains unusable; a workload-shape limit, not an engine defect.
+    has_readme: true
+    nodes: 3
+    nodes_evidence: >
+      Run against the eugr.service endpoint on :8100 while the unit was active
+      at nst=5/mnbt=8192; the fabric gate artifacts enumerate all three nodes.
+    tp_size: 3
+    kv_pool_tokens: 2364598
+    kv_pool_source: "eugr-service-nst5-mnbt8192.log (GPU KV cache size: 2,364,598 tokens, 2.26x @1M ctx)"
+    harness: eugr-remaining-cells.py (committed in this bundle; bench-miaai-compatible sampling)
+    harness_committed: true
+    output_tokens_requested: 256 for the prompt-effect pair, 128 for 131K and 4x200K
+    output_tokens_actual: {256: prompt-effect cells, 128: 131K and 4x200K cells}
+    output_tokens_field: "out= per rep line in the logs; output_tokens in the JSON"
+    output_tokens_note: >
+      min_tokens = max_tokens with ignore_eos, so every completion is exact.
+    reps: prompt-effect 5 per prompt; 131K 3 cold reps; 4x200K one 4-stream run
+    reps_verified: true
+    statistic: median-of-reps
+    fabric_gate: PRESENT-PASS
+    fabric_gate_artifact: fabric-gate.json
+    fabric_gate_evidence: >
+      24 passed / 0 failed BEFORE the run and again AFTER (fabric-gate-post.json),
+      so these numbers are not degradation artifacts. NCCL bandwidth skipped by
+      design because the engine was up; the full 30/30 bandwidth gate for this
+      engine config is in 20260830T2245Z-eugr-ksweep, taken with the engine down.
+    fabric_gated: true
+    fabric_state: healthy
+    raw_data_committed: true
+    raw_files: [prompt-effect.json, ctx131k.json, ctx131k.log, deep4x200k.json, deep4x200k.log, fabric-gate.json, fabric-gate-post.json, eugr-remaining-cells.py]
+    status: CURRENT
+    note: >
+      The dense-prose cross-engine comparison is explicitly NOT matched (prompt
+      reconstruction); the within-engine 1.95x ratio is the sound result. The
+      131K comparison is confounded by max_model_len 460800 vs 1048576.
 
   - dir: 20260830-llama-benchy-ABORTED
     date: 2026-08-30
@@ -2672,16 +2731,66 @@ directories:
     superseded_by: 20260830T101053Z-llama-benchy-2v3
     note: >
       Kept per BENCHMARK-POLICY.
-  - dir: 20260831T0000Z-eugr-remaining-cells
+  - dir: 20260831T1000Z-matched-engine-ab
     date: 2026-08-31
     description: >
-      The three remaining engine-A/B cells on the eugr serving config
-      (nst=5, mnbt=8192, persistent caches, port 8100): 131K-context decode
-      90.5 vs anemll 83.5 (+8%, TTFT 53.7s vs 138.1s); prompt-effect pair at
-      ours-bench.py conditions on the EXACT original prompts (dense-prose
-      recovered from git commit b078eb4) 91.0 / 49.2 vs 81.8 / 49.4, ratio
-      1.85x vs 1.65x; deep concurrency 4x200K TTFT 224s vs ~870s, 1.26 tok/s,
-      still unusable as a workload. Completes docs/ENGINE-AB-3NODE.md.
+      The first MATCHED cross-engine A/B. Both engines measured back-to-back on
+      the same day, same three nodes, same harness, same prompt, same 128-token
+      window, median-of-5, max_num_seqs=16 on BOTH arms -- one variable, the
+      engine. Supersedes the cross-engine table whose anemll column was quoted
+      from 2026-08-21 rows.
+    readme_h1: "Matched engine A/B - anemll-v0.25.1 vs eugr-spark-vllm-b12x (2026-08-31)"
+    has_readme: true
+    nodes: 3
+    nodes_evidence: both arms TP=3 on sparkmain+spark1+spark2; engine startup logs
+    tp_size: 3
+    kv_pool_tokens: 4391722        # anemll arm; eugr arm 2357009
+    kv_pool_source: engine startup log (kv_cache_utils GPU KV cache size), both arms
+    harness: scripts/eugr-ab/bench-miaai.py (vendored; shipped to the node for this run)
+    harness_committed: true
+    output_tokens_requested: 128
+    output_tokens_actual: {128: 200}  # 8 cells x 5 trials x c requests, all exact
+    output_tokens_field: completion_tokens (harness hard-fails on any short window)
+    output_tokens_note: >
+      The harness verifies completion_tokens against the requested window and
+      raises rather than reporting a rate over a collapsed window, so every
+      trial in this bundle decoded exactly 128 tokens.
+    reps: median-of-5 per cell, warm-up sweep discarded, 4 concurrencies x 2 engines
+    reps_verified: true            # per-trial lines in anemll-c*.log / eugr-c*.log
+    statistic: median
+    fabric_gate: ABSENT
+    fabric_gate_artifact: null
+    fabric_gate_evidence: >
+      No fabric gate was run for this bundle. Both arms served live from the
+      same three nodes with no fabric change between them, and the NCCL
+      bandwidth check needs the GPUs free, which an engine-swap A/B never
+      offers while either arm is up.
+    fabric_gate_note: >
+      Recorded ABSENT rather than inherited. A gate from another boot is not
+      evidence for this one. The comparison is internally paired -- both arms
+      ran minutes apart on one fabric state -- so a silent RDMA degradation
+      would have to have landed between the two arms to bias it, and it would
+      have depressed the SECOND (anemll) arm, which is the arm that lost.
+    fabric_gated: false
+    fabric_state: not measured
+    raw_data_committed: true
+    raw_files: [README.md, anemll-c1.log, anemll-c4.log, anemll-c8.log,
+                anemll-c16.log, eugr-c1.log, eugr-c4.log, eugr-c8.log,
+                eugr-c16.log]
+    status: CURRENT
+    note: >
+      Correctness-gated 7/7 on the anemll arm before any throughput cell.
+      Permanent confound: anemll MTP K=2 vs eugr DSpark nst=5 (nst<5 refused by
+      the checkpoint), so cells measure engine+speculator.
+  - dir: 20260831T0525Z-eugr-remaining-cells-matched
+    date: 2026-08-31
+    description: >
+      Remaining engine-A/B cells re-measured on MATCHED harness and EXACT
+      prompts: 131K decode 90.5 vs anemll 83.5 (+8%, TTFT 53.7s vs 138.1s) on
+      bench-miaai --prompt 131072, superseding the 42.3 that measured the
+      driver's own filler prompt; dense-prose 49.2 vs 49.4 (parity) on the
+      original prompt recovered from git commit b078eb4, ratio 1.85x vs 1.65x;
+      code-brief 91.0 vs 81.8; deep 4x200K TTFT 224s, 1.26 tok/s (confirms).
     has_readme: true
     nodes: 3
     nodes_evidence: >
@@ -2692,6 +2801,12 @@ directories:
     kv_pool_tokens: 2364598
     kv_pool_source: "engine-config.txt (service boot KV size line)"
     harness: bench-miaai (131K cell) and eugr-remaining-cells.py (prompt pair at ours-bench.py conditions; deep cell replicating deepconc.py)
+      EUGR_MNBT=8192), the virtual-TP plan line and KV size; TP=3 across three
+      nodes.
+    tp_size: 3
+    kv_pool_tokens: 2364598
+    kv_pool_source: "engine-config.txt (service boot KV size line)"
+    harness: bench-miaai (131K) and eugr-remaining-cells-v2.py (prompt pair at ours-bench.py conditions; deep cell replicating deepconc.py)
     harness_committed: true
     output_tokens_requested: 128 (131K, deep) / 256 (prompt pair)
     output_tokens_actual: {128: 131K and deep cells, 256: prompt pair}
@@ -2713,6 +2828,16 @@ directories:
     fabric_state: healthy
     raw_data_committed: true
     raw_files: [bench-131k.log, remaining-cells.log, remaining-cells.json, eugr-remaining-cells.py, engine-config.txt]
+    fabric_gate_artifact: ../20260831T0030Z-eugr-remaining-cells/fabric-gate-post.json
+    fabric_gate_evidence: >
+      Same eugr.service boot as the superseded bundle, which gated 24/0 before
+      and after its run; no NCCL warnings in the service log since.
+    fabric_gate_note: >
+      Gate artifact lives in the sibling bundle; this bundle ran on the same boot.
+    fabric_gated: true
+    fabric_state: healthy
+    raw_data_committed: true
+    raw_files: [bench-131k.log, remaining-cells.log, remaining-cells.json, eugr-remaining-cells-v2.py, engine-config.txt]
     status: CURRENT
     void_reasons: []
     superseded_by: null
@@ -2775,3 +2900,5 @@ directories:
       this config remains the K-sweep numbers in
       20260830T2245Z-eugr-ksweep; see the README for why this run's tok/s
       figures are prefill-bound and must not be cited as throughput.
+      Supersedes the 131K and dense-prose cells of
+      20260831T0030Z-eugr-remaining-cells (rows relabeled, not deleted).

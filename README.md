@@ -9,17 +9,45 @@ fully benchmarked with a forced 256-token assertion against matched two-node bas
 under passing fabric gates.
 
 > [!IMPORTANT]
-> **Engine status (2026-08-30).** The serving engine is now
-> [`eugr/spark-vllm-b12x`](https://github.com/eugr/spark-vllm-docker) (vLLM main), which
-> carries DeepSeek-V4 TP=3 natively via its virtual-TP plan — **our padding patch is not
-> applied to it and must not be.** The Anemll-based engine every result below was measured
-> on is **retired as the serving engine and kept as the reference arm**; its history is also
-> frozen in [`3x-dgx-spark-deepseek-v4-v0.25-anemll-baseline`](https://github.com/colonel-otto/3x-dgx-spark-deepseek-v4-v0.25-anemll-baseline).
-> Every benchmark row now carries an `engine` column. Arm-1 results for the new engine
-> (correctness gate passed; +20–41 % aggregate at c=4–8, a fixable cliff at c=16) are in
-> [`ENGINE-AB-3NODE.md`](docs/ENGINE-AB-3NODE.md) and the
-> [current handoff](docs/HANDOFF-2026-08-30-ENGINE-AB.md). **Unless a row says otherwise,
-> numbers in this README are anemll-engine numbers.**
+> **Two engines appear on this page. Read this before quoting any number.**
+>
+> The **serving** engine is [`eugr/spark-vllm-b12x`](https://github.com/eugr/spark-vllm-docker)
+> (vLLM main), which carries DeepSeek-V4 TP=3 natively via its virtual-TP plan.
+> **Our attention-group padding patch is NOT applied to it and must not be** — the image
+> already generalizes what the patch fixes, and applying it on top is harmful.
+>
+> **Almost every number below was measured on the retired Anemll engine.** That engine is
+> kept as the reference arm and its history is frozen in
+> [`3x-dgx-spark-deepseek-v4-v0.25-anemll-baseline`](https://github.com/colonel-otto/3x-dgx-spark-deepseek-v4-v0.25-anemll-baseline).
+> **Unless a row says otherwise, numbers on this page are anemll-engine numbers.** Every
+> benchmark row carries an `engine` column so the two can never be silently mixed.
+>
+> **Where the two engines have been compared** (2026-08-31, warm kernel caches, same
+> harness and prompt, 3 nodes both):
+>
+> | c | anemll (retired) | eugr (serving) | |
+> |---|---:|---:|---|
+> | 1 — single-stream decode | 80.4 | **84.3** | +5 % |
+> | 4 — aggregate | 115.2 | **152.8** | +33 % |
+> | 8 — aggregate | 143.6 | **252.9** | +76 % |
+> | 16 — aggregate | 161.0 | **198.8** | +24 % |
+>
+> The new engine wins every concurrency cell — though **read the c=1 row with care**: the
+> anemll comparator is an 8-rep noise-floor study spanning 66.6–88.5 tok/s on an unchanged
+> engine, a 33 % spread, so a +5 % single-stream delta sits inside that noise. The
+> concurrency rows are the load-bearing ones.
+>
+> ⚠️ **An earlier revision of this page
+> reported +20–41 % at c=4–8 and a regression at c=16 ("a fixable cliff").** Those numbers
+> were measured with kernel caches disabled, so the engine's kernels were JIT-compiling
+> *during* the run: they were lower bounds, and the c=16 "cliff" was an artefact that
+> disappeared entirely once caches were warmed. Both are retracted.
+>
+> ⚠️ **This is not a single-variable A/B and cannot be made into one.** The speculator
+> differs permanently — anemll runs MTP K=2, eugr runs DSpark nst=5, and nst<5 is *rejected*
+> by the checkpoint (`dspark_block_size: 5`). Read it as each engine at its own working
+> depth. Details: [`ENGINE-AB-3NODE.md`](docs/ENGINE-AB-3NODE.md), and the
+> [current handoff](docs/HANDOFF-2026-08-31.md).
 
 > [!NOTE]
 > Older decode runs that requested 256 output tokens but returned only 25–26 (due to prompt
@@ -40,10 +68,13 @@ under passing fabric gates.
    in either direction. **Read this before quoting any n=10 magnitude.**
 4. [3-Node vs 2-Node Benchmark](docs/BENCHMARK-2V3-NODES.md) — the older matrix, partly
    superseded by the above; still the reference for APC, MTP, and architectural analysis.
-5. [Current handoff](docs/HANDOFF-2026-08-30-ENGINE-AB.md) — engine switch, arm-1 A/B results,
-   gateway route to restore, and the speculative-depth sweep; the
-   [previous handoff](docs/HANDOFF-2026-08-29-EVENING.md) keeps cluster state, verified findings, and
-   recipe tuning conclusions.
+5. [**Current handoff**](docs/HANDOFF-2026-08-31.md) — live cluster state:
+   the eugr engine on `:8100`, its settled tuning (`nst=5` / `mnbt=8192`), the depth sweep,
+   the gateway now on systemd, and a table of four earlier numbers it corrects. Supersedes the
+   [engine-A/B handoff](docs/HANDOFF-2026-08-30-ENGINE-AB.md), whose "next steps" and
+   arm-1 numbers are both closed out; the
+   [2026-08-29 handoff](docs/HANDOFF-2026-08-29-EVENING.md) keeps the older cluster state
+   and recipe tuning conclusions.
 6. [Documentation index](docs/README.md) — setup, operations, method, decisions, and
    historical investigations.
 7. [Results index](results/README.md) — one readable row per frozen run bundle.
@@ -217,7 +248,7 @@ the one comparison that would make every row above configuration-matched.
 | What is the warm-path (multi-turn APC) speed? | **0.731s TTFT at 131K (106.8x speedup)**; 0.455s at 32K (37.3x speedup). 99.8% cache hit ratio with zero degradation over 2+ min idle. | [APC warm path](results/20260828-issue29-apc-warm-path/) |
 | What is the KV cache capacity? | **4,660,501 tokens** per the engine's init log on the 2026-08-29 boot (Profile B, 0.835 util, `MTP=2`, 31.99 GiB KV memory, 4.44x concurrency at 1M/request). The Profile B bundle records ~2.49M because it ran at `MTP=5`. ⚠️ The live `/metrics` endpoint reports a conflicting 2,822,574 on the same engine — see the [handoff note](docs/HANDOFF-2026-08-28.md); the discrepancy is unresolved. | [Profile B](results/20260827-issue25-profile-b/), [08-28 handoff](docs/HANDOFF-2026-08-28.md) |
 | Does the DSpark proposer suffer from staleness decay? | No evidence of it. Acceptance *rises* with horizon length (69.0% → 80.4%) and holds 76.7%–80.4% at 52–57 tok/s through 1,536 tokens, and `_insert_context_kv` writes all verified tokens. Caveat: each horizon is a separate generation scored cumulatively, so a late-onset decay is not fully excluded. | [Proposer long horizon](results/20260829-issue36-dspark-proposer-long-horizon/) |
-| Does TP=3 serve correct output? | Yes; the attention-group padding patch is required and hermetically baked into `dsv4-3spark:0.1.1`. | [Patch](docs/patch.md), [quality suite](results/20260827-quality-suite-3node/) |
+| Does TP=3 serve correct output? | Yes on both engines — but by **different mechanisms**. On the **retired anemll** image the attention-group padding patch is required and is hermetically baked into `dsv4-3spark:0.1.1`. On the **serving eugr** image TP=3 is native via its virtual-TP plan (heads 64→72, groups 8→9) and **the patch must NOT be applied**; correctness re-verified 7/7 there. Without the right mechanism for the image, stock integer division silently drops attention groups and produces fluent but wrong output — with no error. | [Patch](docs/patch.md), [engine A/B](docs/ENGINE-AB-3NODE.md), [quality suite](results/20260827-quality-suite-3node/) |
 | Does three-node quality hold at long context? | Yes in the tested suite: RULER-lite 12/12, tool battery 7/7, deep-context tools 8/8, garble sweep clean through 131K. | [Quality suite](results/20260827-quality-suite-3node/) |
 | What is corrected three-node decode speed? | Median 50.1–59.8 tok/s from 2K–262K with 256 asserted output tokens under winning Profile B. | [Profile B](results/20260827-issue25-profile-b/) |
 | Does three-node beat two-node at cc=1 decode? | **Yes — confirmed on a matched arm, 2026-08-30.** With node count as the *only* variable and n=30 per cell: **+6.7%** at 2K, **+17.1%** at 8K, **+20.2%** at 32K, **+18.7%** at 131K, **+13.2%** at 262K. All five significant by two independent tests (p from 6×10⁻⁵ to 3×10⁻¹¹). Cliff's δ = 1.000 at 32K and 262K — every TP=3 rep beat every TP=2 rep. Supersedes the older +7.3–+16.7% figures, which were directionally right but drawn from arms differing in **six** settings at n=7. | [**RESULT**](docs/RESULT-2V3-MATCHED-2026-08-30.md), [Analysis](docs/ANALYSIS-2V3-2026-08-29.md) |
@@ -262,6 +293,19 @@ fluent but wrong output. See [topology](docs/topology.md), [setup](docs/setup.md
 [patch details](docs/patch.md).
 
 ## Quick Start: Build, Deploy & Replicate
+
+> [!WARNING]
+> **This Quick Start builds the RETIRED anemll engine**, not the one in service. It is kept
+> because every benchmark on this page was measured on it, so this is the path that
+> reproduces those numbers — and because the padding patch it bakes in is genuinely
+> required *for that image*.
+>
+> **To stand up what actually serves**, use the eugr image instead: install with
+> [`scripts/eugr-ab/install-service.sh`](scripts/eugr-ab/install-service.sh) and start
+> `eugr.service` (port `:8100`, pinned to `EUGR_NST=5` / `EUGR_MNBT=8192`). **Do not apply
+> the padding patch to that image.** See the
+> [current handoff](docs/HANDOFF-2026-08-31.md) for the live shape and
+> [`ENGINE-AB-3NODE.md`](docs/ENGINE-AB-3NODE.md) for why the two differ.
 
 ### 1. Build the Hermetic Image
 

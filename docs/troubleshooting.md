@@ -388,8 +388,8 @@ settings … Consider increasing max_num_batched_tokens`). Measured at nst=5:
 | c=4 agg | 152.8 | 165.0 (+8%) |
 | c=8 agg | **252.9** | 241.8 (−4%) |
 | c=16 agg | 198.8 | 214.3 (+8%) |
-| KV cache | **2,415,674 tok** | 1,165,679 tok (**−52%**) |
-| max concurrency @1M ctx | **2.30x** | 1.11x |
+| KV cache | **2,357,009 tok** | 1,165,679 tok (**−50.5%**) |
+| max concurrency @1M ctx | **2.25x** | 1.11x |
 
 Raising it does silence the warning, but half the KV capacity for ~8% on two
 cells is a bad trade on a 1M-context server. This reproduces the anemll finding
@@ -509,3 +509,139 @@ the unit.
 GPUs free, and it is skipped while the engine serves; use `--nccl=skip` for a
 config check, and schedule the bandwidth check for a window when the engine is
 already down.
+## `MAX_NUM_SEQS` drift makes a cross-engine A/B silently two-variable
+
+The committed anemll reference rows are `config_id=tp3-seqs16`, but the LIVE
+`config/tp3.env` on all three nodes had drifted to `MAX_NUM_SEQS=32`. Booting
+anemll "as it is configured" and comparing it to an eugr arm at `seqs=16`
+therefore measures the engine AND the scheduler cap at once, while looking
+exactly like a clean one-variable comparison — nothing errors, and the row
+label still says `seqs16`.
+
+Before any A/B, diff the live config against the `config_id` you intend to
+quote, and set the knob on **every rank** (a mismatch between ranks hangs
+startup forever with no error — the launcher's "Config verified identical
+across all 3 ranks" line is the check that catches it). Restore afterwards:
+
+```bash
+# on each of sparkmain, spark1, spark2
+cp config/tp3.env config/tp3.env.pre-<experiment>
+sed -i 's/^MAX_NUM_SEQS=32/MAX_NUM_SEQS=16/' config/tp3.env
+# ... run the arm ...
+cp config/tp3.env.pre-<experiment> config/tp3.env
+```
+
+## A delta inside the noise floor is not a result, even in a tidy table
+
+The cross-engine table published single-stream cells of +5%, +8% and +11% as
+findings. The repo's own 8-rep study on an **unchanged** anemll engine had
+already recorded 66.6–88.5 tok/s at c=1 — a 27% spread — and issue #31 set a
+**12% parity tolerance**. All three cells were inside that band: the data could
+not resolve them in either direction.
+
+The tell is that the table quoted a single median per cell with no spread
+column, so nothing on the page contradicted the numbers. When a cell's delta is
+smaller than the trial spread of either arm, write "parity (unresolved)" rather
+than a signed percentage — and always carry min/max next to the median, which
+`bench-miaai.py --repeat N` already prints on its `FINAL:` line.
+
+In this instance both defects (staleness and under-powering) happened to point
+the same way and *understated* the winner: matched measurement moved c=1 decode
+from "+5%" to +38%. It could equally have gone the other way.
+## Same engine, same hour, 2× different decode at 131K — the prompt was different
+
+Two sessions measured "decode at 131K context" on the same eugr engine five hours apart and
+got 42.3 and 90.5 tok/s. Neither was wrong; they measured different prompts. One driver
+grew its 131K prompt from `"benchmark context datum "` repeated ~44,000 times; the other used
+`bench-miaai --prompt 131072` (numbered words), the harness that produced the anemll 83.5.
+DSpark/MTP acceptance depends on the prompt (the 1.65–1.85× code-vs-prose effect), so a
+repetitive filler is a *different measurement*, and only the bench-miaai number is comparable
+to the reference row. Rule: a cross-engine cell is matched only when harness AND prompt shape
+match the reference row's `harness`/`prompt_shape` columns — same engine, same context length,
+same day is not enough. Verified 2026-08-31; the 42.3 row is kept, relabeled.
+
+## "The original prompt was never committed" — search git history before reconstructing
+
+The dense-prose prompt behind the 49.4 tok/s anemll row looked unrecoverable
+(`benchmarks/README.md` shows it with an ellipsis; `ours-bench.py` was never committed) and a
+reconstruction was measured. `git log -S"pipeline parallelism differs" -p` found the full text
+in commit `b078eb4` in under a second. Before declaring any prompt, script or value lost,
+search history with `git log -S<distinctive phrase> --all -p`. A reconstruction silently
+breaks byte-comparability; a recovered original keeps it. Never elide a prompt with `…` in
+the only document that records it.
+## `systemd-analyze verify` passes a unit whose inline `bash -c` is broken
+
+`verify` checks *unit* syntax. It does not evaluate a shell string embedded in
+`ExecStartPost=` / `ExecStart=`, so a gate with mismatched quoting parses clean
+and then fails at runtime:
+
+```
+$ sudo systemd-analyze verify /etc/systemd/system/litellm.service
+                                     # no output: "clean"
+$ /bin/bash -c "for i in $(seq 1 90); do ... done"
+/bin/bash: -c: line 2: syntax error near unexpected token `2'
+```
+
+Two layers of quoting (systemd's, then bash's) make this easy to get wrong and
+invisible to every static check. **Put the logic in a script file** and call it:
+
+```ini
+ExecStartPost=/usr/local/bin/litellm-wait-ready 4000
+```
+
+Then run that script by hand, both against a healthy target and a dead one — a
+readiness gate that silently always-passes is worse than none, because it makes
+a wedged service report `active (running)`. Found writing `litellm.service`
+(2026-08-31); the inline gate had been accepted by `verify` and never ran.
+
+## `StartLimitBurst` / `StartLimitIntervalSec` are silently ignored in `[Service]`
+
+They are `[Unit]` directives. Put them under `[Service]` and systemd does not
+error — it logs `Unknown key ... ignoring` and starts the unit anyway, so the
+restart limiting you thought you configured simply does not exist and a broken
+config spins forever. `systemd-analyze verify <unit>` catches it and **exits 0
+while doing so**, so read its output rather than trusting its exit status:
+
+```bash
+systemd-analyze verify /etc/systemd/system/litellm.service
+# /etc/systemd/system/litellm.service:33: Unknown key 'StartLimitIntervalSec'
+#   in section [Service], ignoring.
+```
+
+Found writing `litellm.service` (2026-08-31), where both directives had been
+placed in `[Service]`.
+
+## A LiteLLM route can 500 while `/v1/models` returns 200
+
+`/v1/models` reports what the **config declares**, not what the backends
+actually serve. A route whose `api_base` points at a dead port lists happily and
+fails only on a real completion:
+
+```
+litellm.InternalServerError: OpenAIException - Connection error..
+Received Model Group=qwen3.8-27b
+```
+
+So `models:200` is not a gateway health check — send a completion. Found
+2026-08-31: bigdog's `qwen3.8-27b` route still pointed at `localhost:8000` after
+the Qwen backends had moved to `:30000` (SGLang) and `:30002` (vLLM NVFP4).
+Nothing listened on `:8000`; every client asking for that model got a 500 while
+the gateway looked healthy.
+
+## Reading `content` alone makes a working DSv4 reply look like a failure
+
+DeepSeek-V4-Flash emits reasoning into `reasoning_content` (exposed by LiteLLM
+as `provider_specific_fields.reasoning`). At a small `max_tokens` the whole
+budget can be spent there, so the response is a **success** with
+`content: null`:
+
+```json
+{"finish_reason":"length",
+ "message":{"content":null,
+            "reasoning_content":"We need answer. Need"}}
+```
+
+A smoke test that reads `choices[0].message.content` reports this as a failure.
+Give the probe enough headroom (≥64 tokens) and check `reasoning_content` too.
+See also the note that the field is `reasoning`, not `reasoning_content`, on the
+client side.

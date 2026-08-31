@@ -9,8 +9,10 @@ Makefile text eol=lf
 *.env text eol=lf
 *.env.example text eol=lf
 
-# systemd units and extensionless shell scripts must ship LF: a CRLF unit or
-# an interpreter line ending in \r fails on the Linux nodes with an opaque
-# error ("bad interpreter", "syntax error near unexpected token").
+# Files consumed by Linux hosts must stay LF regardless of the checkout
+# platform. `text=auto` alone leaves these to chance: a systemd unit or a
+# shebang script with CRLF fails at runtime -- systemd mis-parses the value and
+# the kernel reports "bad interpreter: No such file or directory".
 *.service text eol=lf
+scripts/gateway/litellm-wait-ready text eol=lf
 scripts/fabric/dsv4-fabric-reconcile text eol=lf

@@ -1,0 +1,21 @@
+{
+  "deep_4x200k": {
+    "label": "4x200k",
+    "streams": 4,
+    "ok": 4,
+    "errors": 0,
+    "wall_s": 364.8,
+    "aggregate_tok_s": 1.4,
+    "median_decode_tok_s": 1.17,
+    "median_ttft_s": 226.6,
+    "prompt_tokens": 200015
+  },
+  "_meta": {
+    "base_url": "http://127.0.0.1:8100/v1",
+    "model": "deepseek-v4-flash-eugr-ab",
+    "code_brief_prompt": "Write a Python function that merges two sorted lists. Explain briefly.",
+    "dense_prose_prompt": "Consider how a distributed inference system balances latency against throughput when many independent callers arrive at once, and describe the tradeoffs a scheduler must weigh when it decides which pending request to admit next rather than continuing the one already running.",
+    "dense_prose_is_reconstruction": true,
+    "dense_prose_note": "ours-bench.py was never committed and no doc records its prompt text; this is a reconstruction to the recorded ~51-token prose shape. The cross-engine dense-prose number is NOT matched; only the within-engine code/prose ratio is."
+  }
+}

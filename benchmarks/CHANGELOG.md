@@ -432,3 +432,44 @@ checkpoint** (`dspark_block_size: 5`), so the legal sweep is {5, 7} only.
 As the winner but `max_num_batched_tokens 16384`: +8% on two cells for −52% KV cache
 (1,165,679 tokens / 1.11x at 1M). The same trap as on anemll, now confirmed on fp8 KV. Rows
 kept with `reverted=true`.
+**SUPERSEDED for throughput** by `eugr-tp3-seqs16-dspark5-mnbt8192` below. Arm 1 ran
+with `--no-cache-dirs`, so b12x kernels JIT-compiled *during* measurement; its
+throughput rows are lower bounds, not engine capability, and its "c=16 scheduling
+cliff" is retracted. The rows are kept and marked, not deleted. Its KV figure
+(2,415,674 / 2.30x) is arm 1's own boot and is correct for arm 1.
+
+## `eugr-tp3-seqs16-dspark5-mnbt8192` — K-sweep WINNER, and what `eugr.service` serves
+
+Same image, checkpoint and node count as arm 1. The one change that matters:
+**persistent kernel caches** (`/opt/eugrcache-{vllm,flashinfer,triton,tilelang}` bind
+mounts replacing `--no-cache-dirs`), so kernels are warm before measurement.
+`num_speculative_tokens 5`, `max_num_batched_tokens 8192`, `max_num_seqs 16`,
+`gpu_memory_utilization 0.82`, kv fp8, 1M context. KV cache 2,357,009 tokens / 2.25x
+at 1M. Pinned in `eugr.service` as `EUGR_NST=5` / `EUGR_MNBT=8192`.
+
+This id also carries the three remaining A/B cells (131K decode, the
+code-brief/dense-prose prompt-effect pair, deep concurrency 4×200K), measured against
+the live service on the same tuning. Those rows report KV 2,364,598 from their own
+boot — ~0.3% boot-to-boot variance on an identical config, not a different config.
+
+## `eugr-tp3-seqs16-dspark7-mnbt8192` — depth arm, LOSES
+
+Identical except `num_speculative_tokens 7`. KV 2,405,070 / 2.29x. Loses every cell
+(−5.7% decode, −17% at c=8). The legal depth range on this checkpoint is only {5,7} —
+nst<5 is rejected outright because `dspark_block_size: 5` — so with 7 beaten, depth is
+settled at 5, not merely untested.
+
+## `eugr-tp3-seqs16-dspark5-mnbt16384` — batched-tokens arm, REVERTED
+
+Identical except `max_num_batched_tokens 16384`. KV collapses to 1,165,679 tokens /
+1.11x at 1M — **−50.5%** — to buy +8% at c=4 and c=16 while losing 4% at c=8. Rows are
+marked `reverted=true` and preserved. It does silence the engine's own
+`max_num_scheduled_tokens is set to 8128` warning; that warning is a trap on this
+engine exactly as it was on anemll, now confirmed on a different KV dtype.
+
+### 2026-08-31 correction to `eugr-tp3-seqs16-dspark5-mnbt8192` remaining cells
+
+The 131K (42.3) and dense-prose (45.9) rows from `20260831T0030Z-eugr-remaining-cells` are
+relabeled SUPERSEDED: the first used the driver's own filler prompt rather than bench-miaai's,
+the second a reconstructed prompt. Matched replacements (90.5 on bench-miaai at p=131072; 49.2
+on the exact prompt from commit b078eb4) are in `20260831T0525Z-eugr-remaining-cells-matched`.

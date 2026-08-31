@@ -1,5 +1,12 @@
 # Handoff — 2026-08-30 evening: K sweep done, eugr is the service, gateway live
 
+> [!WARNING]
+> **SUPERSEDED by [HANDOFF-2026-08-31.md](HANDOFF-2026-08-31.md).** Four numbers
+> on this page were later corrected on evidence — the c=8/c=16 aggregates, the
+> 131K decode cell, the dense-prose row and ratio, and the KV figures in §2.
+> Read the correction table on the current page before quoting anything here.
+> The *methodology* and the depth verdict (nst=5, legal range {5,7}) stand.
+
 Supersedes [HANDOFF-2026-08-30-ENGINE-AB.md](HANDOFF-2026-08-30-ENGINE-AB.md) for
 cluster state and for its "next steps" list. Written for a fresh conversation.
 
@@ -33,15 +40,21 @@ cluster state and for its "next steps" list. Written for a fresh conversation.
 | 4 | 152.8 | 151.2 | **165.0** |
 | 8 | **252.9** | 208.8 | 241.8 |
 | 16 | 198.8 | 197.2 | **214.3** |
-| KV tokens | **2,415,674** | 2,415,674 | 1,165,679 |
+| KV tokens | **2,357,009** | 2,405,070 | 1,165,679 |
+| max conc @1M | **2.25x** | 2.29x | 1.11x |
 
 - **Depth is SETTLED at nst=5.** The legal range is only {5,7}: the checkpoint sets
   `dspark_block_size: 5` and nst<5 is *rejected* ("produce incorrect output").
   nst=7 never wins a cell. The anemll expectation "high K wins single-stream" does
   NOT transfer.
-- **mnbt=16384 rejected**: +8% on two cells for **−52% KV cache** (max concurrency
-  at 1M ctx 2.30x → 1.11x). Silences the engine's own warning; costs more than the
+- **mnbt=16384 rejected**: +8% on two cells for **−50.5% KV cache** (max concurrency
+  at 1M ctx 2.25x → 1.11x). Silences the engine's own warning; costs more than the
   disease. Same trap as anemll, now confirmed on fp8 KV too.
+- *KV figures corrected 2026-08-31.* An earlier revision of this table listed
+  2,415,674 for both nst columns. That number is **arm 1's** boot
+  (`20260830T194550Z-engine-ab-eugr`), not this sweep's; each arm here reports
+  what its OWN engine log recorded. The conclusion is unchanged (−50.5% vs −52%),
+  and nst=5/nst=7 KV differ slightly (2.0%) rather than being identical.
 - **Arm-1's "c=16 scheduling cliff" is RETRACTED** — mostly JIT contamination.
   Cache persistence alone gave +47% at c=8 and +48% at c=16, TTFT 7000→1755ms.
   Every arm-1 `--no-cache-dirs` row is a LOWER BOUND, not engine capability.
@@ -79,6 +92,53 @@ Still open:
    vs anemll (2.36M vs 3.59M tokens), if supported.
 3. Optional: a fabric-gated re-run of the remaining cells (this run inherited the
    sweep's gate on the same boot rather than running its own).
+1. ~~Remaining A/B cells~~ **DONE 2026-08-31, corrected 05:30Z** —
+   `results/20260831T0525Z-eugr-remaining-cells-matched/` supersedes two cells of
+   `20260831T0030Z-eugr-remaining-cells`: **131K decode is 90.5 vs 83.5 (+8 %, TTFT
+   53.7 s vs 138 s)** on the matched `bench-miaai` harness — the earlier 42.3 measured
+   the driver's own repetitive filler, a different prompt, so "−49 %" was never a
+   comparison; and **dense-prose is 49.2 vs 49.4 (parity) on the EXACT original
+   prompt**, recovered from git commit `b078eb4` (it was never lost), giving a
+   within-engine prompt effect of **1.85×** (anemll 1.65×; the 1.95× was the
+   reconstruction). Deep 4×200K confirmed at TTFT 224 s / 1.26 tok/s. Rows re-homed
+   onto `eugr-tp3-seqs16-dspark5-mnbt8192`; the superseded rows are relabeled, not
+   deleted.
+2. ~~Re-baseline the cross-engine A/B table~~ **DONE 2026-08-31** — the four
+   concurrency cells in `ENGINE-AB-3NODE.md` now read from the nst=5/mnbt=8192
+   sweep rows instead of the contaminated arm-1 column. **This changed the
+   headline**: c=16 flipped from −17% (reported as a "scheduling cliff") to
+   **+24%**, and c=8 went from +20% to **+76%**. On warm caches the new engine
+   wins every concurrency cell. The PERMANENT speculator caveat (anemll MTP K=2
+   vs eugr DSpark K≥5, parity impossible) is now stated above the table.
+3. ~~Append rows to `benchmarks/measurements.csv`~~ **DONE 2026-08-31** — all of
+   it. The 4 remaining-cells rows, plus all **12 K-sweep points** under three new
+   config ids (`eugr-tp3-seqs16-dspark5-mnbt8192` — the winner and what the
+   service serves, `…-dspark7-mnbt8192`, `…-dspark5-mnbt16384` marked
+   `reverted=true`). The remaining-cells rows were re-homed from the transient id
+   `eugr-tp3-nst5-mnbt8192` onto the winner's id: they measured the same served
+   tuning, so they are the same configuration. The arm-1 rows
+   (`eugr-tp3-seqs16-dspark5`) are kept and marked superseded. summary.csv
+   regenerated; all 7 test scripts pass.
+4. ~~Make LiteLLM a systemd unit on bigdog~~ **DONE 2026-08-31, one manual step
+   left.** `litellm.service` is installed and **enabled**, so the gateway now
+   survives a reboot and `sudo systemctl restart litellm` applies a config edit.
+   The unit blocks on `/health/liveliness` before reporting "started". Copies in
+   `scripts/gateway/`.
+
+   **The cutover has NOT been run** — the bare nohup process (started 19:13) is
+   still the thing serving :4000. Swapping it means stopping a live service, so
+   it was left for a human. Either reboot, or run:
+   `bash $HOME/litellm/cutover-to-systemd.sh`
+
+   **Found while verifying, NOT fixed** (it is someone's live A/B): the
+   `qwen3.8-27b` route still points at `localhost:8000`, but the Qwen backends
+   have moved to **:30000** (SGLang, `qwen3.8-27b-sglang-dspark`) and **:30002**
+   (vLLM NVFP4, `qwen3.8-verify-27b`). Nothing serves :8000, so every gateway
+   client asking for `qwen3.8-27b` gets a 500 while `/v1/models` still returns
+   200. The DSv4 route is fine (:8100, verified with a real completion).
+   Whoever owns that A/B should repoint the route.
+5. Optional: `--kv-cache-dtype nvfp4_ds_mla` on this build to remove the KV delta
+   vs anemll, if supported.
 
 ## 5. Traps added to troubleshooting.md today
 
