@@ -8,3 +8,9 @@
 Makefile text eol=lf
 *.env text eol=lf
 *.env.example text eol=lf
+
+# systemd units and extensionless shell scripts must ship LF: a CRLF unit or
+# an interpreter line ending in \r fails on the Linux nodes with an opaque
+# error ("bad interpreter", "syntax error near unexpected token").
+*.service text eol=lf
+scripts/fabric/dsv4-fabric-reconcile text eol=lf
