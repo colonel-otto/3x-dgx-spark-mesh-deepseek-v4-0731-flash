@@ -1,0 +1,6 @@
+== cell: decode at 131,072-token context (c=1, 128 out) ==
+  131k-decode rep 0 (cold, 131083 tok): decode=42.3 tok/s ttft=53567ms
+  131k-decode rep 1 (cold, 131083 tok): decode=59.9 tok/s ttft=53721ms
+  131k-decode rep 2 (cold, 131083 tok): decode=41.2 tok/s ttft=56393ms
+
+wrote /home/sparkmain/eugr-remaining/ctx131k.json

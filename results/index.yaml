@@ -72,7 +72,7 @@ meta:
     PRESENT-FAIL: 0
     ABSENT: 21
     PRE-DATES-GATE: 5
-    total: 45
+    total: 46
   fabric_gate_tally_detail:
     PRESENT-PASS:
       - 20260825-deep-concurrency        # fabric-gate-full.json 13/13, nccl=full
@@ -2631,6 +2631,64 @@ directories:
     note: >
       Correctness gate 7/7 at nst=5 on :8100 with the virtual-TP plan confirmed
       active (heads 64->72, groups 8->9); our TP=3 padding patch stays OFF.
+
+  - dir: 20260831T0030Z-eugr-remaining-cells
+    date: 2026-08-31
+    description: >
+      The three A/B cells left open by the K sweep, on the eugr engine at the
+      sweep-winning nst=5/mnbt=8192. PROMPT EFFECT: code-brief 89.4 tok/s vs
+      dense-prose 45.9 = 1.95x on identical hardware minutes apart (anemll
+      recorded 1.65x) - the DSpark/MTP acceptance effect is LARGER on this
+      engine, so no decode number means anything without its prompt shape.
+      CAVEAT: ours-bench.py was never committed and no doc records the
+      dense-prose prompt text, so the prompt here is a RECONSTRUCTION to the
+      recorded ~51-token shape; the cross-engine dense-prose number is NOT
+      matched and only the within-engine ratio is sound. The code-brief prompt
+      IS exact (recovered verbatim from the committed bench_tp3.py default, 18
+      tokens, matching the anemll rows). 131K DECODE: 42.3 tok/s cold vs anemll
+      83.5, but NOT a matched config - anemll ran max_model_len 460800 and this
+      engine serves 1048576 - and prefill is 2.6x FASTER (TTFT 53,721ms vs
+      138,076ms), so it is slower at decode AFTER a long prefill, not at long
+      context generally. A first attempt reusing one 131K prompt was DISCARDED:
+      TTFT fell 58,742ms -> 1,262ms between reps, i.e. the prefix cache served
+      the later reps; the harness now builds a unique 131K prompt per rep and
+      every rep shows a cold 53-56s TTFT. DEEP CONCURRENCY 4x200K: 1.4 tok/s
+      aggregate, median TTFT 226.6s, 0 errors (anemll 0.9) - completes but
+      remains unusable; a workload-shape limit, not an engine defect.
+    has_readme: true
+    nodes: 3
+    nodes_evidence: >
+      Run against the eugr.service endpoint on :8100 while the unit was active
+      at nst=5/mnbt=8192; the fabric gate artifacts enumerate all three nodes.
+    tp_size: 3
+    kv_pool_tokens: 2364598
+    kv_pool_source: "eugr-service-nst5-mnbt8192.log (GPU KV cache size: 2,364,598 tokens, 2.26x @1M ctx)"
+    harness: eugr-remaining-cells.py (committed in this bundle; bench-miaai-compatible sampling)
+    harness_committed: true
+    output_tokens_requested: 256 for the prompt-effect pair, 128 for 131K and 4x200K
+    output_tokens_actual: {256: prompt-effect cells, 128: 131K and 4x200K cells}
+    output_tokens_field: "out= per rep line in the logs; output_tokens in the JSON"
+    output_tokens_note: >
+      min_tokens = max_tokens with ignore_eos, so every completion is exact.
+    reps: prompt-effect 5 per prompt; 131K 3 cold reps; 4x200K one 4-stream run
+    reps_verified: true
+    statistic: median-of-reps
+    fabric_gate: PRESENT-PASS
+    fabric_gate_artifact: fabric-gate.json
+    fabric_gate_evidence: >
+      24 passed / 0 failed BEFORE the run and again AFTER (fabric-gate-post.json),
+      so these numbers are not degradation artifacts. NCCL bandwidth skipped by
+      design because the engine was up; the full 30/30 bandwidth gate for this
+      engine config is in 20260830T2245Z-eugr-ksweep, taken with the engine down.
+    fabric_gated: true
+    fabric_state: healthy
+    raw_data_committed: true
+    raw_files: [prompt-effect.json, ctx131k.json, ctx131k.log, deep4x200k.json, deep4x200k.log, fabric-gate.json, fabric-gate-post.json, eugr-remaining-cells.py]
+    status: CURRENT
+    note: >
+      The dense-prose cross-engine comparison is explicitly NOT matched (prompt
+      reconstruction); the within-engine 1.95x ratio is the sound result. The
+      131K comparison is confounded by max_model_len 460800 vs 1048576.
 
   - dir: 20260830-llama-benchy-ABORTED
     date: 2026-08-30

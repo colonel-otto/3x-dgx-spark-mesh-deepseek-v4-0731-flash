@@ -144,14 +144,30 @@ the comparison table then falls out of the data instead of being hand-kept.
 | aggregate c=4 | bench-miaai | synthetic-numbered-words | 4 | 115.2 | **162.7** (+41%) |
 | aggregate c=8 | bench-miaai | synthetic-numbered-words | 8 | 143.6 | **171.7** (+20%) |
 | peak useful aggregate (seqs cap) | bench-miaai | synthetic-numbered-words | 16 | 161.0 | 133.9 (−17%; c=16 scheduling cliff, TTFT 7s — see bundle README) |
-| decode at 131,072-token context | bench-miaai | synthetic-numbered-words | 1 | 83.5 | — |
-| prompt-effect: code-brief | ours-bench.py | code-brief | 1 | 81.8 | — |
-| prompt-effect: dense-prose | ours-bench.py | dense-prose | 1 | 49.4 | — |
-| deep concurrency 4×~200K (usability) | deepconc.py | synthetic-numbered-words | 4 | 0.9 (unusable) | — |
+| decode at 131,072-token context | bench-miaai / eugr-remaining-cells | synthetic-numbered-words | 1 | 83.5 | **42.3** (cold; ⚠ not matched — see below) |
+| prompt-effect: code-brief | ours-bench.py / eugr-remaining-cells | code-brief | 1 | 81.8 | **89.4** (+9%) |
+| prompt-effect: dense-prose | ours-bench.py / eugr-remaining-cells | dense-prose | 1 | 49.4 | 45.9 (⚠ prompt reconstructed — not matched) |
+| deep concurrency 4×~200K (usability) | deepconc.py / eugr-remaining-cells | synthetic-numbered-words | 4 | 0.9 (unusable) | 1.4 (still unusable, TTFT 227s) |
 | KV cache tokens (capacity, prompt-independent) | n/a | n/a | n/a | 3,588,422 | 2,415,674 (kv fp8 vs nvfp4_ds_mla delta) |
 
+**All cells are now filled (2026-08-31, bundle
+`results/20260831T0030Z-eugr-remaining-cells/`). Two carry caveats that must
+travel with the numbers:**
+
+- **dense-prose is NOT a matched comparison.** `ours-bench.py` was never
+  committed and no doc records its prompt text, so the prompt used was
+  reconstructed to the recorded ~51-token shape. Quote the *within-engine*
+  ratio (**1.95x** code-brief vs dense-prose, both measured here minutes apart
+  and both recorded in the bundle) — never the cross-engine dense-prose value.
+- **131K is NOT a matched config.** The anemll row ran `max_model_len 460800`;
+  this engine serves `1048576`. And prefill got **2.6x faster** (TTFT 53,721ms
+  vs 138,076ms), so the engine is slower at *decode after* a long prefill, not
+  at long context generally. A first attempt was discarded when TTFT fell
+  58,742ms -> 1,262ms between reps, revealing the prefix cache was serving them;
+  the harness now uses a unique 131K prompt per rep.
+
 Decode rates depend on the speculative path (the prompt-effect pair exists
-because MTP acceptance moves decode 1.65x). If the eugr arm runs a different
+because MTP acceptance moves decode 1.65x on anemll, and **1.95x here**). If the eugr arm runs a different
 speculative config than MTP K=2, the decode cells measure *engine+speculator*,
 not engine — still useful, but say so in the row notes.
 

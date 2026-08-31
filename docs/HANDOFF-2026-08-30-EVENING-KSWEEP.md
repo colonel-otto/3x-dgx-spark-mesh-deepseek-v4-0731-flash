@@ -59,16 +59,22 @@ JIT counters, engine configs, fabric gate JSON).
 
 ## 4. Next steps
 
-1. **Remaining A/B cells** (unchanged, still pending): 131K-context decode, the
-   code-brief / dense-prose prompt-effect pair, deep-concurrency 4×200K. Re-run
-   them on the winning config; the old anemll comparators are cold-cache-era for
-   the eugr side only — the anemll side is unaffected.
+1. ~~Remaining A/B cells~~ **DONE 2026-08-31** —
+   `results/20260831T0030Z-eugr-remaining-cells/`. Headlines: the **prompt effect
+   is larger on this engine (1.95x vs anemll's 1.65x)**; 131K cold decode is
+   42.3 vs 83.5 but the configs differ (`max_model_len` 460800 vs 1048576) and
+   prefill is **2.6x faster**; 4×200K is 1.4 tok/s with TTFT 227s — completes,
+   still unusable. Two caveats travel with these numbers: the dense-prose prompt
+   is a **reconstruction** (`ours-bench.py` was never committed), so only the
+   within-engine ratio is sound; and the 131K row is not a matched config.
+   Rows appended to `benchmarks/measurements.csv`; summary regenerated.
 2. **Re-baseline the cross-engine A/B table.** The arm-1 eugr column is
    contaminated; regenerate it from the nst=5/mnbt=8192 rows. Note in every row
    that the speculator delta is PERMANENT (anemll MTP K=2 vs eugr DSpark K≥5) —
    parity is impossible, see troubleshooting.md.
-3. **Append rows to `benchmarks/measurements.csv`** with
-   `engine=eugr-spark-vllm-b12x` and regenerate summary.csv. Not yet done.
+3. ~~Append rows to `benchmarks/measurements.csv`~~ **DONE 2026-08-31** for the
+   remaining-cells rows (4 rows, `config_id=eugr-tp3-nst5-mnbt8192`) and
+   summary.csv regenerated. The *K-sweep* rows are still to be appended.
 4. **Make LiteLLM a systemd unit on bigdog.** It runs as a bare nohup process, so
    it does not survive a reboot and a config edit needs a manual restart.
 5. Optional: `--kv-cache-dtype nvfp4_ds_mla` on this build to remove the KV delta
