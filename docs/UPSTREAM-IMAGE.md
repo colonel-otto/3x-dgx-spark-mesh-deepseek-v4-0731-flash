@@ -1,4 +1,19 @@
-# Building the runtime from upstream vLLM
+# Building the runtime from upstream vLLM — RETIRED 2026-08-30
+
+> **This path is retired and its files are deleted.** `upstream.lock`,
+> `docker/Dockerfile.upstream`, `scripts/check-upstream-drift.sh` and
+> `scripts/apply_tp3_patch.py` were removed when the own-build runtime was
+> superseded by the **eugr/spark-vllm-b12x** image (PR #40), which ships native
+> virtual TP=3 and needs no padding patch. **Do not apply the padding patch to
+> the eugr image.** For the engine actually in service see
+> [`HANDOFF-2026-08-30-EVENING-KSWEEP.md`](HANDOFF-2026-08-30-EVENING-KSWEEP.md).
+>
+> The page is kept because its *analysis* stands on its own: it documents that
+> the Anemll image is a thin, fully public recipe over stock vLLM rather than a
+> fork — which is why rebuilding it ourselves was feasible, and why we could
+> read b12x behaviour from public source. File references below are historical;
+> recover them from Git history (`git log --diff-filter=D -- upstream.lock`).
+
 
 `docker/Dockerfile.upstream` builds the 3-node runtime **directly from stock
 `vllm/vllm-openai:v0.25.1`** instead of the prebuilt
@@ -25,7 +40,8 @@ inside someone else's image bump.
 
 ## Pins
 
-Everything is pinned in [`upstream.lock`](../upstream.lock) (mirroring
+Everything was pinned in `upstream.lock` (deleted; see the retirement note
+above and recover from Git history) (mirroring
 Anemll's own `upstream.lock` at our pinned overlay commit, plus
 `ANEMLL_OVERLAY_COMMIT` for the overlay itself). The Dockerfile `ARG` defaults
 duplicate the lock so a bare `docker build` is reproducible; change them

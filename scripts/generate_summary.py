@@ -161,6 +161,101 @@ def build():
                           "prompt - a 1.65x swing"),
             })
 
+    # --- The eugr engine: the config actually in service. ---
+    # This block exists because the selection above is a hardcoded allowlist of
+    # anemll-era config ids, so every eugr row -- including the engine the
+    # gateway serves -- was silently absent from the summary. A reader comparing
+    # engines would have seen only the retired one.
+    #
+    # Only the SWEEP WINNER is surfaced (eugr-tp3-seqs16-dspark5-mnbt8192, what
+    # eugr.service is pinned to). The nst=7 arm lost every cell and the
+    # mnbt=16384 arm is reverted=true; both stay in measurements.csv as evidence
+    # and are deliberately NOT promoted to the headline summary.
+    #
+    # comparability is "prompt-matched": same harness (bench-miaai), same prompt
+    # shape and length as the anemll rows beside them. The speculator differs
+    # permanently (anemll MTP K=2 vs eugr DSpark nst=5, and nst<5 is rejected by
+    # the checkpoint), which is an ENGINE difference, not a prompt one -- so the
+    # note carries it on every row rather than the comparability field hiding it.
+    EUGR_CFG = "eugr-tp3-seqs16-dspark5-mnbt8192"
+    SPEC = (" Cross-engine: the speculator CANNOT be matched (anemll MTP K=2 vs "
+            "eugr DSpark nst=5; nst<5 is rejected by the checkpoint, "
+            "dspark_block_size=5), so this is each engine at its own working "
+            "depth, not a single-variable A/B. Warm kernel caches - the earlier "
+            "arm-1 rows under --no-cache-dirs are JIT-contaminated lower bounds.")
+
+    r = pick(EUGR_CFG, "bench-miaai", "synthetic-numbered-words", "1",
+             "decode_tok_s")
+    if r:
+        out.append({
+            "result_id": "eugr-c1-decode",
+            "source_file": "measurements.csv",
+            "config_id": EUGR_CFG,
+            "engine": r["engine"],
+            "metric": "decode_tok_s",
+            "statistic": r["statistic"],
+            "value": r["decode_tok_s"],
+            "prompt_shape": r["prompt_shape"],
+            "harness": r["harness"],
+            "comparability": "prompt-matched",
+            "evidence_status": "raw-measurements",
+            "notes": ("K-sweep winner; the tuning eugr.service serves "
+                      "(EUGR_NST=5 EUGR_MNBT=8192)." + SPEC),
+        })
+
+    for cc, rid, extra in (
+            ("8", "eugr-c8-aggregate",
+             "best aggregate cell measured on this engine"),
+            ("16", "eugr-peak-aggregate",
+             "at the max_num_seqs cap (c=16); peak USEFUL concurrency")):
+        r = pick(EUGR_CFG, "bench-miaai", "synthetic-numbered-words", cc,
+                 "aggregate_tok_s")
+        if r:
+            out.append({
+                "result_id": rid,
+                "source_file": "measurements.csv",
+                "config_id": EUGR_CFG,
+                "engine": r["engine"],
+                "metric": "aggregate_tok_s",
+                "statistic": r["statistic"],
+                "value": r["aggregate_tok_s"],
+                "prompt_shape": r["prompt_shape"],
+                "harness": r["harness"],
+                "comparability": "prompt-matched",
+                "evidence_status": "raw-measurements",
+                "notes": extra + "." + SPEC,
+            })
+
+    # The eugr prompt-effect pair: same script, same engine, only the prompt
+    # differs -- the within-engine ratio, which is sound even though the
+    # dense-prose prompt is a reconstruction and so NOT matched across engines.
+    for ps, rid in (("code-brief", "eugr-prompt-effect-code"),
+                    ("dense-prose", "eugr-prompt-effect-prose")):
+        r = pick(EUGR_CFG, "eugr-remaining-cells.py", ps, "1", "decode_tok_s")
+        if r:
+            note = ("identical script and engine; this pair differs ONLY by "
+                    "prompt - a 1.95x swing on this engine, LARGER than the "
+                    "1.65x measured on anemll.")
+            if ps == "dense-prose":
+                note += (" The prompt is a RECONSTRUCTION (ours-bench.py was "
+                         "never committed), so this value is NOT matched to the "
+                         "anemll dense-prose row; only the within-engine ratio "
+                         "is sound.")
+            out.append({
+                "result_id": rid,
+                "source_file": "measurements.csv",
+                "config_id": EUGR_CFG,
+                "engine": r["engine"],
+                "metric": "decode_tok_s",
+                "statistic": r["statistic"],
+                "value": r["decode_tok_s"],
+                "prompt_shape": ps,
+                "harness": r["harness"],
+                "comparability": "prompt-matched" if ps == "code-brief" else "historical-only",
+                "evidence_status": "raw-measurements",
+                "notes": note,
+            })
+
     # --- The MATCHED 2-node vs 3-node comparison (the headline result). ---
     # Same cluster, same afternoon, same harness and prompt shape, MTP=4 on both,
     # so node count is the only variable. Values are QUERIED from measurements.csv

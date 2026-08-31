@@ -140,15 +140,42 @@ the comparison table then falls out of the data instead of being hand-kept.
 
 | cell | harness | prompt_shape | c | anemll-v0.25.1 | eugr-spark-vllm-b12x |
 |---|---|---|---|---:|---:|
-| single-stream decode (256-tok prompt) | bench-miaai | synthetic-numbered-words | 1 | 80.4 (tp3-seqs16) | **82.1** (warm; cold read 65.4 under JIT compiles) |
-| aggregate c=4 | bench-miaai | synthetic-numbered-words | 4 | 115.2 | **162.7** (+41%) |
-| aggregate c=8 | bench-miaai | synthetic-numbered-words | 8 | 143.6 | **171.7** (+20%) |
-| peak useful aggregate (seqs cap) | bench-miaai | synthetic-numbered-words | 16 | 161.0 | 133.9 (−17%; c=16 scheduling cliff, TTFT 7s — see bundle README) |
+| single-stream decode (256-tok prompt) | bench-miaai | synthetic-numbered-words | 1 | 80.4 (tp3-seqs16) | **84.3** (+5%) |
+| aggregate c=4 | bench-miaai | synthetic-numbered-words | 4 | 115.2 | **152.8** (+33%) |
+| aggregate c=8 | bench-miaai | synthetic-numbered-words | 8 | 143.6 | **252.9** (+76%) |
+| peak useful aggregate (seqs cap) | bench-miaai | synthetic-numbered-words | 16 | 161.0 | **198.8** (+24%) |
 | decode at 131,072-token context | bench-miaai / eugr-remaining-cells | synthetic-numbered-words | 1 | 83.5 | **42.3** (cold; ⚠ not matched — see below) |
 | prompt-effect: code-brief | ours-bench.py / eugr-remaining-cells | code-brief | 1 | 81.8 | **89.4** (+9%) |
 | prompt-effect: dense-prose | ours-bench.py / eugr-remaining-cells | dense-prose | 1 | 49.4 | 45.9 (⚠ prompt reconstructed — not matched) |
 | deep concurrency 4×~200K (usability) | deepconc.py / eugr-remaining-cells | synthetic-numbered-words | 4 | 0.9 (unusable) | 1.4 (still unusable, TTFT 227s) |
-| KV cache tokens (capacity, prompt-independent) | n/a | n/a | n/a | 3,588,422 | 2,415,674 (kv fp8 vs nvfp4_ds_mla delta) |
+| KV cache tokens (capacity, prompt-independent) | n/a | n/a | n/a | 3,588,422 | 2,357,009 (kv fp8 vs nvfp4_ds_mla delta) |
+
+**The four concurrency cells were REBASELINED on 2026-08-31** from the K-sweep
+bundle `results/20260830T2245Z-eugr-ksweep/` (config
+`eugr-tp3-seqs16-dspark5-mnbt8192`, the tuning `eugr.service` actually serves).
+They previously carried arm-1 values measured under `--no-cache-dirs`, where
+b12x kernels JIT-compiled *during* measurement — lower bounds, not engine
+capability. What changed:
+
+| c | was (arm 1, cold) | now (warm caches) | anemll |
+|---|---:|---:|---:|
+| 1 | 82.1 (+2%) | **84.3 (+5%)** | 80.4 |
+| 4 | 162.7 (+41%) | **152.8 (+33%)** | 115.2 |
+| 8 | 171.7 (+20%) | **252.9 (+76%)** | 143.6 |
+| 16 | 133.9 (**−17%**) | **198.8 (+24%)** | 161.0 |
+
+The c=16 cell is the consequential one: it flipped from an apparent 17%
+*regression* — reported as a "scheduling cliff" — to a 24% win. That cliff is
+**retracted**; it was JIT contamination. On warm caches the new engine wins
+every concurrency cell. The arm-1 rows remain in `measurements.csv` under
+`eugr-tp3-seqs16-dspark5`, marked superseded, because reverted and superseded
+evidence is preserved here rather than deleted.
+
+**A permanent caveat applies to every row above**: the speculator differs and
+CANNOT be matched. anemll runs MTP K=2; eugr runs DSpark nst=5, and nst<5 is
+rejected by the checkpoint (`dspark_block_size: 5`). This is an engine-vs-engine
+comparison at each engine's own working depth, not a controlled single-variable
+A/B. See `docs/troubleshooting.md`.
 
 **All cells are now filled (2026-08-31, bundle
 `results/20260831T0030Z-eugr-remaining-cells/`). Two carry caveats that must

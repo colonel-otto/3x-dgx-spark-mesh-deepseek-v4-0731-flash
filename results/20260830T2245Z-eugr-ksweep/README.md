@@ -66,16 +66,16 @@ Complete matrix (aggregate tok/s; c=1 column is single-stream decode):
 | 4 | 152.8 | 151.2 | **165.0** |
 | 8 | **252.9** | 208.8 | 241.8 |
 | 16 | 198.8 | 197.2 | **214.3** |
-| **KV cache tokens** | **2,415,674** | 2,415,674 | **1,165,679** |
-| max concurrency @1M ctx | **2.30x** | 2.30x | 1.11x |
+| **KV cache tokens** | **2,357,009** | 2,405,070 | **1,165,679** |
+| max concurrency @1M ctx | **2.25x** | 2.29x | 1.11x |
 
 - **nst=7 loses everywhere.** It never wins a cell and costs 21% at c=8. The
   anemll-derived expectation "high K wins single-stream" does NOT transfer:
   nst=5 wins single-stream too. With the block-size floor at 5, the legal range
   is {5,7} and 5 is simply better — the depth question is settled, not open.
 - **mnbt=16384 is the anemll KV trap again.** It wins c=4 (+8%) and c=16 (+8%)
-  but costs **52% of the KV cache** (2.42M -> 1.17M tokens; max concurrency at 1M
-  context falls 2.30x -> 1.11x). It also loses c=8 by 4%. Trading half the KV
+  but costs **50.5% of the KV cache** (2.36M -> 1.17M tokens; max concurrency at 1M
+  context falls 2.25x -> 1.11x). It also loses c=8 by 4%. Trading half the KV
   capacity for ~8% on two cells is a bad trade for a 1M-context server, so this
   confirms the anemll finding on a different engine and different KV dtype —
   measured, not assumed, as the plan required.
