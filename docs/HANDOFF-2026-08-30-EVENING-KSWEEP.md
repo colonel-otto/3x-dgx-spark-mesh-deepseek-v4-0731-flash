@@ -1,5 +1,12 @@
 # Handoff — 2026-08-30 evening: K sweep done, eugr is the service, gateway live
 
+> [!WARNING]
+> **SUPERSEDED by [HANDOFF-2026-08-31.md](HANDOFF-2026-08-31.md).** Four numbers
+> on this page were later corrected on evidence — the c=8/c=16 aggregates, the
+> 131K decode cell, the dense-prose row and ratio, and the KV figures in §2.
+> Read the correction table on the current page before quoting anything here.
+> The *methodology* and the depth verdict (nst=5, legal range {5,7}) stand.
+
 Supersedes [HANDOFF-2026-08-30-ENGINE-AB.md](HANDOFF-2026-08-30-ENGINE-AB.md) for
 cluster state and for its "next steps" list. Written for a fresh conversation.
 
