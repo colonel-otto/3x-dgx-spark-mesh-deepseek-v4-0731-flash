@@ -1,0 +1,1 @@
+Environment=HOME=/home/sparkmain PATH=/home/sparkmain/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin EUGR_NST=5 EUGR_MNBT=8192

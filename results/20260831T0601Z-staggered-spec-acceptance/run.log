@@ -1,0 +1,33 @@
+======================================================================
+STAGGERED SPEC-ACCEPTANCE SWEEP
+URL: http://127.0.0.1:8100/v1  Model: deepseek-v4-flash-eugr-ab
+Concurrencies: [1, 4, 8, 16, 32]  Requests/tier: 30
+Arrival rate λ: 2.0  Output tokens: 256
+======================================================================
+
+Warming up (2 requests) ...
+Warmup complete.
+
+--- Concurrency cc=1 (30 requests, staggered λ=2.0) ---
+  OK=30 ERR=0 WINDOW_FAIL=0  Acceptance=41.3%  Preemptions=0  TTFT_med=3.527s  Decode_med=51.8 tok/s  PromptRange=[1181, 78413]
+
+--- Concurrency cc=4 (30 requests, staggered λ=2.0) ---
+  OK=30 ERR=0 WINDOW_FAIL=0  Acceptance=40.8%  Preemptions=0  TTFT_med=7.787s  Decode_med=12.2 tok/s  PromptRange=[1154, 106452]
+
+--- Concurrency cc=8 (30 requests, staggered λ=2.0) ---
+  OK=30 ERR=0 WINDOW_FAIL=0  Acceptance=41.6%  Preemptions=0  TTFT_med=12.493s  Decode_med=4.6 tok/s  PromptRange=[1506, 128275]
+
+--- Concurrency cc=16 (30 requests, staggered λ=2.0) ---
+  OK=30 ERR=0 WINDOW_FAIL=0  Acceptance=41.3%  Preemptions=0  TTFT_med=61.881s  Decode_med=1.5 tok/s  PromptRange=[1283, 123307]
+
+--- Concurrency cc=32 (30 requests, staggered λ=2.0) ---
+  OK=30 ERR=0 WINDOW_FAIL=0  Acceptance=40.0%  Preemptions=0  TTFT_med=61.037s  Decode_med=3.0 tok/s  PromptRange=[1272, 111067]
+
+======================================================================
+VERDICT: PASS
+  Min acceptance across tiers: 40.0%
+  Total preemptions: 0
+  Total errors: 0
+======================================================================
+
+Saved results to /home/sparkmain/3spark-dsv4/results/20260831T0601Z-staggered-spec-acceptance/staggered_spec_acceptance.json
