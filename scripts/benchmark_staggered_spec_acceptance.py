@@ -448,6 +448,14 @@ def main() -> int:
                         help="Output JSON path")
     args = parser.parse_args()
 
+    # Line-buffer stdout. A long sweep is normally run detached with its output
+    # redirected to a file, and Python block-buffers a redirected stream: without
+    # this the log stays EMPTY for hours and is lost entirely if the run dies.
+    try:
+        sys.stdout.reconfigure(line_buffering=True)
+    except AttributeError:  # pragma: no cover - Python < 3.7
+        pass
+
     ccs = [int(x.strip()) for x in args.concurrencies.split(",")]
     result = run_sweep(args.url, args.metrics_url, args.model, ccs,
                        args.requests_per_tier, args.arrival_rate,

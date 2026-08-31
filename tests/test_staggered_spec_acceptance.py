@@ -8,6 +8,7 @@ handling without requiring a live cluster.
 import importlib.util
 import json
 import math
+import os
 import pathlib
 import random
 import sys
@@ -163,6 +164,32 @@ class TestRequestResultSchema(unittest.TestCase):
             self.assertIn("HTTP 500", result["error"])
             self.assertEqual(result["request_id"], "req-1")
             self.assertFalse(result["window_ok"])
+
+
+class TestStdoutLineBuffering(unittest.TestCase):
+    """main() must line-buffer stdout before the sweep starts.
+
+    A sweep is run detached with stdout redirected to a file. Python
+    block-buffers a redirected stream, so without this the run log stays empty
+    for hours and is lost entirely if the process dies mid-run.
+    """
+
+    def test_main_line_buffers_stdout(self):
+        stdout = MagicMock()
+        with patch.object(mod.sys, "stdout", stdout),              patch.object(mod, "run_sweep") as run_sweep,              patch.object(mod.sys, "argv",
+                          ["prog", "--out", os.devnull]),              patch.object(mod.json, "dump"),              patch("builtins.open", MagicMock()):
+            run_sweep.return_value = {"verdict": "PASS"}
+            mod.main()
+        stdout.reconfigure.assert_called_once_with(line_buffering=True)
+
+    def test_main_survives_stdout_without_reconfigure(self):
+        """Python < 3.7 streams have no reconfigure; main() must not crash."""
+        stdout = MagicMock()
+        del stdout.reconfigure
+        with patch.object(mod.sys, "stdout", stdout),              patch.object(mod, "run_sweep") as run_sweep,              patch.object(mod.sys, "argv",
+                          ["prog", "--out", os.devnull]),              patch.object(mod.json, "dump"),              patch("builtins.open", MagicMock()):
+            run_sweep.return_value = {"verdict": "PASS"}
+            self.assertEqual(mod.main(), 0)
 
 
 if __name__ == "__main__":
