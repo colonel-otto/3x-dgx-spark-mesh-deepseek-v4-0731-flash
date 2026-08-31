@@ -13,6 +13,10 @@ Use these canonical pages instead:
   eugr — it compared against 10-day-old anemll rows and its single-stream deltas sat inside
   the 12 % parity tolerance. Deep concurrency (4×~200K) is the one cell left unmatched:
   [#49](../../issues/49).
+- [Staggered-gate & fabric handoff](HANDOFF-2026-08-31-STAGGERED-AND-FABRIC.md) — the
+  ragged-context correctness gate (PASSES, acceptance flat c=1..32), why `nvfp4_ds_mla`
+  is impossible on MLA, and the fabric gate's 7 failures being a stale config rather
+  than a broken fabric. Its tok/s figures are a PREFILL-bound workload — not throughput.
 - [Operating state, 2026-08-31](HANDOFF-2026-08-31.md) — current for the running system:
   eugr on `:8100` (nst=5/mnbt=8192), LiteLLM as a systemd unit, and a correction table for
   four numbers the K-sweep handoff published. **One claim there is superseded**: it closes

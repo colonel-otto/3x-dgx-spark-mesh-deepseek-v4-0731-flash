@@ -15,3 +15,4 @@ Makefile text eol=lf
 # the kernel reports "bad interpreter: No such file or directory".
 *.service text eol=lf
 scripts/gateway/litellm-wait-ready text eol=lf
+scripts/fabric/dsv4-fabric-reconcile text eol=lf

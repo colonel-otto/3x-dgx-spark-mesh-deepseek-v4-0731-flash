@@ -171,7 +171,7 @@ new-engine column by appending rows to measurements.csv with
 `engine=eugr-spark-vllm-b12x` and the SAME config/harness/prompt columns —
 the comparison table then falls out of the data instead of being hand-kept.
 
-| cell | harness | prompt_shape | c | anemll-v0.25.1 | eugr-spark-vllm-b12x |
+| cell | harness | prompt_shape | c | anemll-v0.25.1 | eugr-spark-vllm-b12x (nst=5, mnbt=8192, persistent caches, `eugr-tp3-seqs16-dspark5-cached`) |
 |---|---|---|---|---:|---:|
 | single-stream decode (256-tok prompt) | bench-miaai | synthetic-numbered-words | 1 | 80.4 (tp3-seqs16) | **84.3** (+5%) |
 | aggregate c=4 | bench-miaai | synthetic-numbered-words | 4 | 115.2 | **152.8** (+33%) |

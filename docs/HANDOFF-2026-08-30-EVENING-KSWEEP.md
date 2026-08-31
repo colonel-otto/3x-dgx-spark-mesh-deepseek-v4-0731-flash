@@ -72,6 +72,26 @@ JIT counters, engine configs, fabric gate JSON).
 
 ## 4. Next steps
 
+Items 1–3 of the original list are DONE (2026-08-31 00:35 EDT):
+
+- **Remaining A/B cells measured** on the winning config — 131K decode **90.5** vs 83.5
+  (TTFT 53.7 s vs 138 s), prompt-effect pair on the **exact** original prompts (the
+  dense-prose text was in git history, commit `b078eb4`, not lost) **91.0 / 49.2** vs
+  81.8 / 49.4, deep 4×200K **TTFT 224 s** vs ~870 s (still unusable as a workload).
+  Bundle `results/20260831T0000Z-eugr-remaining-cells/`.
+- **Cross-engine table re-baselined** in `docs/ENGINE-AB-3NODE.md` from the nst=5 rows;
+  arm-1 rows marked lower bounds.
+- **measurements.csv rows appended** for the sweep (12) and the remaining cells (4);
+  `config_id=eugr-tp3-seqs16-dspark5-cached` is the serving config; summary regenerated.
+
+Still open:
+
+1. **Make LiteLLM a systemd unit on bigdog.** It runs as a bare nohup process, so
+   it does not survive a reboot and a config edit needs a manual restart.
+2. Optional: `--kv-cache-dtype nvfp4_ds_mla` on this build to remove the KV delta
+   vs anemll (2.36M vs 3.59M tokens), if supported.
+3. Optional: a fabric-gated re-run of the remaining cells (this run inherited the
+   sweep's gate on the same boot rather than running its own).
 1. ~~Remaining A/B cells~~ **DONE 2026-08-31, corrected 05:30Z** —
    `results/20260831T0525Z-eugr-remaining-cells-matched/` supersedes two cells of
    `20260831T0030Z-eugr-remaining-cells`: **131K decode is 90.5 vs 83.5 (+8 %, TTFT

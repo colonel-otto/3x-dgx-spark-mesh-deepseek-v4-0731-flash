@@ -11,11 +11,11 @@ and diagnostic baseline values.
 
 | Item | Count |
 |---|---:|
-| Result bundles | 48 |
-| `CURRENT` | 32 |
+| Result bundles | 49 |
+| `CURRENT` | 33 |
 | `VOID` | 11 |
 | `SUPERSEDED` | 5 |
-| Own passing fabric gate | 18 |
+| Own passing fabric gate | 19 |
 | Gate absent | 24 |
 | Predates the gate | 5 |
 
@@ -59,6 +59,7 @@ quality evidence or a methodology-only control.
 | [20260831T0030Z-eugr-remaining-cells](20260831T0030Z-eugr-remaining-cells/) | 2026-08-31 | 3 / 3 | `PRESENT-PASS` | The three A/B cells left open by the K sweep, on the eugr engine at the sweep-winning nst=5/mnbt=8192. PROMPT EFFECT: code-brief 89.4 tok/s vs dense-prose 45.9 = 1.95x on identical hardware minutes apart (anemll recorded 1.65x) - the DSpark/MTP acceptance effect is LARGER on this engine, so no decode number means anything without its prompt shape. CAVEAT: ours-bench.py was never committed and no doc records the dense-prose prompt text, so the prompt here is a RECONSTRUCTION to the recorded ~51-token shape; the cross-engine dense-prose number is NOT matched and only the within-engine ratio is sound. The code-brief prompt IS exact (recovered verbatim from the committed bench_tp3.py default, 18 tokens, matching the anemll rows). 131K DECODE: 42.3 tok/s cold vs anemll 83.5, but NOT a matched config - anemll ran max_model_len 460800 and this engine serves 1048576 - and prefill is 2.6x FASTER (TTFT 53,721ms vs 138,076ms), so it is slower at decode AFTER a long prefill, not at long context generally. A first attempt reusing one 131K prompt was DISCARDED: TTFT fell 58,742ms -> 1,262ms between reps, i.e. the prefix cache served the later reps; the harness now builds a unique 131K prompt per rep and every rep shows a cold 53-56s TTFT. DEEP CONCURRENCY 4x200K: 1.4 tok/s aggregate, median TTFT 226.6s, 0 errors (anemll 0.9) - completes but remains unusable; a workload-shape limit, not an engine defect. |
 | [20260831T1000Z-matched-engine-ab](20260831T1000Z-matched-engine-ab/) | 2026-08-31 | 3 / 3 | `ABSENT` | The first MATCHED cross-engine A/B. Both engines measured back-to-back on the same day, same three nodes, same harness, same prompt, same 128-token window, median-of-5, max_num_seqs=16 on BOTH arms -- one variable, the engine. Supersedes the cross-engine table whose anemll column was quoted from 2026-08-21 rows. |
 | [20260831T0525Z-eugr-remaining-cells-matched](20260831T0525Z-eugr-remaining-cells-matched/) | 2026-08-31 | 3 / 3 | `PRESENT-PASS` | Remaining engine-A/B cells re-measured on MATCHED harness and EXACT prompts: 131K decode 90.5 vs anemll 83.5 (+8%, TTFT 53.7s vs 138.1s) on bench-miaai --prompt 131072, superseding the 42.3 that measured the driver's own filler prompt; dense-prose 49.2 vs 49.4 (parity) on the original prompt recovered from git commit b078eb4, ratio 1.85x vs 1.65x; code-brief 91.0 vs 81.8; deep 4x200K TTFT 224s, 1.26 tok/s (confirms). |
+| [20260831T0601Z-staggered-spec-acceptance](20260831T0601Z-staggered-spec-acceptance/) | 2026-08-31 | 3 / 3 | `PRESENT-PASS` | Staggered ragged-context load gate on the eugr serving config: 150 Poisson-arrival requests (30 per tier at c=1,4,8,16,32) with prompt lengths drawn log-uniformly from a tiered mixture spanning 1.1K-128K tokens. PASS - 0 errors, 0 window failures, 0 preemptions; MTP acceptance flat at 40.0-41.6% from c=1 to c=32 against a 30% floor. Settles three production questions: MTP acceptance under async continuous batching, KV allocator correctness under ragged churn, and virtual-TP zero-fill sink stability under dynamic compaction. This is a CORRECTNESS gate, not a throughput result - the workload is prefill-bound by construction (58-132x prefill:decode) and its per-request decode figures must not be quoted as engine throughput. |
 
 ## Superseded evidence
 

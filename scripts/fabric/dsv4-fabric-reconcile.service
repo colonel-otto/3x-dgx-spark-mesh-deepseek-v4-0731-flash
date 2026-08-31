@@ -1,0 +1,26 @@
+[Unit]
+# Reconcile the DSv4 rendezvous address + peer host routes on every boot.
+#
+# The addresses this restores are what Gloo rendezvous and scripts/fabric_gate.sh
+# both resolve peers by. When they are missing the gate fails 7 checks on a
+# perfectly healthy fabric, so this runs BEFORE the engine and before anyone
+# reads a gate result.
+Description=DSv4 fabric rendezvous address and peer routes
+Documentation=file:/etc/dsv4-fabric-map
+After=network-online.target
+Wants=network-online.target
+# The engine's rendezvous needs these addresses to exist first.
+Before=eugr.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/bin/dsv4-fabric-reconcile
+# A peer being down must not fail the boot: the script exits non-zero only on a
+# LOCAL failure it could not repair.
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=dsv4-fabric
+
+[Install]
+WantedBy=multi-user.target

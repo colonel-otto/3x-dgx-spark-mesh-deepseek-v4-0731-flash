@@ -10,7 +10,9 @@
 # a run (byte-identical harness or the comparison is void).
 set -uo pipefail
 
-URL=${1:-http://127.0.0.1:8000/v1/chat/completions}
+# Port 8100, not 8000: eugr.service serves DSv4 on :8100 and :8000 is DEAD for
+# this model. The old default made every content check fail with an empty body.
+URL=${1:-http://127.0.0.1:8100/v1/chat/completions}
 MODEL=${2:-deepseek-v4-flash-eugr-ab}
 SUITE=${SUITE:-$HOME/xrepo/2spark-suite}
 BASE=${URL%/v1/chat/completions}
@@ -49,7 +51,10 @@ check "red/blue"        "7"      "$(ask 'Red is 7 and blue is 3. A ball is red. 
 needle=$(python3 -c "print('The sky report follows. ' + 'Filler sentence about weather patterns. '*260 + 'The secret code is FALCON42. ' + 'More filler about clouds. '*40 + 'What is the secret code mentioned above? Answer with just the code.')")
 check "needle ~1.5k tok" "FALCON42" "$(ask "$needle" 60)"
 deg=$(ask 'Write one short paragraph about the ocean.' 150)
-uw=$(python3 -c "import sys; w=sys.argv[1].split(); print('OK' if not w or len(set(w))/len(w) > 0.4 else 'DEGENERATE')" "$deg")
+# An EMPTY body is a failure, not a pass: the previous 'not w or ...' spelling
+# reported OK when the endpoint returned nothing, so a dead port scored a PASS
+# on this line while every other check failed.
+uw=$(python3 -c "import sys; w=sys.argv[1].split(); print('EMPTY' if not w else ('OK' if len(set(w))/len(w) > 0.4 else 'DEGENERATE'))" "$deg")
 check "no degeneration (unique-word ratio)" "OK" "$uw"
 
 say ""

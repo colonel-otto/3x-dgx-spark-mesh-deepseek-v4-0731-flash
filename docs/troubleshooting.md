@@ -407,6 +407,108 @@ Query `http://<gateway>:8771/opencode.gateway.json`; that document is resolved
 LIVE from the gateway's own `/v1/models` (3s cache TTL), so a model added to
 LiteLLM appears there by itself with no manual edit.
 
+## "The original prompt was never committed" — check git history before reconstructing
+
+2026-08-31: the dense-prose prompt behind the 49.4 tok/s anemll row looked unrecoverable
+(`benchmarks/README.md` shows it with an ellipsis; `ours-bench.py` was never committed) and a
+reconstruction was drafted. `git log -S"pipeline parallelism differs" -p` found the full text in
+commit `b078eb4` in under a second. Before declaring any prompt, script or value lost: search
+history with `git log -S<distinctive phrase> --all -p`. A reconstruction silently breaks
+byte-comparability; a recovered original keeps it. Corollary for authors: never elide a prompt
+with `…` in a doc that is the only place it is written down.
+
+## `nvfp4_ds_mla` KV cache is REJECTED for DeepSeek — an accepted flag value that cannot boot
+
+`--kv-cache-dtype nvfp4_ds_mla` is in the engine's accepted values *and* fails
+validation for this model. The eugr recipe carries the comment
+`kv-cache-dtype fp8 (ours: nvfp4_ds_mla)`, and the anemll engine's larger KV
+pool (3.59M tokens vs eugr's 2.36M) made closing that gap look like a
+one-flag change. It is not available on any MLA model:
+
+```
+Value error, nvfp4 KV cache is not supported with MLA (Multi-head Latent
+Attention) backends. Please use a different --kv-cache-dtype (e.g., 'fp8' or
+'auto') for MLA models such as DeepSeek.
+```
+
+DeepSeek-V4-Flash is MLA, so `fp8` is the floor on this engine and the KV
+delta vs the anemll arm is **permanent** — the same shape of conclusion as the
+DSpark depth floor.
+
+**Two traps in how it fails.** First, `nvfp4_ds_mla` *is* a legal member of
+`CacheConfig.cache_dtype`'s `Literal`, so probing the type hints says
+"supported". Support is enforced later, by a `VllmConfig` pydantic validator
+that knows the attention backend. Do not conclude a dtype is usable from the
+accepted-values list alone.
+
+Second, the log **says it is using the dtype before it rejects it**:
+
+```
+[cache.py:283] Using nvfp4_ds_mla data type to store kv cache. It reduces the
+GPU memory footprint and boosts the performance...
+[pydantic] ValidationError: 1 validation error for VllmConfig
+```
+
+That cheerful line is emitted by the cache layer one second before the
+`ValidationError`. Reading forward from it and stopping would suggest the
+switch worked. Read to the end of the boot, and treat `systemctl is-active`
+returning `failed` as the authority — the same "init success is not health"
+rule as elsewhere in this document.
+
+**Recovery is clean:** revert the recipe's `--kv-cache-dtype` to `fp8` and
+`systemctl restart eugr.service`. The unit's `ExecStopPost` tore down all
+three nodes on the failed boot and left **zero** leaked containers, so no
+manual `docker rm` was needed.
+
+Verified 2026-08-31 on `eugr/spark-vllm-b12x` at 3-node TP=3 (fp8 baseline:
+23.02 GiB → 2,364,598 tokens, 2.26x max concurrency at 1M context).
+
+## The fabric gate FAILS on a healthy fabric after a renumber (stale `FABRIC_ADDRS`)
+
+`scripts/fabric_gate.sh` reported **7 failures** — every peer "UNREACHABLE over
+fabric", every peer egress "would leave via a non-fabric device" — on a fabric
+that was completely healthy. The gate was right to fail loudly; it was reading
+addresses that no longer existed.
+
+**The tell is that the gate contradicts itself.** In the same run:
+
+```
+FAIL  sparkmain -> spark1 (192.168.100.2) UNREACHABLE over fabric
+PASS  spark1 fabric addressing clean: enp1s0f0np0=10.100.160.2/24 ...
+PASS  spark1: every fabric peer on its cabled port
+```
+
+It cannot both fail to reach a node and enumerate that node's clean addressing
+on cabled ports. When mesh checks fail but *addressing* and *arp* checks pass,
+suspect the config, not the cables.
+
+**Cause.** NVIDIA Sync renumbered the fabric to `10.100.16x` (see the Sync
+renumber entry). `configs/3spark-live.env` still named the pre-Sync
+`192.168.100.2` / `192.168.101.2`. sparkmain was unaffected only because its
+rendezvous address is on its **loopback** (`192.168.200.1/32`), which a fabric
+renumber cannot touch — so its two directed pairs kept passing and disguised
+the breakage as partial.
+
+**Fix, and why it is shaped this way.** Give *every* node a loopback rendezvous
+address on the same `/32` scheme (`.1` sparkmain, `.2` spark1, `.3` spark2) and
+a host route to each peer over that pair's point-to-point link — the fabric is
+a triangle, so each `/24` joins exactly one pair and no single interface address
+is reachable from both peers. Persist the address with
+`nmcli con mod lo +ipv4.addresses <addr>/32` and the routes in each node's
+`/etc/netplan/96-dsv4-routes.yaml`. Gate result: 7 failed → **21 passed, 0
+failed**.
+
+`scripts/fabric/` now carries a `dsv4-fabric-reconcile` oneshot unit that
+restores the address and routes on every boot, ordered `Before=eugr.service`.
+It is additive and idempotent, and it deliberately **never runs `netplan
+apply`** — applying netplan on a live fabric is what killed a running cluster
+(GID change → `EngineDead`). A peer being down is reported but does not fail
+the unit.
+
+**Do not run the gate's NCCL bandwidth check to diagnose this.** It needs the
+GPUs free, and it is skipped while the engine serves; use `--nccl=skip` for a
+config check, and schedule the bandwidth check for a window when the engine is
+already down.
 ## `MAX_NUM_SEQS` drift makes a cross-engine A/B silently two-variable
 
 The committed anemll reference rows are `config_id=tp3-seqs16`, but the LIVE
