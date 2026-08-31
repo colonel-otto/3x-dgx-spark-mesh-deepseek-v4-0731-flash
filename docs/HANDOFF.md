@@ -6,9 +6,12 @@ current-state page made the repository harder to trust.
 
 Use these canonical pages instead:
 
-- **[Current handoff](HANDOFF-2026-08-30-EVENING-KSWEEP.md) — START HERE.** eugr is the
-  serving engine (`:8100`), tuning settled at `nst=5`/`mnbt=8192`, gateway live, K sweep
-  done, and the cross-engine A/B rebaselined.
+- **[Current handoff](HANDOFF-2026-08-31.md) — START HERE.** eugr is the serving engine on
+  `:8100` (nst=5/mnbt=8192), LiteLLM is a systemd unit, the engine A/B is closed —
+  and four numbers the previous handoff published are corrected there.
+- [Previous handoff](HANDOFF-2026-08-30-EVENING-KSWEEP.md) — the K sweep itself. Its
+  131K, dense-prose and KV figures are SUPERSEDED; see the correction table on the
+  current page before quoting it.
 - [Engine-A/B handoff](HANDOFF-2026-08-30-ENGINE-AB.md) — superseded. Records the engine
   switch, but its arm-1 throughput numbers were measured with kernel caches disabled and
   are lower bounds; its "c=16 scheduling cliff" is retracted.
