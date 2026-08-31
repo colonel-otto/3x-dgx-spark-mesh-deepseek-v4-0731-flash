@@ -256,6 +256,55 @@ def build():
                 "notes": note,
             })
 
+    # --- The MATCHED cross-engine A/B (2026-08-31). ---
+    # The eugr rows above are compared against anemll numbers measured on
+    # 2026-08-21. These rows are that comparison run properly: both engines on
+    # the same day, same harness, same prompt, same 128-token window,
+    # median-of-5, and max_num_seqs=16 on BOTH arms -- one variable, the engine.
+    # They supersede the stale reference column for every cell they cover.
+    #
+    # Both arms are emitted for all four concurrencies. A cross-engine claim is
+    # only checkable if the reader can see both sides, and a hardcoded allowlist
+    # that surfaced only one arm is exactly how the eugr rows went missing before.
+    MATCHED_NOTE = (
+        "MATCHED A/B 2026-08-31: same day, same harness, same prompt, same "
+        "window, median-of-5, max_num_seqs=16 on both arms; one variable (the "
+        "engine). Correctness-gated 7/7 before any throughput cell. The "
+        "speculator remains a PERMANENT confound (anemll MTP K=2 vs eugr DSpark "
+        "nst=5; nst<5 is refused by the checkpoint), so these measure "
+        "engine+speculator. Supersedes the 2026-08-21 anemll reference column, "
+        "whose single-stream deltas fell inside the 12% parity tolerance. "
+        "results/20260831T1000Z-matched-engine-ab")
+    for cfg, tag in (("tp3-seqs16-matched", "anemll"),
+                     ("eugr-tp3-seqs16-dspark5-cached", "eugr")):
+        for cc in ("1", "4", "8", "16"):
+            for metric in ("decode_tok_s", "aggregate_tok_s"):
+                # this config_id is shared with earlier eugr rows, so select on
+                # the matched timestamp rather than taking the first match
+                r = next((x for x in m
+                          if x["config_id"] == cfg
+                          and x["concurrency"] == cc
+                          and x["harness"] == "bench-miaai"
+                          and x[metric]
+                          and x["timestamp_utc"].startswith("2026-08-31T10:")),
+                         None)
+                if not r:
+                    continue
+                out.append({
+                    "result_id": f"matched-{tag}-c{cc}-{metric.split('_')[0]}",
+                    "source_file": "measurements.csv",
+                    "config_id": cfg,
+                    "engine": r["engine"],
+                    "metric": metric,
+                    "statistic": r["statistic"],
+                    "value": r[metric],
+                    "prompt_shape": r["prompt_shape"],
+                    "harness": r["harness"],
+                    "comparability": "matched-one-variable",
+                    "evidence_status": "raw-measurements",
+                    "notes": MATCHED_NOTE,
+                })
+
     # --- The MATCHED 2-node vs 3-node comparison (the headline result). ---
     # Same cluster, same afternoon, same harness and prompt shape, MTP=4 on both,
     # so node count is the only variable. Values are QUERIED from measurements.csv

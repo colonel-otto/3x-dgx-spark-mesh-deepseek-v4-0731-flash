@@ -70,9 +70,9 @@ meta:
   fabric_gate_tally:
     PRESENT-PASS: 15
     PRESENT-FAIL: 0
-    ABSENT: 21
+    ABSENT: 22
     PRE-DATES-GATE: 5
-    total: 46
+    total: 47
   fabric_gate_tally_detail:
     PRESENT-PASS:
       - 20260825-deep-concurrency        # fabric-gate-full.json 13/13, nccl=full
@@ -107,6 +107,7 @@ meta:
       - 20260828-issue32-mtp-concurrency-sweep
       - 20260828-issue33-deep-prefill-bt-sweep
       - 20260828-issue35-guidellm-concurrency
+      - 20260831T1000Z-matched-engine-ab # engine-swap A/B; no gate run, see note
     PRE-DATES-GATE:
       - 20260821T001024Z-2spark-baseline
       - 20260821T031300Z-3spark-ep3
@@ -2729,3 +2730,54 @@ directories:
     superseded_by: 20260830T101053Z-llama-benchy-2v3
     note: >
       Kept per BENCHMARK-POLICY.
+  - dir: 20260831T1000Z-matched-engine-ab
+    date: 2026-08-31
+    description: >
+      The first MATCHED cross-engine A/B. Both engines measured back-to-back on
+      the same day, same three nodes, same harness, same prompt, same 128-token
+      window, median-of-5, max_num_seqs=16 on BOTH arms -- one variable, the
+      engine. Supersedes the cross-engine table whose anemll column was quoted
+      from 2026-08-21 rows.
+    readme_h1: "Matched engine A/B - anemll-v0.25.1 vs eugr-spark-vllm-b12x (2026-08-31)"
+    has_readme: true
+    nodes: 3
+    nodes_evidence: both arms TP=3 on sparkmain+spark1+spark2; engine startup logs
+    tp_size: 3
+    kv_pool_tokens: 4391722        # anemll arm; eugr arm 2357009
+    kv_pool_source: engine startup log (kv_cache_utils GPU KV cache size), both arms
+    harness: scripts/eugr-ab/bench-miaai.py (vendored; shipped to the node for this run)
+    harness_committed: true
+    output_tokens_requested: 128
+    output_tokens_actual: {128: 200}  # 8 cells x 5 trials x c requests, all exact
+    output_tokens_field: completion_tokens (harness hard-fails on any short window)
+    output_tokens_note: >
+      The harness verifies completion_tokens against the requested window and
+      raises rather than reporting a rate over a collapsed window, so every
+      trial in this bundle decoded exactly 128 tokens.
+    reps: median-of-5 per cell, warm-up sweep discarded, 4 concurrencies x 2 engines
+    reps_verified: true            # per-trial lines in anemll-c*.log / eugr-c*.log
+    statistic: median
+    fabric_gate: ABSENT
+    fabric_gate_artifact: null
+    fabric_gate_evidence: >
+      No fabric gate was run for this bundle. Both arms served live from the
+      same three nodes with no fabric change between them, and the NCCL
+      bandwidth check needs the GPUs free, which an engine-swap A/B never
+      offers while either arm is up.
+    fabric_gate_note: >
+      Recorded ABSENT rather than inherited. A gate from another boot is not
+      evidence for this one. The comparison is internally paired -- both arms
+      ran minutes apart on one fabric state -- so a silent RDMA degradation
+      would have to have landed between the two arms to bias it, and it would
+      have depressed the SECOND (anemll) arm, which is the arm that lost.
+    fabric_gated: false
+    fabric_state: not measured
+    raw_data_committed: true
+    raw_files: [README.md, anemll-c1.log, anemll-c4.log, anemll-c8.log,
+                anemll-c16.log, eugr-c1.log, eugr-c4.log, eugr-c8.log,
+                eugr-c16.log]
+    status: CURRENT
+    note: >
+      Correctness-gated 7/7 on the anemll arm before any throughput cell.
+      Permanent confound: anemll MTP K=2 vs eugr DSpark nst=5 (nst<5 refused by
+      the checkpoint), so cells measure engine+speculator.
