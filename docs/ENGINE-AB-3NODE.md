@@ -180,7 +180,7 @@ the comparison table then falls out of the data instead of being hand-kept.
 | decode at 131,072-token context | bench-miaai / eugr-remaining-cells | synthetic-numbered-words | 1 | 83.5 | **42.3** (cold; ⚠ not matched — see below) |
 | prompt-effect: code-brief | ours-bench.py / eugr-remaining-cells | code-brief | 1 | 81.8 | **89.4** (+9%) |
 | prompt-effect: dense-prose | ours-bench.py / eugr-remaining-cells | dense-prose | 1 | 49.4 | 45.9 (⚠ prompt reconstructed — not matched) |
-| deep concurrency 4×~200K (usability) | deepconc.py / eugr-remaining-cells | synthetic-numbered-words | 4 | 0.9 (unusable) | 1.4 (still unusable, TTFT 227s) |
+| deep concurrency 4×~200K (usability) | deepconc.py / eugr-remaining-cells — **different harnesses, a second confound** | synthetic-numbered-words | 4 | 0.9 (unusable) | 1.4 (still unusable, TTFT 227s) — **UNMATCHED, [#49](../../issues/49)**: eugr row 08-31, anemll rows 08-25. Both complete with 0 errors; eugr is ~40% faster and both are unusable. Workload-shape limit (~800K prefill), not an engine defect |
 | KV cache tokens (capacity, prompt-independent) | n/a | n/a | n/a | 3,588,422 | 2,357,009 (kv fp8 vs nvfp4_ds_mla delta) |
 
 **The four concurrency cells were REBASELINED on 2026-08-31** from the K-sweep

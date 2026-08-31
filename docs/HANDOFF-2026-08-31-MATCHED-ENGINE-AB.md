@@ -102,8 +102,16 @@ way — that is the point of matching.
    `sudo systemctl daemon-reload && sudo systemctl enable --now dsv4-fabric-reconcile.service`
 3. **The NCCL bandwidth fabric gate** is still the one check never run today.
    It needs the GPUs free; the next engine-down window is the moment for it.
-4. **Optional, now lower value**: the remaining unmatched cells (131K decode,
-   the prompt-effect pair, 4×200K deep concurrency) still carry 2026-08-21
-   anemll references. The four concurrency cells that mattered are now matched;
-   these three would need another engine swap to match, which is a real cost for
-   a comparison whose direction is no longer in doubt.
+4. **The remaining unmatched cells** (131K decode, the prompt-effect pair,
+   4×200K deep concurrency) still carry 2026-08-21/25 anemll references. The
+   four concurrency cells that mattered are now matched; these three would need
+   another engine swap to match.
+
+   **4×200K is tracked as [issue #49](../../issues/49)** and is the one worth
+   keeping open, because it is the cell where anemll's 1.86× KV pool *should*
+   matter most and the current data cannot adjudicate it. Note what it does
+   NOT say: eugr did not fail there. Both engines complete with 0 errors and
+   both are unusable — eugr at 1.40 agg tok/s / 227 s TTFT against anemll's
+   0.8–1.1 / 275–397 s, i.e. eugr is ~40 % faster and still unusable. It is a
+   workload-shape limit (~800K tokens of prefill), not an engine defect, and
+   there is nothing to tune at that prompt:decode ratio.
