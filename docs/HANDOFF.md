@@ -6,8 +6,12 @@ current-state page made the repository harder to trust.
 
 Use these canonical pages instead:
 
-- **[Current handoff](HANDOFF-2026-08-30-ENGINE-AB.md) — START HERE.** anemll retired,
-  eugr engine up, arm-1 results, gateway route to fix, K sweep next.
+- **[Current handoff](HANDOFF-2026-08-30-EVENING-KSWEEP.md) — START HERE.** eugr is the
+  serving engine (`:8100`), tuning settled at `nst=5`/`mnbt=8192`, gateway live, K sweep
+  done, and the cross-engine A/B rebaselined.
+- [Engine-A/B handoff](HANDOFF-2026-08-30-ENGINE-AB.md) — superseded. Records the engine
+  switch, but its arm-1 throughput numbers were measured with kernel caches disabled and
+  are lower bounds; its "c=16 scheduling cliff" is retracted.
 - [Previous handoff](HANDOFF-2026-08-29-EVENING.md) — Live cluster state
   (including a `systemctl`-says-failed / engine-is-healthy trap), the significance finding
   that withdraws four of five published 2v3 decode deltas, five harness bugs fixed, and the
