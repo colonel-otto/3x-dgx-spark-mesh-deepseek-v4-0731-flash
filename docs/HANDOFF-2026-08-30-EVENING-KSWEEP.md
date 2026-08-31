@@ -92,8 +92,24 @@ JIT counters, engine configs, fabric gate JSON).
    tuning, so they are the same configuration. The arm-1 rows
    (`eugr-tp3-seqs16-dspark5`) are kept and marked superseded. summary.csv
    regenerated; all 7 test scripts pass.
-4. **Make LiteLLM a systemd unit on bigdog.** It runs as a bare nohup process, so
-   it does not survive a reboot and a config edit needs a manual restart.
+4. ~~Make LiteLLM a systemd unit on bigdog~~ **DONE 2026-08-31, one manual step
+   left.** `litellm.service` is installed and **enabled**, so the gateway now
+   survives a reboot and `sudo systemctl restart litellm` applies a config edit.
+   The unit blocks on `/health/liveliness` before reporting "started". Copies in
+   `scripts/gateway/`.
+
+   **The cutover has NOT been run** — the bare nohup process (started 19:13) is
+   still the thing serving :4000. Swapping it means stopping a live service, so
+   it was left for a human. Either reboot, or run:
+   `bash $HOME/litellm/cutover-to-systemd.sh`
+
+   **Found while verifying, NOT fixed** (it is someone's live A/B): the
+   `qwen3.8-27b` route still points at `localhost:8000`, but the Qwen backends
+   have moved to **:30000** (SGLang, `qwen3.8-27b-sglang-dspark`) and **:30002**
+   (vLLM NVFP4, `qwen3.8-verify-27b`). Nothing serves :8000, so every gateway
+   client asking for `qwen3.8-27b` gets a 500 while `/v1/models` still returns
+   200. The DSv4 route is fine (:8100, verified with a real completion).
+   Whoever owns that A/B should repoint the route.
 5. Optional: `--kv-cache-dtype nvfp4_ds_mla` on this build to remove the KV delta
    vs anemll, if supported.
 
