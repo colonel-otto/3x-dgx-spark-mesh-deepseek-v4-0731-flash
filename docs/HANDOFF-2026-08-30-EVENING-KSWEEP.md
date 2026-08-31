@@ -65,15 +65,17 @@ JIT counters, engine configs, fabric gate JSON).
 
 ## 4. Next steps
 
-1. ~~Remaining A/B cells~~ **DONE 2026-08-31** —
-   `results/20260831T0030Z-eugr-remaining-cells/`. Headlines: the **prompt effect
-   is larger on this engine (1.95x vs anemll's 1.65x)**; 131K cold decode is
-   42.3 vs 83.5 but the configs differ (`max_model_len` 460800 vs 1048576) and
-   prefill is **2.6x faster**; 4×200K is 1.4 tok/s with TTFT 227s — completes,
-   still unusable. Two caveats travel with these numbers: the dense-prose prompt
-   is a **reconstruction** (`ours-bench.py` was never committed), so only the
-   within-engine ratio is sound; and the 131K row is not a matched config.
-   Rows appended to `benchmarks/measurements.csv`; summary regenerated.
+1. ~~Remaining A/B cells~~ **DONE 2026-08-31, corrected 05:30Z** —
+   `results/20260831T0525Z-eugr-remaining-cells-matched/` supersedes two cells of
+   `20260831T0030Z-eugr-remaining-cells`: **131K decode is 90.5 vs 83.5 (+8 %, TTFT
+   53.7 s vs 138 s)** on the matched `bench-miaai` harness — the earlier 42.3 measured
+   the driver's own repetitive filler, a different prompt, so "−49 %" was never a
+   comparison; and **dense-prose is 49.2 vs 49.4 (parity) on the EXACT original
+   prompt**, recovered from git commit `b078eb4` (it was never lost), giving a
+   within-engine prompt effect of **1.85×** (anemll 1.65×; the 1.95× was the
+   reconstruction). Deep 4×200K confirmed at TTFT 224 s / 1.26 tok/s. Rows re-homed
+   onto `eugr-tp3-seqs16-dspark5-mnbt8192`; the superseded rows are relabeled, not
+   deleted.
 2. ~~Re-baseline the cross-engine A/B table~~ **DONE 2026-08-31** — the four
    concurrency cells in `ENGINE-AB-3NODE.md` now read from the nst=5/mnbt=8192
    sweep rows instead of the contaminated arm-1 column. **This changed the

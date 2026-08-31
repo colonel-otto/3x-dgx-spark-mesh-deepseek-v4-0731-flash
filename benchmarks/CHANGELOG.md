@@ -447,3 +447,10 @@ Identical except `max_num_batched_tokens 16384`. KV collapses to 1,165,679 token
 marked `reverted=true` and preserved. It does silence the engine's own
 `max_num_scheduled_tokens is set to 8128` warning; that warning is a trap on this
 engine exactly as it was on anemll, now confirmed on a different KV dtype.
+
+### 2026-08-31 correction to `eugr-tp3-seqs16-dspark5-mnbt8192` remaining cells
+
+The 131K (42.3) and dense-prose (45.9) rows from `20260831T0030Z-eugr-remaining-cells` are
+relabeled SUPERSEDED: the first used the driver's own filler prompt rather than bench-miaai's,
+the second a reconstructed prompt. Matched replacements (90.5 on bench-miaai at p=131072; 49.2
+on the exact prompt from commit b078eb4) are in `20260831T0525Z-eugr-remaining-cells-matched`.

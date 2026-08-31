@@ -67,7 +67,11 @@ VALID_HARNESS = {"bench-miaai", "benchmark_tp3", "ours-bench.py", "deepconc.py",
                  # provenance gap it documents cannot recur. Sampling matches
                  # bench-miaai, but TTFT and the cache-defeat strategy differ,
                  # so it is a SEPARATE harness, not a re-label.
-                 "eugr-remaining-cells.py"}
+                 "eugr-remaining-cells.py",
+                 # eugr-remaining-cells-v2.py: same driver with the EXACT dense-prose
+                 # prompt (git commit b078eb4) and ours-bench.py sampling for the
+                 # prompt-effect cell (results/20260831T0525Z-eugr-remaining-cells-matched).
+                 "eugr-remaining-cells-v2.py"}
 # random-token-ids: upstream's prefill harness feeds pseudo-random token IDs
 # (seeded per size/trial so no two requests share a prefix). Not natural text at
 # all, which is the point -- it defeats the prefix cache and makes prefill cost
