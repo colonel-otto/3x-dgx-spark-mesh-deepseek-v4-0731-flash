@@ -416,3 +416,49 @@ commit `b078eb4` in under a second. Before declaring any prompt, script or value
 history with `git log -S<distinctive phrase> --all -p`. A reconstruction silently breaks
 byte-comparability; a recovered original keeps it. Corollary for authors: never elide a prompt
 with `…` in a doc that is the only place it is written down.
+
+## `nvfp4_ds_mla` KV cache is REJECTED for DeepSeek — an accepted flag value that cannot boot
+
+`--kv-cache-dtype nvfp4_ds_mla` is in the engine's accepted values *and* fails
+validation for this model. The eugr recipe carries the comment
+`kv-cache-dtype fp8 (ours: nvfp4_ds_mla)`, and the anemll engine's larger KV
+pool (3.59M tokens vs eugr's 2.36M) made closing that gap look like a
+one-flag change. It is not available on any MLA model:
+
+```
+Value error, nvfp4 KV cache is not supported with MLA (Multi-head Latent
+Attention) backends. Please use a different --kv-cache-dtype (e.g., 'fp8' or
+'auto') for MLA models such as DeepSeek.
+```
+
+DeepSeek-V4-Flash is MLA, so `fp8` is the floor on this engine and the KV
+delta vs the anemll arm is **permanent** — the same shape of conclusion as the
+DSpark depth floor.
+
+**Two traps in how it fails.** First, `nvfp4_ds_mla` *is* a legal member of
+`CacheConfig.cache_dtype`'s `Literal`, so probing the type hints says
+"supported". Support is enforced later, by a `VllmConfig` pydantic validator
+that knows the attention backend. Do not conclude a dtype is usable from the
+accepted-values list alone.
+
+Second, the log **says it is using the dtype before it rejects it**:
+
+```
+[cache.py:283] Using nvfp4_ds_mla data type to store kv cache. It reduces the
+GPU memory footprint and boosts the performance...
+[pydantic] ValidationError: 1 validation error for VllmConfig
+```
+
+That cheerful line is emitted by the cache layer one second before the
+`ValidationError`. Reading forward from it and stopping would suggest the
+switch worked. Read to the end of the boot, and treat `systemctl is-active`
+returning `failed` as the authority — the same "init success is not health"
+rule as elsewhere in this document.
+
+**Recovery is clean:** revert the recipe's `--kv-cache-dtype` to `fp8` and
+`systemctl restart eugr.service`. The unit's `ExecStopPost` tore down all
+three nodes on the failed boot and left **zero** leaked containers, so no
+manual `docker rm` was needed.
+
+Verified 2026-08-31 on `eugr/spark-vllm-b12x` at 3-node TP=3 (fp8 baseline:
+23.02 GiB → 2,364,598 tokens, 2.26x max concurrency at 1M context).
