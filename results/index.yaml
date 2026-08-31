@@ -72,7 +72,7 @@ meta:
     PRESENT-FAIL: 0
     ABSENT: 21
     PRE-DATES-GATE: 5
-    total: 45
+    total: 46
   fabric_gate_tally_detail:
     PRESENT-PASS:
       - 20260825-deep-concurrency        # fabric-gate-full.json 13/13, nccl=full
@@ -2671,3 +2671,50 @@ directories:
     superseded_by: 20260830T101053Z-llama-benchy-2v3
     note: >
       Kept per BENCHMARK-POLICY.
+  - dir: 20260831T0000Z-eugr-remaining-cells
+    date: 2026-08-31
+    description: >
+      The three remaining engine-A/B cells on the eugr serving config
+      (nst=5, mnbt=8192, persistent caches, port 8100): 131K-context decode
+      90.5 vs anemll 83.5 (+8%, TTFT 53.7s vs 138.1s); prompt-effect pair at
+      ours-bench.py conditions on the EXACT original prompts (dense-prose
+      recovered from git commit b078eb4) 91.0 / 49.2 vs 81.8 / 49.4, ratio
+      1.85x vs 1.65x; deep concurrency 4x200K TTFT 224s vs ~870s, 1.26 tok/s,
+      still unusable as a workload. Completes docs/ENGINE-AB-3NODE.md.
+    has_readme: true
+    nodes: 3
+    nodes_evidence: >
+      engine-config.txt records the eugr.service boot (EUGR_NST=5,
+      EUGR_MNBT=8192), the virtual-TP plan line and the KV size from the
+      service log; the service runs TP=3 across three nodes.
+    tp_size: 3
+    kv_pool_tokens: 2364598
+    kv_pool_source: "engine-config.txt (service boot KV size line)"
+    harness: bench-miaai (131K cell) and eugr-remaining-cells.py (prompt pair at ours-bench.py conditions; deep cell replicating deepconc.py)
+    harness_committed: true
+    output_tokens_requested: 128 (131K, deep) / 256 (prompt pair)
+    output_tokens_actual: {128: 131K and deep cells, 256: prompt pair}
+    output_tokens_field: "n=[...] in bench-131k.log; out= per rep in remaining-cells.log"
+    output_tokens_note: >
+      bench-miaai forces min=max=128; the prompt pair reports out=256 on every
+      rep; the deep cell requests 128 per stream.
+    reps: 131K 3 trials (unique cold prefixes); prompt pair 5 reps each; deep 1 run of 4 streams
+    reps_verified: true
+    statistic: median (131K, prompt pair); single-observation (deep)
+    fabric_gate: PRESENT-PASS
+    fabric_gate_artifact: ../20260830T2245Z-eugr-ksweep/nst5-mnbt8192/fabric-gate-preboot.json
+    fabric_gate_evidence: >
+      Same service boot as the K sweep, whose pre-boot gate passed 30/30
+      including NCCL bandwidth; no NCCL warnings in the service log since.
+    fabric_gate_note: >
+      Gate artifact lives in the sweep bundle; this bundle ran on the same boot.
+    fabric_gated: true
+    fabric_state: healthy
+    raw_data_committed: true
+    raw_files: [bench-131k.log, remaining-cells.log, remaining-cells.json, eugr-remaining-cells.py, engine-config.txt]
+    status: CURRENT
+    void_reasons: []
+    superseded_by: null
+    note: >
+      Together with 20260830T2245Z-eugr-ksweep this completes the eugr column
+      of the cross-engine table.

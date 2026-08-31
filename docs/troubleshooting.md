@@ -406,3 +406,13 @@ which reads like "the service is up but broken" when it is perfectly healthy.
 Query `http://<gateway>:8771/opencode.gateway.json`; that document is resolved
 LIVE from the gateway's own `/v1/models` (3s cache TTL), so a model added to
 LiteLLM appears there by itself with no manual edit.
+
+## "The original prompt was never committed" — check git history before reconstructing
+
+2026-08-31: the dense-prose prompt behind the 49.4 tok/s anemll row looked unrecoverable
+(`benchmarks/README.md` shows it with an ellipsis; `ours-bench.py` was never committed) and a
+reconstruction was drafted. `git log -S"pipeline parallelism differs" -p` found the full text in
+commit `b078eb4` in under a second. Before declaring any prompt, script or value lost: search
+history with `git log -S<distinctive phrase> --all -p`. A reconstruction silently breaks
+byte-comparability; a recovered original keeps it. Corollary for authors: never elide a prompt
+with `…` in a doc that is the only place it is written down.

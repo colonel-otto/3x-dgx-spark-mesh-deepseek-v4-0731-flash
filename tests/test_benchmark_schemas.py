@@ -57,7 +57,13 @@ VALID_HARNESS = {"bench-miaai", "benchmark_tp3", "ours-bench.py", "deepconc.py",
                  "decode_depth_sweep.py",
                  # probe_proposer_long_gen.py: the issue-36 long-horizon DSpark
                  # proposer probe (results/20260829-issue36-dspark-proposer-*).
-                 "probe_proposer_long_gen.py"}
+                 "probe_proposer_long_gen.py",
+                 # eugr-remaining-cells.py: the engine-A/B remaining cells driver
+                 # (results/20260831T0000Z-eugr-remaining-cells). Its prompt-effect
+                 # cell replicates ours-bench.py conditions (temperature 0, 256 max
+                 # tokens, streamed, decode excludes TTFT) on the exact recovered
+                 # prompts; its deep cell replicates deepconc.py (unique 200K nonces).
+                 "eugr-remaining-cells.py"}
 # random-token-ids: upstream's prefill harness feeds pseudo-random token IDs
 # (seeded per size/trial so no two requests share a prefix). Not natural text at
 # all, which is the point -- it defeats the prefix cache and makes prefill cost

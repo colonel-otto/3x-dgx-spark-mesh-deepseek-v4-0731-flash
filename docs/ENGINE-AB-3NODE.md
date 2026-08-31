@@ -1,6 +1,6 @@
 # Engine A/B — 3-node TP=3, anemll-v0.25.1 vs eugr-spark-vllm-b12x
 
-**Status: ARM 1 MEASURED (2026-08-30) — correctness gate PASSED, throughput recorded; matched same-day A/B against a live anemll engine still pending.** Results bundle: `results/20260830T194550Z-engine-ab-eugr/`. Rows: `config_id=eugr-tp3-seqs16-dspark5` in measurements.csv.
+**Status: COMPLETE (2026-08-31) — every cell in the table below is measured on the eugr serving config (`eugr-tp3-seqs16-dspark5-cached`: nst=5, mnbt=8192, persistent caches, port 8100).** Correctness gate passed 2026-08-30; K sweep settled nst=5 (`results/20260830T2245Z-eugr-ksweep/`); remaining cells in `results/20260831T0000Z-eugr-remaining-cells/`. Arm-1 rows (`eugr-tp3-seqs16-dspark5`, `--no-cache-dirs`) are lower bounds, retained.
 Image pulled to all three nodes 2026-08-30 at digest
 `sha256:7dc02f162929943ba2e14514066ed2a04bb7e9ed3592d4eb460ebcbb1f8376bd`
 (24.9GB; vLLM `0.1.dev20133+gb5f995e73.d20260823` — a main-branch build —
@@ -138,17 +138,26 @@ new-engine column by appending rows to measurements.csv with
 `engine=eugr-spark-vllm-b12x` and the SAME config/harness/prompt columns —
 the comparison table then falls out of the data instead of being hand-kept.
 
-| cell | harness | prompt_shape | c | anemll-v0.25.1 | eugr-spark-vllm-b12x |
+| cell | harness | prompt_shape | c | anemll-v0.25.1 | eugr-spark-vllm-b12x (nst=5, mnbt=8192, persistent caches, `eugr-tp3-seqs16-dspark5-cached`) |
 |---|---|---|---|---:|---:|
-| single-stream decode (256-tok prompt) | bench-miaai | synthetic-numbered-words | 1 | 80.4 (tp3-seqs16) | **82.1** (warm; cold read 65.4 under JIT compiles) |
-| aggregate c=4 | bench-miaai | synthetic-numbered-words | 4 | 115.2 | **162.7** (+41%) |
-| aggregate c=8 | bench-miaai | synthetic-numbered-words | 8 | 143.6 | **171.7** (+20%) |
-| peak useful aggregate (seqs cap) | bench-miaai | synthetic-numbered-words | 16 | 161.0 | 133.9 (−17%; c=16 scheduling cliff, TTFT 7s — see bundle README) |
-| decode at 131,072-token context | bench-miaai | synthetic-numbered-words | 1 | 83.5 | — |
-| prompt-effect: code-brief | ours-bench.py | code-brief | 1 | 81.8 | — |
-| prompt-effect: dense-prose | ours-bench.py | dense-prose | 1 | 49.4 | — |
-| deep concurrency 4×~200K (usability) | deepconc.py | synthetic-numbered-words | 4 | 0.9 (unusable) | — |
-| KV cache tokens (capacity, prompt-independent) | n/a | n/a | n/a | 3,588,422 | 2,415,674 (kv fp8 vs nvfp4_ds_mla delta) |
+| single-stream decode (256-tok prompt) | bench-miaai | synthetic-numbered-words | 1 | 80.4 (tp3-seqs16) | **84.3** (+5%) |
+| aggregate c=4 | bench-miaai | synthetic-numbered-words | 4 | 115.2 | **152.8** (+33%) |
+| aggregate c=8 | bench-miaai | synthetic-numbered-words | 8 | 143.6 | **252.9** (+76%) |
+| peak useful aggregate (seqs cap) | bench-miaai | synthetic-numbered-words | 16 | 161.0 | **198.8** (+23%) |
+| decode at 131,072-token context | bench-miaai | synthetic-numbered-words | 1 | 83.5 (TTFT 138.1 s) | **90.5** (+8%; TTFT **53.7 s**, 2.6× faster prefill) |
+| prompt-effect: code-brief | ours-bench.py conditions via eugr-remaining-cells.py | code-brief | 1 | 81.8 | **91.0** (+11%) |
+| prompt-effect: dense-prose | ours-bench.py conditions via eugr-remaining-cells.py | dense-prose | 1 | 49.4 | 49.2 (parity; ratio 1.85× vs 1.65×) |
+| deep concurrency 4×~200K (usability) | deepconc.py / eugr-remaining-cells.py | synthetic-numbered-words | 4 | 0.9 (unusable; ~870 s to first token) | 1.26 (still unusable; **TTFT 224 s**, 3.9× faster) |
+| KV cache tokens (capacity, prompt-independent) | n/a | n/a | n/a | 3,588,422 | 2,357,009 (kv fp8 vs nvfp4_ds_mla delta) |
+
+Arm-1 (`eugr-tp3-seqs16-dspark5`, `--no-cache-dirs`) rows are retained in
+measurements.csv as **lower bounds** — 20 runtime B12X JIT compiles contaminated
+them; the "c=16 scheduling cliff" read from them is retracted (persistent caches
+alone took c=16 from 133.9 to 198.8). The speculator delta is PERMANENT: the
+checkpoint's `dspark_block_size: 5` makes nst<5 illegal on this engine, so no
+K=2 parity arm with anemll's MTP can exist. Every eugr row states nst=5.
+Bundles: `results/20260830T2245Z-eugr-ksweep/` (c=1/4/8/16, K sweep, fabric gate
+30/30) and `results/20260831T0000Z-eugr-remaining-cells/` (131K, prompt pair, deep).
 
 Decode rates depend on the speculative path (the prompt-effect pair exists
 because MTP acceptance moves decode 1.65x). If the eugr arm runs a different

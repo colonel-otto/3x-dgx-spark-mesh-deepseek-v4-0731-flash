@@ -1,0 +1,20 @@
+== cell: prompt-effect pair (c=1, 256 out) ==
+  code-brief rep 0: decode=91.3 tok/s ttft=305ms prompt_tok=18 out=256
+  code-brief rep 1: decode=89.5 tok/s ttft=344ms prompt_tok=18 out=256
+  code-brief rep 2: decode=89.7 tok/s ttft=290ms prompt_tok=18 out=256
+  code-brief rep 3: decode=91.8 tok/s ttft=289ms prompt_tok=18 out=256
+  code-brief rep 4: decode=91.0 tok/s ttft=341ms prompt_tok=18 out=256
+  dense-prose rep 0: decode=55.2 tok/s ttft=182ms prompt_tok=23 out=256
+  dense-prose rep 1: decode=48.0 tok/s ttft=203ms prompt_tok=23 out=256
+  dense-prose rep 2: decode=52.5 tok/s ttft=145ms prompt_tok=23 out=256
+  dense-prose rep 3: decode=49.2 tok/s ttft=189ms prompt_tok=23 out=256
+  dense-prose rep 4: decode=49.2 tok/s ttft=137ms prompt_tok=23 out=256
+  prompt effect: code-brief / dense-prose = 1.85x (anemll recorded 1.65x)
+== cell: deep concurrency 4 x ~200K (128 out each) ==
+  stream 0: 200011 prompt tokens
+  stream 1: 200011 prompt tokens
+  stream 2: 200011 prompt tokens
+  stream 3: 200011 prompt tokens
+  4x200k: agg=1.42 tok/s median_decode=1.26 ttft=224.0s wall=360.8s prompt_tok=200015 errors=0
+
+wrote /home/sparkmain/eugr-ab-results/remaining-cells.json

@@ -59,20 +59,26 @@ JIT counters, engine configs, fabric gate JSON).
 
 ## 4. Next steps
 
-1. **Remaining A/B cells** (unchanged, still pending): 131K-context decode, the
-   code-brief / dense-prose prompt-effect pair, deep-concurrency 4×200K. Re-run
-   them on the winning config; the old anemll comparators are cold-cache-era for
-   the eugr side only — the anemll side is unaffected.
-2. **Re-baseline the cross-engine A/B table.** The arm-1 eugr column is
-   contaminated; regenerate it from the nst=5/mnbt=8192 rows. Note in every row
-   that the speculator delta is PERMANENT (anemll MTP K=2 vs eugr DSpark K≥5) —
-   parity is impossible, see troubleshooting.md.
-3. **Append rows to `benchmarks/measurements.csv`** with
-   `engine=eugr-spark-vllm-b12x` and regenerate summary.csv. Not yet done.
-4. **Make LiteLLM a systemd unit on bigdog.** It runs as a bare nohup process, so
+Items 1–3 of the original list are DONE (2026-08-31 00:35 EDT):
+
+- **Remaining A/B cells measured** on the winning config — 131K decode **90.5** vs 83.5
+  (TTFT 53.7 s vs 138 s), prompt-effect pair on the **exact** original prompts (the
+  dense-prose text was in git history, commit `b078eb4`, not lost) **91.0 / 49.2** vs
+  81.8 / 49.4, deep 4×200K **TTFT 224 s** vs ~870 s (still unusable as a workload).
+  Bundle `results/20260831T0000Z-eugr-remaining-cells/`.
+- **Cross-engine table re-baselined** in `docs/ENGINE-AB-3NODE.md` from the nst=5 rows;
+  arm-1 rows marked lower bounds.
+- **measurements.csv rows appended** for the sweep (12) and the remaining cells (4);
+  `config_id=eugr-tp3-seqs16-dspark5-cached` is the serving config; summary regenerated.
+
+Still open:
+
+1. **Make LiteLLM a systemd unit on bigdog.** It runs as a bare nohup process, so
    it does not survive a reboot and a config edit needs a manual restart.
-5. Optional: `--kv-cache-dtype nvfp4_ds_mla` on this build to remove the KV delta
-   vs anemll, if supported.
+2. Optional: `--kv-cache-dtype nvfp4_ds_mla` on this build to remove the KV delta
+   vs anemll (2.36M vs 3.59M tokens), if supported.
+3. Optional: a fabric-gated re-run of the remaining cells (this run inherited the
+   sweep's gate on the same boot rather than running its own).
 
 ## 5. Traps added to troubleshooting.md today
 
