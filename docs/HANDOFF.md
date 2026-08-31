@@ -6,12 +6,20 @@ current-state page made the repository harder to trust.
 
 Use these canonical pages instead:
 
-- **[Current handoff](HANDOFF-2026-08-31.md) — START HERE.** eugr is the serving engine on
-  `:8100` (nst=5/mnbt=8192), LiteLLM is a systemd unit, the engine A/B is closed —
-  and four numbers the previous handoff published are corrected there.
-- [Previous handoff](HANDOFF-2026-08-30-EVENING-KSWEEP.md) — the K sweep itself. Its
+- **[Current handoff](HANDOFF-2026-08-31-MATCHED-ENGINE-AB.md) — START HERE.** The matched
+  cross-engine A/B is done and the engine question is settled: **eugr wins every aggregate
+  cell by +31 % to +61 % and single-stream decode by +38 %**, with anemll keeping 1.86× the
+  KV pool (permanent) and per-stream decode at the c=16 cap. The earlier table *understated*
+  eugr — it compared against 10-day-old anemll rows and its single-stream deltas sat inside
+  the 12 % parity tolerance. Deep concurrency (4×~200K) is the one cell left unmatched:
+  [#49](../../issues/49).
+- [Operating state, 2026-08-31](HANDOFF-2026-08-31.md) — current for the running system:
+  eugr on `:8100` (nst=5/mnbt=8192), LiteLLM as a systemd unit, and a correction table for
+  four numbers the K-sweep handoff published. **One claim there is superseded**: it closes
+  the engine A/B on the *unmatched* table; the matched run above is the settled version.
+- [K-sweep handoff](HANDOFF-2026-08-30-EVENING-KSWEEP.md) — the K sweep itself. Its
   131K, dense-prose and KV figures are SUPERSEDED; see the correction table on the
-  current page before quoting it.
+  operating-state page before quoting it.
 - [Engine-A/B handoff](HANDOFF-2026-08-30-ENGINE-AB.md) — superseded. Records the engine
   switch, but its arm-1 throughput numbers were measured with kernel caches disabled and
   are lower bounds; its "c=16 scheduling cliff" is retracted.
