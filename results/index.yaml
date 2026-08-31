@@ -72,7 +72,7 @@ meta:
     PRESENT-FAIL: 0
     ABSENT: 21
     PRE-DATES-GATE: 5
-    total: 46
+    total: 47
   fabric_gate_tally_detail:
     PRESENT-PASS:
       - 20260825-deep-concurrency        # fabric-gate-full.json 13/13, nccl=full
@@ -2729,3 +2729,49 @@ directories:
     superseded_by: 20260830T101053Z-llama-benchy-2v3
     note: >
       Kept per BENCHMARK-POLICY.
+  - dir: 20260831T0525Z-eugr-remaining-cells-matched
+    date: 2026-08-31
+    description: >
+      Remaining engine-A/B cells re-measured on MATCHED harness and EXACT
+      prompts: 131K decode 90.5 vs anemll 83.5 (+8%, TTFT 53.7s vs 138.1s) on
+      bench-miaai --prompt 131072, superseding the 42.3 that measured the
+      driver's own filler prompt; dense-prose 49.2 vs 49.4 (parity) on the
+      original prompt recovered from git commit b078eb4, ratio 1.85x vs 1.65x;
+      code-brief 91.0 vs 81.8; deep 4x200K TTFT 224s, 1.26 tok/s (confirms).
+    has_readme: true
+    nodes: 3
+    nodes_evidence: >
+      engine-config.txt records the eugr.service boot (EUGR_NST=5,
+      EUGR_MNBT=8192), the virtual-TP plan line and KV size; TP=3 across three
+      nodes.
+    tp_size: 3
+    kv_pool_tokens: 2364598
+    kv_pool_source: "engine-config.txt (service boot KV size line)"
+    harness: bench-miaai (131K) and eugr-remaining-cells-v2.py (prompt pair at ours-bench.py conditions; deep cell replicating deepconc.py)
+    harness_committed: true
+    output_tokens_requested: 128 (131K, deep) / 256 (prompt pair)
+    output_tokens_actual: {128: 131K and deep cells, 256: prompt pair}
+    output_tokens_field: "n=[...] in bench-131k.log; out= per rep in remaining-cells.log"
+    output_tokens_note: >
+      bench-miaai forces min=max=128; the prompt pair reports out=256 on every
+      rep; the deep cell requests 128 per stream.
+    reps: 131K 3 trials (unique cold prefixes); prompt pair 5 reps each; deep 1 run of 4 streams
+    reps_verified: true
+    statistic: median (131K, prompt pair); single-observation (deep)
+    fabric_gate: PRESENT-PASS
+    fabric_gate_artifact: ../20260831T0030Z-eugr-remaining-cells/fabric-gate-post.json
+    fabric_gate_evidence: >
+      Same eugr.service boot as the superseded bundle, which gated 24/0 before
+      and after its run; no NCCL warnings in the service log since.
+    fabric_gate_note: >
+      Gate artifact lives in the sibling bundle; this bundle ran on the same boot.
+    fabric_gated: true
+    fabric_state: healthy
+    raw_data_committed: true
+    raw_files: [bench-131k.log, remaining-cells.log, remaining-cells.json, eugr-remaining-cells-v2.py, engine-config.txt]
+    status: CURRENT
+    void_reasons: []
+    superseded_by: null
+    note: >
+      Supersedes the 131K and dense-prose cells of
+      20260831T0030Z-eugr-remaining-cells (rows relabeled, not deleted).

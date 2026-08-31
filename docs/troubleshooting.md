@@ -406,3 +406,25 @@ which reads like "the service is up but broken" when it is perfectly healthy.
 Query `http://<gateway>:8771/opencode.gateway.json`; that document is resolved
 LIVE from the gateway's own `/v1/models` (3s cache TTL), so a model added to
 LiteLLM appears there by itself with no manual edit.
+
+## Same engine, same hour, 2× different decode at 131K — the prompt was different
+
+Two sessions measured "decode at 131K context" on the same eugr engine five hours apart and
+got 42.3 and 90.5 tok/s. Neither was wrong; they measured different prompts. One driver
+grew its 131K prompt from `"benchmark context datum "` repeated ~44,000 times; the other used
+`bench-miaai --prompt 131072` (numbered words), the harness that produced the anemll 83.5.
+DSpark/MTP acceptance depends on the prompt (the 1.65–1.85× code-vs-prose effect), so a
+repetitive filler is a *different measurement*, and only the bench-miaai number is comparable
+to the reference row. Rule: a cross-engine cell is matched only when harness AND prompt shape
+match the reference row's `harness`/`prompt_shape` columns — same engine, same context length,
+same day is not enough. Verified 2026-08-31; the 42.3 row is kept, relabeled.
+
+## "The original prompt was never committed" — search git history before reconstructing
+
+The dense-prose prompt behind the 49.4 tok/s anemll row looked unrecoverable
+(`benchmarks/README.md` shows it with an ellipsis; `ours-bench.py` was never committed) and a
+reconstruction was measured. `git log -S"pipeline parallelism differs" -p` found the full text
+in commit `b078eb4` in under a second. Before declaring any prompt, script or value lost,
+search history with `git log -S<distinctive phrase> --all -p`. A reconstruction silently
+breaks byte-comparability; a recovered original keeps it. Never elide a prompt with `…` in
+the only document that records it.
