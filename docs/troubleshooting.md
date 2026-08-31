@@ -388,8 +388,8 @@ settings … Consider increasing max_num_batched_tokens`). Measured at nst=5:
 | c=4 agg | 152.8 | 165.0 (+8%) |
 | c=8 agg | **252.9** | 241.8 (−4%) |
 | c=16 agg | 198.8 | 214.3 (+8%) |
-| KV cache | **2,415,674 tok** | 1,165,679 tok (**−52%**) |
-| max concurrency @1M ctx | **2.30x** | 1.11x |
+| KV cache | **2,357,009 tok** | 1,165,679 tok (**−50.5%**) |
+| max concurrency @1M ctx | **2.25x** | 1.11x |
 
 Raising it does silence the warning, but half the KV capacity for ~8% on two
 cells is a bad trade on a 1M-context server. This reproduces the anemll finding

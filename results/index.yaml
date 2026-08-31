@@ -2589,8 +2589,8 @@ directories:
       171.7->252.9 (+47%) and c=16 agg 133.9->198.8 (+48%) with TTFT
       7000ms->1755ms. Every arm-1 throughput row is therefore a LOWER BOUND.
       (3) max_num_batched_tokens 16384 is the anemll KV trap again, now
-      confirmed on fp8 KV: +8% on c=4/c=16, -4% on c=8, for -52% KV cache
-      (2,415,674 -> 1,165,679 tokens; max concurrency at 1M ctx 2.30x -> 1.11x).
+      confirmed on fp8 KV: +8% on c=4/c=16, -4% on c=8, for -50.5% KV cache
+      (2,357,009 -> 1,165,679 tokens; max concurrency at 1M ctx 2.25x -> 1.11x).
       It does silence the engine's own startup warning recommending it.
       Winner nst=5/mnbt=8192 is pinned in eugr.service.
     has_readme: true
@@ -2600,8 +2600,8 @@ directories:
       (tensor_parallel_size=3) and the virtual-TP plan warning; the fabric gate
       artifact enumerates all three nodes.
     tp_size: 3
-    kv_pool_tokens: 2415674
-    kv_pool_source: "nst5-mnbt8192/engine-config.txt (GPU KV cache size line); the mnbt=16384 arm records 1,165,679 in its own engine-config.txt"
+    kv_pool_tokens: 2357009
+    kv_pool_source: "nst5-mnbt8192/engine-config.txt (GPU KV cache size line: 2,357,009 tokens, 2.25x @1M); nst7 records 2,405,070 and the mnbt=16384 arm 1,165,679 in their own engine-config.txt"
     harness: bench-miaai (vendored this run at scripts/eugr-ab/bench-miaai.py), byte-identical to arm 1
     harness_committed: true
     output_tokens_requested: 128
