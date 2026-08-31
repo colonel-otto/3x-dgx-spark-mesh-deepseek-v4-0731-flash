@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# Block until the LiteLLM gateway actually answers on :4000, or fail.
+#
+# This lives in a FILE rather than inline in ExecStartPost= because a bash -c
+# string inside a systemd value has two layers of quoting; the first version of
+# this gate was inline, parsed clean under `systemd-analyze verify`, and still
+# died with "syntax error near unexpected token". verify does not evaluate the
+# embedded shell -- so an inline gate can look healthy and never run.
+set -u
+url="http://127.0.0.1:${1:-4000}/health/liveliness"
+for _ in $(seq 1 90); do
+  if curl -fsS -m 2 "$url" >/dev/null 2>&1; then
+    echo "gateway answering at $url"
+    exit 0
+  fi
+  sleep 1
+done
+echo "litellm did not serve $url within 90s" >&2
+exit 1

@@ -47,7 +47,7 @@ under passing fabric gates.
 > differs permanently — anemll runs MTP K=2, eugr runs DSpark nst=5, and nst<5 is *rejected*
 > by the checkpoint (`dspark_block_size: 5`). Read it as each engine at its own working
 > depth. Details: [`ENGINE-AB-3NODE.md`](docs/ENGINE-AB-3NODE.md), and the
-> [current handoff](docs/HANDOFF-2026-08-30-EVENING-KSWEEP.md).
+> [current handoff](docs/HANDOFF-2026-08-31.md).
 
 > [!NOTE]
 > Older decode runs that requested 256 output tokens but returned only 25–26 (due to prompt
@@ -68,9 +68,9 @@ under passing fabric gates.
    in either direction. **Read this before quoting any n=10 magnitude.**
 4. [3-Node vs 2-Node Benchmark](docs/BENCHMARK-2V3-NODES.md) — the older matrix, partly
    superseded by the above; still the reference for APC, MTP, and architectural analysis.
-5. [**Current handoff**](docs/HANDOFF-2026-08-30-EVENING-KSWEEP.md) — live cluster state:
+5. [**Current handoff**](docs/HANDOFF-2026-08-31.md) — live cluster state:
    the eugr engine on `:8100`, its settled tuning (`nst=5` / `mnbt=8192`), the depth sweep,
-   and the gateway. Supersedes the
+   the gateway now on systemd, and a table of four earlier numbers it corrects. Supersedes the
    [engine-A/B handoff](docs/HANDOFF-2026-08-30-ENGINE-AB.md), whose "next steps" and
    arm-1 numbers are both closed out; the
    [2026-08-29 handoff](docs/HANDOFF-2026-08-29-EVENING.md) keeps the older cluster state
@@ -304,7 +304,7 @@ fluent but wrong output. See [topology](docs/topology.md), [setup](docs/setup.md
 > [`scripts/eugr-ab/install-service.sh`](scripts/eugr-ab/install-service.sh) and start
 > `eugr.service` (port `:8100`, pinned to `EUGR_NST=5` / `EUGR_MNBT=8192`). **Do not apply
 > the padding patch to that image.** See the
-> [current handoff](docs/HANDOFF-2026-08-30-EVENING-KSWEEP.md) for the live shape and
+> [current handoff](docs/HANDOFF-2026-08-31.md) for the live shape and
 > [`ENGINE-AB-3NODE.md`](docs/ENGINE-AB-3NODE.md) for why the two differ.
 
 ### 1. Build the Hermetic Image

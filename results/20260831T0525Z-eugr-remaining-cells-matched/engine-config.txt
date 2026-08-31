@@ -1,0 +1,6 @@
+Sun 2026-08-30 19:13:41 EDT
+EUGR_NST=5 EUGR_MNBT=8192 
+log: /home/sparkmain/eugr-service-nst5-mnbt8192.log
+(EngineCore pid=208) INFO 08-30 23:11:44 [kv_cache_utils.py:2215] GPU KV cache size: 2,364,598 tokens, Maximum concurrency for 1,048,576 tokens per request: 2.26x
+(APIServer pid=89) WARNING 08-30 23:08:41 [virtual_tp.py:527] Automatically enabled B12X virtual TP padding for B12X ker
+8

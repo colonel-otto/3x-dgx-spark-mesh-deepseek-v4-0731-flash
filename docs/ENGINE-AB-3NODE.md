@@ -177,9 +177,9 @@ the comparison table then falls out of the data instead of being hand-kept.
 | aggregate c=4 | bench-miaai | synthetic-numbered-words | 4 | 115.2 | **152.8** (+33%) |
 | aggregate c=8 | bench-miaai | synthetic-numbered-words | 8 | 143.6 | **252.9** (+76%) |
 | peak useful aggregate (seqs cap) | bench-miaai | synthetic-numbered-words | 16 | 161.0 | **198.8** (+24%) |
-| decode at 131,072-token context | bench-miaai / eugr-remaining-cells | synthetic-numbered-words | 1 | 83.5 | **42.3** (cold; ⚠ not matched — see below) |
-| prompt-effect: code-brief | ours-bench.py / eugr-remaining-cells | code-brief | 1 | 81.8 | **89.4** (+9%) |
-| prompt-effect: dense-prose | ours-bench.py / eugr-remaining-cells | dense-prose | 1 | 49.4 | 45.9 (⚠ prompt reconstructed — not matched) |
+| decode at 131,072-token context | bench-miaai | synthetic-numbered-words | 1 | 83.5 (TTFT 138.1 s) | **90.5** (+8%; TTFT **53.7 s**, 2.6× faster prefill) — matched harness; the earlier 42.3 measured the driver's own filler prompt, see the correction below |
+| prompt-effect: code-brief | ours-bench.py conditions via eugr-remaining-cells-v2 | code-brief | 1 | 81.8 | **89.4** (+9%) |
+| prompt-effect: dense-prose | ours-bench.py conditions via eugr-remaining-cells-v2 | dense-prose | 1 | 49.4 | **49.2** (parity; exact original prompt; ratio 1.85× vs 1.65×) |
 | deep concurrency 4×~200K (usability) | deepconc.py / eugr-remaining-cells — **different harnesses, a second confound** | synthetic-numbered-words | 4 | 0.9 (unusable) | 1.4 (still unusable, TTFT 227s) — **UNMATCHED, [#49](../../issues/49)**: eugr row 08-31, anemll rows 08-25. Both complete with 0 errors; eugr is ~40% faster and both are unusable. Workload-shape limit (~800K prefill), not an engine defect |
 | KV cache tokens (capacity, prompt-independent) | n/a | n/a | n/a | 3,588,422 | 2,357,009 (kv fp8 vs nvfp4_ds_mla delta) |
 
@@ -227,9 +227,33 @@ travel with the numbers:**
   the harness now uses a unique 131K prompt per rep.
 
 Decode rates depend on the speculative path (the prompt-effect pair exists
-because MTP acceptance moves decode 1.65x on anemll, and **1.95x here**). If the eugr arm runs a different
+because MTP acceptance moves decode 1.65x on anemll, and **1.85x here** on the exact prompts). If the eugr arm runs a different
 speculative config than MTP K=2, the decode cells measure *engine+speculator*,
 not engine — still useful, but say so in the row notes.
+
+### Correction (2026-08-31, `results/20260831T0525Z-eugr-remaining-cells-matched/`)
+
+Two cells above were first filled from `20260831T0030Z-eugr-remaining-cells` and are
+superseded there, not deleted:
+
+- **131K decode 42.3 → 90.5.** The 42.3 came from the driver's own 131K filler
+  (`"benchmark context datum "` repeated ~44,000 times), not from `bench-miaai`'s
+  numbered-words prompt that produced the anemll 83.5. DSpark acceptance is
+  prompt-dependent (that is the whole prompt-effect finding), so a different filler
+  is a different measurement — the "−49 %" was never a comparison. Re-measured with
+  `bench-miaai --prompt 131072`, byte-identical to the anemll harness: **90.5** median
+  (85.9 / 90.5 / 94.4), TTFT 53.7 s vs 138.1 s. The one remaining delta is
+  `max_model_len` (1,048,576 here vs 460,800 on the 2026-08-21 anemll row).
+- **dense-prose 45.9 → 49.2.** The original prompt was not lost: `git log -S` finds it
+  in commit `b078eb4` (*"Write a detailed technical explanation of how pipeline
+  parallelism differs from tensor parallelism in large language model inference."*).
+  Re-measured on the exact text at `ours-bench.py` conditions (temperature 0,
+  max_tokens 256, streamed): **49.2** vs 49.4, parity; the within-engine ratio is
+  **1.85×** (anemll 1.65×). The 1.95× figure was the reconstruction's ratio.
+
+Lesson recorded in troubleshooting.md: a cell is only matched when the *harness and
+prompt* match the reference row — same engine, same hour, same context length is not
+enough — and search git history before declaring any prompt unrecoverable.
 
 ## Where results go
 

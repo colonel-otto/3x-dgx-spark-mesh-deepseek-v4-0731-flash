@@ -1,5 +1,12 @@
 # Handoff — 2026-08-30 evening: K sweep done, eugr is the service, gateway live
 
+> [!WARNING]
+> **SUPERSEDED by [HANDOFF-2026-08-31.md](HANDOFF-2026-08-31.md).** Four numbers
+> on this page were later corrected on evidence — the c=8/c=16 aggregates, the
+> 131K decode cell, the dense-prose row and ratio, and the KV figures in §2.
+> Read the correction table on the current page before quoting anything here.
+> The *methodology* and the depth verdict (nst=5, legal range {5,7}) stand.
+
 Supersedes [HANDOFF-2026-08-30-ENGINE-AB.md](HANDOFF-2026-08-30-ENGINE-AB.md) for
 cluster state and for its "next steps" list. Written for a fresh conversation.
 
@@ -65,15 +72,17 @@ JIT counters, engine configs, fabric gate JSON).
 
 ## 4. Next steps
 
-1. ~~Remaining A/B cells~~ **DONE 2026-08-31** —
-   `results/20260831T0030Z-eugr-remaining-cells/`. Headlines: the **prompt effect
-   is larger on this engine (1.95x vs anemll's 1.65x)**; 131K cold decode is
-   42.3 vs 83.5 but the configs differ (`max_model_len` 460800 vs 1048576) and
-   prefill is **2.6x faster**; 4×200K is 1.4 tok/s with TTFT 227s — completes,
-   still unusable. Two caveats travel with these numbers: the dense-prose prompt
-   is a **reconstruction** (`ours-bench.py` was never committed), so only the
-   within-engine ratio is sound; and the 131K row is not a matched config.
-   Rows appended to `benchmarks/measurements.csv`; summary regenerated.
+1. ~~Remaining A/B cells~~ **DONE 2026-08-31, corrected 05:30Z** —
+   `results/20260831T0525Z-eugr-remaining-cells-matched/` supersedes two cells of
+   `20260831T0030Z-eugr-remaining-cells`: **131K decode is 90.5 vs 83.5 (+8 %, TTFT
+   53.7 s vs 138 s)** on the matched `bench-miaai` harness — the earlier 42.3 measured
+   the driver's own repetitive filler, a different prompt, so "−49 %" was never a
+   comparison; and **dense-prose is 49.2 vs 49.4 (parity) on the EXACT original
+   prompt**, recovered from git commit `b078eb4` (it was never lost), giving a
+   within-engine prompt effect of **1.85×** (anemll 1.65×; the 1.95× was the
+   reconstruction). Deep 4×200K confirmed at TTFT 224 s / 1.26 tok/s. Rows re-homed
+   onto `eugr-tp3-seqs16-dspark5-mnbt8192`; the superseded rows are relabeled, not
+   deleted.
 2. ~~Re-baseline the cross-engine A/B table~~ **DONE 2026-08-31** — the four
    concurrency cells in `ENGINE-AB-3NODE.md` now read from the nst=5/mnbt=8192
    sweep rows instead of the contaminated arm-1 column. **This changed the
@@ -90,8 +99,24 @@ JIT counters, engine configs, fabric gate JSON).
    tuning, so they are the same configuration. The arm-1 rows
    (`eugr-tp3-seqs16-dspark5`) are kept and marked superseded. summary.csv
    regenerated; all 7 test scripts pass.
-4. **Make LiteLLM a systemd unit on bigdog.** It runs as a bare nohup process, so
-   it does not survive a reboot and a config edit needs a manual restart.
+4. ~~Make LiteLLM a systemd unit on bigdog~~ **DONE 2026-08-31, one manual step
+   left.** `litellm.service` is installed and **enabled**, so the gateway now
+   survives a reboot and `sudo systemctl restart litellm` applies a config edit.
+   The unit blocks on `/health/liveliness` before reporting "started". Copies in
+   `scripts/gateway/`.
+
+   **The cutover has NOT been run** — the bare nohup process (started 19:13) is
+   still the thing serving :4000. Swapping it means stopping a live service, so
+   it was left for a human. Either reboot, or run:
+   `bash $HOME/litellm/cutover-to-systemd.sh`
+
+   **Found while verifying, NOT fixed** (it is someone's live A/B): the
+   `qwen3.8-27b` route still points at `localhost:8000`, but the Qwen backends
+   have moved to **:30000** (SGLang, `qwen3.8-27b-sglang-dspark`) and **:30002**
+   (vLLM NVFP4, `qwen3.8-verify-27b`). Nothing serves :8000, so every gateway
+   client asking for `qwen3.8-27b` gets a 500 while `/v1/models` still returns
+   200. The DSv4 route is fine (:8100, verified with a real completion).
+   Whoever owns that A/B should repoint the route.
 5. Optional: `--kv-cache-dtype nvfp4_ds_mla` on this build to remove the KV delta
    vs anemll, if supported.
 

@@ -21,7 +21,8 @@ same day: **16 of 16 cells resolved, all favour three nodes, zero favour two** (
 | [**RESULT: n=30 re-run of the unresolved cells**](RESULT-RERUN-INCONCLUSIVE-2026-08-30.md) | Both resolved, three nodes faster (+12.7 %, +14.8 %). **Its real finding is that `n=10` mis-estimates variance in either direction**, which makes the llama-benchy 32K/131K decode magnitudes provisional. Read before quoting any n=10 figure |
 | [Plan: llama-benchy 2v3](PLAN-LLAMA-BENCHY-2V3.md) | Why that tool, the fairness rules, and the three expectations pre-registered before it ran |
 | [3-Node vs 2-Node Benchmark](BENCHMARK-2V3-NODES.md) | Older matrix — superseded for decode/concurrency; still the reference for APC, MTP and architecture |
-| [**Current handoff**](HANDOFF-2026-08-30-EVENING-KSWEEP.md) | **START HERE.** eugr is the serving engine on `:8100`, tuning settled at `nst=5`/`mnbt=8192`, gateway live, K sweep done |
+| [**Current handoff**](HANDOFF-2026-08-31.md) | **START HERE.** eugr serving on `:8100` (`nst=5`/`mnbt=8192`), LiteLLM on systemd, engine A/B closed, and four earlier numbers corrected |
+| [Previous handoff](HANDOFF-2026-08-30-EVENING-KSWEEP.md) | The K sweep. Its 131K, dense-prose and KV figures are SUPERSEDED — read the correction table on the current page first |
 | [Engine-A/B handoff](HANDOFF-2026-08-30-ENGINE-AB.md) | Superseded — the engine switch itself; its arm-1 numbers are JIT-contaminated lower bounds and its next-steps are closed |
 | [Previous handoff](HANDOFF-2026-08-29-EVENING.md) | Cluster state, the six-confound finding, harness bugs fixed |
 | [GPU clocks cannot be locked](GPU-CLOCKS-NOT-LOCKABLE.md) | Why GB10 ignores `nvidia-smi -lgc`, and what to do instead |
