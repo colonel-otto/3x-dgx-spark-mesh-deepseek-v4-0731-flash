@@ -412,3 +412,23 @@ MTP), **kv-cache-dtype fp8** (not nvfp4_ds_mla), V2 model runner, native virtual
 (no padding patch). KV cache 2,415,674 tokens / 2.30x max concurrency at 1M.
 `engine=eugr-spark-vllm-b12x` — never compare its rows to anemll rows except cell-by-cell
 per [`ENGINE-AB-3NODE.md`](../docs/ENGINE-AB-3NODE.md).
+
+## `eugr-tp3-seqs16-dspark5-cached` — the K-sweep winner (CURRENT eugr serving config)
+
+Same engine/image/checkpoint as `eugr-tp3-seqs16-dspark5` but with **persistent kernel
+caches** (`/opt/eugrcache-*` on every node; JIT miss counter frozen before any trial) and
+served on **port 8100** by `eugr.service`. `num_speculative_tokens 5`, `max_num_batched_tokens
+8192`. KV cache 2,357,009 tokens / 2.25x at 1M. Supersedes every arm-1 throughput row: those
+were taken under `--no-cache-dirs` and are lower bounds. Bundle
+`results/20260830T2245Z-eugr-ksweep/nst5-mnbt8192/`.
+
+## `eugr-tp3-seqs16-dspark7-cached` — sweep arm, not adopted
+
+As above with `num_speculative_tokens 7`. Never wins a cell. Note nst<5 is **rejected by the
+checkpoint** (`dspark_block_size: 5`), so the legal sweep is {5, 7} only.
+
+## `eugr-tp3-seqs16-dspark5-mnbt16384` — REVERTED
+
+As the winner but `max_num_batched_tokens 16384`: +8% on two cells for −52% KV cache
+(1,165,679 tokens / 1.11x at 1M). The same trap as on anemll, now confirmed on fp8 KV. Rows
+kept with `reverted=true`.
