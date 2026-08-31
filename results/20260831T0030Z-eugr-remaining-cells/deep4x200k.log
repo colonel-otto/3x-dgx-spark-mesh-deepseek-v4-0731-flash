@@ -1,0 +1,8 @@
+== cell: deep concurrency 4 x ~200K (128 out each) ==
+  stream 0: 200011 prompt tokens
+  stream 1: 200011 prompt tokens
+  stream 2: 200011 prompt tokens
+  stream 3: 200011 prompt tokens
+  4x200k: agg=1.4 tok/s median_decode=1.17 ttft=226.6s wall=364.8s prompt_tok=200015 errors=0
+
+wrote /home/sparkmain/eugr-remaining/deep4x200k.json
