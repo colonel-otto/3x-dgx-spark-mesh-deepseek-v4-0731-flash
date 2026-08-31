@@ -406,3 +406,43 @@ which reads like "the service is up but broken" when it is perfectly healthy.
 Query `http://<gateway>:8771/opencode.gateway.json`; that document is resolved
 LIVE from the gateway's own `/v1/models` (3s cache TTL), so a model added to
 LiteLLM appears there by itself with no manual edit.
+
+## `MAX_NUM_SEQS` drift makes a cross-engine A/B silently two-variable
+
+The committed anemll reference rows are `config_id=tp3-seqs16`, but the LIVE
+`config/tp3.env` on all three nodes had drifted to `MAX_NUM_SEQS=32`. Booting
+anemll "as it is configured" and comparing it to an eugr arm at `seqs=16`
+therefore measures the engine AND the scheduler cap at once, while looking
+exactly like a clean one-variable comparison — nothing errors, and the row
+label still says `seqs16`.
+
+Before any A/B, diff the live config against the `config_id` you intend to
+quote, and set the knob on **every rank** (a mismatch between ranks hangs
+startup forever with no error — the launcher's "Config verified identical
+across all 3 ranks" line is the check that catches it). Restore afterwards:
+
+```bash
+# on each of sparkmain, spark1, spark2
+cp config/tp3.env config/tp3.env.pre-<experiment>
+sed -i 's/^MAX_NUM_SEQS=32/MAX_NUM_SEQS=16/' config/tp3.env
+# ... run the arm ...
+cp config/tp3.env.pre-<experiment> config/tp3.env
+```
+
+## A delta inside the noise floor is not a result, even in a tidy table
+
+The cross-engine table published single-stream cells of +5%, +8% and +11% as
+findings. The repo's own 8-rep study on an **unchanged** anemll engine had
+already recorded 66.6–88.5 tok/s at c=1 — a 27% spread — and issue #31 set a
+**12% parity tolerance**. All three cells were inside that band: the data could
+not resolve them in either direction.
+
+The tell is that the table quoted a single median per cell with no spread
+column, so nothing on the page contradicted the numbers. When a cell's delta is
+smaller than the trial spread of either arm, write "parity (unresolved)" rather
+than a signed percentage — and always carry min/max next to the median, which
+`bench-miaai.py --repeat N` already prints on its `FINAL:` line.
+
+In this instance both defects (staleness and under-powering) happened to point
+the same way and *understated* the winner: matched measurement moved c=1 decode
+from "+5%" to +38%. It could equally have gone the other way.

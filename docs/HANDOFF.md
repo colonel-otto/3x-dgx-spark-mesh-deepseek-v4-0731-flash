@@ -6,9 +6,15 @@ current-state page made the repository harder to trust.
 
 Use these canonical pages instead:
 
-- **[Current handoff](HANDOFF-2026-08-30-EVENING-KSWEEP.md) — START HERE.** eugr is the
-  serving engine (`:8100`), tuning settled at `nst=5`/`mnbt=8192`, gateway live, K sweep
-  done, and the cross-engine A/B rebaselined.
+- **[Current handoff](HANDOFF-2026-08-31-MATCHED-ENGINE-AB.md) — START HERE.** The matched
+  cross-engine A/B is done and the engine question is settled: **eugr wins every aggregate
+  cell by +31 % to +61 % and single-stream decode by +38 %**, with anemll keeping 1.86× the
+  KV pool (permanent) and per-stream decode at the c=16 cap. The earlier table *understated*
+  eugr — it compared against 10-day-old anemll rows and its single-stream deltas sat inside
+  the 12 % parity tolerance.
+- [K-sweep handoff](HANDOFF-2026-08-30-EVENING-KSWEEP.md) — still current for everything
+  except the cross-engine table: eugr is the serving engine (`:8100`), tuning settled at
+  `nst=5`/`mnbt=8192`, gateway live, K sweep done.
 - [Engine-A/B handoff](HANDOFF-2026-08-30-ENGINE-AB.md) — superseded. Records the engine
   switch, but its arm-1 throughput numbers were measured with kernel caches disabled and
   are lower bounds; its "c=16 scheduling cliff" is retracted.
