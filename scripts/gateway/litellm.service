@@ -1,0 +1,57 @@
+[Unit]
+# LiteLLM LAN gateway on :4000.
+#
+# Written 2026-08-31. Before this, LiteLLM ran as a bare nohup process: it did
+# not survive a reboot, and a config edit needed a manual kill+restart. A stale
+# config being served for 7 days is a failure mode this repo has already hit
+# (see the "config edits need a restart" trap) -- so this unit exists to make
+# `systemctl restart litellm` the one obvious way to apply a config change.
+Description=LiteLLM LAN gateway (:4000)
+Documentation=https://docs.litellm.ai/
+After=network-online.target
+Wants=network-online.target
+# Do not fight a genuinely broken config in an endless restart loop.
+StartLimitBurst=5
+StartLimitIntervalSec=300
+
+[Service]
+# User/Group are a placeholder for this public repo; the deployed unit names
+# the real account. %h expands to that user's home, so the paths follow.
+Type=exec
+User=<gateway-user>
+Group=<gateway-user>
+WorkingDirectory=%h/litellm
+ExecStart=%h/litellm-env/bin/python %h/litellm-env/bin/litellm \
+    --config %h/litellm/config.yaml \
+    --host 0.0.0.0 --port 4000
+
+# Do not report "started" until :4000 actually answers. Without this a failed
+# boot looks healthy in `systemctl status` -- the same "init success != health"
+# trap the DSv4 work hit.
+#
+# This is a SCRIPT FILE, not an inline bash -c. The inline version parsed clean
+# under `systemd-analyze verify` and still died with "syntax error near
+# unexpected token" -- verify does not evaluate the embedded shell, so an inline
+# gate can look healthy and never actually run.
+ExecStartPost=/usr/local/bin/litellm-wait-ready 4000
+
+Restart=on-failure
+RestartSec=5s
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=litellm
+
+# Modest hardening. The gateway needs outbound network and its own config dir;
+# it has no reason to write anywhere else on the box.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=read-only
+ReadWritePaths=%h/litellm
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+
+[Install]
+WantedBy=multi-user.target
