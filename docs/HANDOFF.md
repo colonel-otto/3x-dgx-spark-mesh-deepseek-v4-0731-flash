@@ -6,7 +6,12 @@ current-state page made the repository harder to trust.
 
 Use these canonical pages instead:
 
-- **[Current handoff](HANDOFF-2026-08-30-ENGINE-AB.md) — START HERE.** anemll retired,
+- **[Current handoff](HANDOFF-2026-08-31-STAGGERED-AND-FABRIC.md) — START HERE.**
+  Staggered ragged-context gate PASSES, `nvfp4_ds_mla` is impossible on MLA, the
+  fabric gate's 7 failures were a stale config, fabric addressing now self-heals.
+- [Previous handoff](HANDOFF-2026-08-30-EVENING-KSWEEP.md) — K sweep settled
+  (nst=5/mnbt=8192), eugr is the service, gateway live.
+- [Previous handoff](HANDOFF-2026-08-30-ENGINE-AB.md) — anemll retired,
   eugr engine up, arm-1 results, gateway route to fix, K sweep next.
 - [Previous handoff](HANDOFF-2026-08-29-EVENING.md) — Live cluster state
   (including a `systemctl`-says-failed / engine-is-healthy trap), the significance finding
