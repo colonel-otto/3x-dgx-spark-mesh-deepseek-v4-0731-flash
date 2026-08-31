@@ -462,3 +462,50 @@ manual `docker rm` was needed.
 
 Verified 2026-08-31 on `eugr/spark-vllm-b12x` at 3-node TP=3 (fp8 baseline:
 23.02 GiB → 2,364,598 tokens, 2.26x max concurrency at 1M context).
+
+## The fabric gate FAILS on a healthy fabric after a renumber (stale `FABRIC_ADDRS`)
+
+`scripts/fabric_gate.sh` reported **7 failures** — every peer "UNREACHABLE over
+fabric", every peer egress "would leave via a non-fabric device" — on a fabric
+that was completely healthy. The gate was right to fail loudly; it was reading
+addresses that no longer existed.
+
+**The tell is that the gate contradicts itself.** In the same run:
+
+```
+FAIL  sparkmain -> spark1 (192.168.100.2) UNREACHABLE over fabric
+PASS  spark1 fabric addressing clean: enp1s0f0np0=10.100.160.2/24 ...
+PASS  spark1: every fabric peer on its cabled port
+```
+
+It cannot both fail to reach a node and enumerate that node's clean addressing
+on cabled ports. When mesh checks fail but *addressing* and *arp* checks pass,
+suspect the config, not the cables.
+
+**Cause.** NVIDIA Sync renumbered the fabric to `10.100.16x` (see the Sync
+renumber entry). `configs/3spark-live.env` still named the pre-Sync
+`192.168.100.2` / `192.168.101.2`. sparkmain was unaffected only because its
+rendezvous address is on its **loopback** (`192.168.200.1/32`), which a fabric
+renumber cannot touch — so its two directed pairs kept passing and disguised
+the breakage as partial.
+
+**Fix, and why it is shaped this way.** Give *every* node a loopback rendezvous
+address on the same `/32` scheme (`.1` sparkmain, `.2` spark1, `.3` spark2) and
+a host route to each peer over that pair's point-to-point link — the fabric is
+a triangle, so each `/24` joins exactly one pair and no single interface address
+is reachable from both peers. Persist the address with
+`nmcli con mod lo +ipv4.addresses <addr>/32` and the routes in each node's
+`/etc/netplan/96-dsv4-routes.yaml`. Gate result: 7 failed → **21 passed, 0
+failed**.
+
+`scripts/fabric/` now carries a `dsv4-fabric-reconcile` oneshot unit that
+restores the address and routes on every boot, ordered `Before=eugr.service`.
+It is additive and idempotent, and it deliberately **never runs `netplan
+apply`** — applying netplan on a live fabric is what killed a running cluster
+(GID change → `EngineDead`). A peer being down is reported but does not fail
+the unit.
+
+**Do not run the gate's NCCL bandwidth check to diagnose this.** It needs the
+GPUs free, and it is skipped while the engine serves; use `--nccl=skip` for a
+config check, and schedule the bandwidth check for a window when the engine is
+already down.

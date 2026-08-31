@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+# Reconcile this node's DSv4 rendezvous address and its peer host routes.
+#
+# WHY THIS EXISTS
+#
+# The gate config named 192.168.100.2 / 192.168.101.2 for months after NVIDIA
+# Sync renumbered the fabric to 10.100.16x. Those addresses were simply gone,
+# so scripts/fabric_gate.sh reported 7 failures on a HEALTHY fabric -- the
+# failure mode a gate is supposed to prevent, inverted: it cried wolf, and the
+# temptation is to start ignoring it.
+#
+# sparkmain survived the renumber because its rendezvous address lives on its
+# LOOPBACK (192.168.200.1/32), which no fabric renumber touches. spark1/spark2
+# never had that, so this script gives every node the same treatment and
+# reconciles it on every boot.
+#
+# It is idempotent and safe to run at any time: it only ADDS a missing address
+# or route. It never runs `netplan apply` -- applying netplan on a live fabric
+# is what killed a running cluster on 2026-08-30 (GID change -> EngineDead), so
+# persistence is left to the netplan files and this script only fixes the
+# RUNNING state.
+set -uo pipefail
+
+MAP_FILE=${DSV4_FABRIC_MAP:-/etc/dsv4-fabric-map}
+[ -r "$MAP_FILE" ] || { echo "no map at $MAP_FILE" >&2; exit 0; }
+# shellcheck disable=SC1090
+. "$MAP_FILE"
+
+: "${SELF_ADDR:?SELF_ADDR not set in $MAP_FILE}"
+: "${PEER_ROUTES:=}"
+
+rc=0
+
+# 1. Our own rendezvous address on the loopback.
+if ip -4 addr show lo | grep -qw "$SELF_ADDR"; then
+  echo "self $SELF_ADDR present"
+else
+  if ip addr add "$SELF_ADDR/32" dev lo; then
+    echo "self $SELF_ADDR ADDED"
+  else
+    echo "self $SELF_ADDR FAILED to add" >&2; rc=1
+  fi
+fi
+
+# 2. One host route per peer: "<peer_addr>:<via>:<dev>".
+for entry in $PEER_ROUTES; do
+  addr=${entry%%:*}; rest=${entry#*:}
+  via=${rest%%:*}; dev=${rest#*:}
+  if [ -z "$addr" ] || [ -z "$via" ] || [ -z "$dev" ]; then
+    echo "malformed PEER_ROUTES entry: $entry" >&2; rc=1; continue
+  fi
+  # `route replace` is idempotent and repairs a route pointing the wrong way.
+  if ip route replace "$addr/32" via "$via" dev "$dev"; then
+    echo "route $addr via $via dev $dev ok"
+  else
+    echo "route $addr via $via dev $dev FAILED" >&2; rc=1
+  fi
+done
+
+# 3. Report reachability. A peer that is down is NOT this script's failure --
+#    it reconciles local config, it cannot fix a powered-off node -- so this is
+#    reported and does not change the exit code.
+for entry in $PEER_ROUTES; do
+  addr=${entry%%:*}
+  if ping -c1 -W2 "$addr" >/dev/null 2>&1; then
+    echo "peer $addr reachable"
+  else
+    echo "peer $addr UNREACHABLE (peer may be down; local config is set)"
+  fi
+done
+
+exit $rc
