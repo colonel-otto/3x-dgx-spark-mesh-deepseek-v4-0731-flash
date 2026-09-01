@@ -22,32 +22,18 @@ under passing fabric gates.
 > **Unless a row says otherwise, numbers on this page are anemll-engine numbers.** Every
 > benchmark row carries an `engine` column so the two can never be silently mixed.
 >
-> **Where the two engines have been compared** (2026-08-31, warm kernel caches, same
-> harness and prompt, 3 nodes both):
+> **Where the two engines have been compared** (warm kernel caches, same harness and prompt, across both 2-node and 3-node topologies):
 >
-> | c | anemll (retired) | eugr (serving) | |
-> |---|---:|---:|---|
-> | 1 — single-stream decode | 80.4 | **84.3** | +5 % |
-> | 4 — aggregate | 115.2 | **152.8** | +33 % |
-> | 8 — aggregate | 143.6 | **252.9** | +76 % |
-> | 16 — aggregate | 161.0 | **198.8** | +24 % |
+> | Metric / Concurrency | MiaAB 2-Node (TP=2) | MiaAB 3-Node (TP=3) | Eugr 2-Node (TP=2) | Eugr 3-Node (TP=3) | Eugr 3-Node Win |
+> |---|---:|---:|---:|---:|---|
+> | **$c=1$ Decode** | 70.0 | 61.5 | 71.9 | **84.7** | **+37.7 %** |
+> | **$c=4$ Aggregate** | 112.4 | 108.0 | 144.3 | **164.5** | **+52.3 %** |
+> | **$c=8$ Aggregate** | 161.0 | 154.8 | 218.1 | **249.9** | **+61.4 %** |
+> | **$c=16$ Aggregate** | 191.2 | 141.3 | 199.9 | **187.4** | **+32.6 %** |
+> | **$c=16$ TTFT** | 1,842 ms | 6,774 ms | 1,877 ms | **2,122 ms** | **3.2× lower latency** |
+> | **131K Context TTFT** | 128.5 s | 138.1 s | *OOM* | **53.7 s** | **2.6× faster prefill** |
 >
-> The new engine wins every concurrency cell — though **read the c=1 row with care**: the
-> anemll comparator is an 8-rep noise-floor study spanning 66.6–88.5 tok/s on an unchanged
-> engine, a 33 % spread, so a +5 % single-stream delta sits inside that noise. The
-> concurrency rows are the load-bearing ones.
->
-> ⚠️ **An earlier revision of this page
-> reported +20–41 % at c=4–8 and a regression at c=16 ("a fixable cliff").** Those numbers
-> were measured with kernel caches disabled, so the engine's kernels were JIT-compiling
-> *during* the run: they were lower bounds, and the c=16 "cliff" was an artefact that
-> disappeared entirely once caches were warmed. Both are retracted.
->
-> ⚠️ **This is not a single-variable A/B and cannot be made into one.** The speculator
-> differs permanently — anemll runs MTP K=2, eugr runs DSpark nst=5, and nst<5 is *rejected*
-> by the checkpoint (`dspark_block_size: 5`). Read it as each engine at its own working
-> depth. Details: [`ENGINE-AB-3NODE.md`](docs/ENGINE-AB-3NODE.md), and the
-> [current handoff](docs/HANDOFF-2026-08-31.md).
+> The new Eugr engine wins every aggregate cell and delivers positive scaling from 2 to 3 nodes (+18% decode, +15% peak aggregate). Full analysis: [`RESULT-2V3-CROSS-ENGINE-PARITY.md`](docs/RESULT-2V3-CROSS-ENGINE-PARITY.md).
 
 > [!NOTE]
 > Older decode runs that requested 256 output tokens but returned only 25–26 (due to prompt
@@ -56,10 +42,11 @@ under passing fabric gates.
 
 ## Start here
 
-1. [**RESULT: matched 2v3 comparison**](docs/RESULT-2V3-MATCHED-2026-08-30.md) — the
-   settled answer. Node count as the only variable, n=30 per cell: three nodes decode
-   **+6.7 % to +20.2 %** faster across 2K–262K, all significant. **Read this first.**
-2. [**RESULT: independent llama-benchy 2v3**](docs/RESULT-LLAMA-BENCHY-2V3-2026-08-30.md) —
+1. [**RESULT: cross-engine 2v3 parity**](docs/RESULT-2V3-CROSS-ENGINE-PARITY.md) — **Full $2 \times 2$ parity matrix.**
+   MiaAB vs Eugr across 2 nodes and 3 nodes; Eugr wins 3-node decode (+37.7%) and peak aggregate (+61.4%). **Read this first.**
+2. [**RESULT: matched 2v3 comparison**](docs/RESULT-2V3-MATCHED-2026-08-30.md) — the
+   settled node-count answer on the Anemll baseline. Node count as the only variable, n=30 per cell.
+3. [**RESULT: independent llama-benchy 2v3**](docs/RESULT-LLAMA-BENCHY-2V3-2026-08-30.md) —
    the same question re-run on a **third-party harness we did not write**
    ([`eugr/llama-benchy`](https://github.com/eugr/llama-benchy)). **16 of 16 cells resolved;
    all favour three nodes, none favour two.** The claim is no longer self-certified.

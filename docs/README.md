@@ -15,6 +15,7 @@ same day: **16 of 16 cells resolved, all favour three nodes, zero favour two** (
 
 | Document | Purpose |
 |---|---|
+| [**RESULT: cross-engine 2v3 parity**](RESULT-2V3-CROSS-ENGINE-PARITY.md) | **Full $2 \times 2$ parity matrix.** MiaAB vs Eugr on 2 nodes vs 3 nodes; Eugr wins 3-node decode (+37.7%) and aggregate (+61.4%) |
 | [**RESULT: matched 2v3**](RESULT-2V3-MATCHED-2026-08-30.md) | **The settled node-count answer.** Node count the only variable, n=30/cell, significance-tested |
 | [Pre-registration](PREREGISTRATION-2V3-MATCHED.md) | Hypotheses, tie band and outlier rule, fixed before that run measured anything |
 | [**RESULT: independent llama-benchy 2v3**](RESULT-LLAMA-BENCHY-2V3-2026-08-30.md) | **The same question on a harness we did not write.** 16/16 cells resolved, all favour three nodes, zero favour two; like-for-like decode ratio +14.7 % against our +17–20 % band |

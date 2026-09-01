@@ -27,6 +27,7 @@ quality evidence or a methodology-only control.
 
 | Bundle | Date | Nodes / TP | Gate | Description |
 |---|---|---|---|---|
+| [20260901T174000Z-eugr-tp2-2node](20260901T174000Z-eugr-tp2-2node/) | 2026-09-01 | 2 / 2 | `PRESENT-PASS` | 2-Node TP=2 Eugr Benchmark Suite. Concurrency sweep (71.9 / 47.2 / 37.3 / 15.7 tok/s decode), prompt-effect (77.3 vs 44.3 tok/s = 1.74x), and 8K context (42.0 tok/s). Completes the 2v3 cross-engine parity matrix. |
 | [20260825-decode-2v3](20260825-decode-2v3/) | 2026-08-25 | [2, 3] / [2, 3] | `ABSENT` | Decode: 2 nodes vs 3 nodes on healthy fabric — the headline result on the concurrency axis (cc=1/4/8/16, 18-token prompt). |
 | [20260825-deep-concurrency](20260825-deep-concurrency/) | 2026-08-25 | [2, 3] / [2, 3] | `PRESENT-PASS` | 4 x 200,000-token deep-concurrency re-run on healthy fabric, answering issue #15's challenge to the 2026-08-21 result. |
 | [20260825-fabric-fix](20260825-fabric-fix/) | 2026-08-25 | [2, 3] / [2, 3] | `ABSENT` | The fabric fix itself: matched prefill and decode before and after the reboot that restored the degraded node. The before/after pair. |
