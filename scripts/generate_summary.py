@@ -256,6 +256,45 @@ def build():
                 "notes": note,
             })
 
+    # --- The 2-node eugr engine (TP=2 on 2x DGX Spark). ---
+    EUGR_TP2_CFG = "eugr-tp2-seqs16-dspark5-cached"
+    r = pick(EUGR_TP2_CFG, "bench-miaai", "synthetic-numbered-words", "1", "decode_tok_s")
+    if r:
+        out.append({
+            "result_id": "eugr-tp2-c1-decode",
+            "source_file": "measurements.csv",
+            "config_id": EUGR_TP2_CFG,
+            "engine": r["engine"],
+            "metric": "decode_tok_s",
+            "statistic": r["statistic"],
+            "value": r["decode_tok_s"],
+            "prompt_shape": r["prompt_shape"],
+            "harness": r["harness"],
+            "comparability": "prompt-matched",
+            "evidence_status": "raw-measurements",
+            "notes": "2-node TP=2 deployment (sparkmain + spark1, 2x DGX Spark / GB10); vLLM main dev g b5f995e73, nst=5, mnbt=8192, kv fp8, warm persistent caches.",
+        })
+
+    for cc, rid, extra in (
+            ("8", "eugr-tp2-c8-aggregate", "c=8 aggregate on 2-node eugr TP=2"),
+            ("16", "eugr-tp2-peak-aggregate", "at the max_num_seqs cap (c=16) on 2-node eugr TP=2")):
+        r = pick(EUGR_TP2_CFG, "bench-miaai", "synthetic-numbered-words", cc, "aggregate_tok_s")
+        if r:
+            out.append({
+                "result_id": rid,
+                "source_file": "measurements.csv",
+                "config_id": EUGR_TP2_CFG,
+                "engine": r["engine"],
+                "metric": "aggregate_tok_s",
+                "statistic": r["statistic"],
+                "value": r["aggregate_tok_s"],
+                "prompt_shape": r["prompt_shape"],
+                "harness": r["harness"],
+                "comparability": "prompt-matched",
+                "evidence_status": "raw-measurements",
+                "notes": extra + "; vLLM main dev g b5f995e73, nst=5, mnbt=8192, kv fp8, warm persistent caches.",
+            })
+
     # --- The MATCHED cross-engine A/B (2026-08-31). ---
     # The eugr rows above are compared against anemll numbers measured on
     # 2026-08-21. These rows are that comparison run properly: both engines on

@@ -83,10 +83,10 @@ VALID_PROMPT = {"code-brief", "dense-prose", "synthetic-numbered-words",
                 # continuous generation, unlike the short-answer shapes above.
                 "architectural-spec"}
 VALID_STATISTIC = {"median", "single-observation", "mean", "engine-reported", ""}
-VALID_OBSERVATION = {"sweep-point", "acceptance-observation", "correctness-check"}
+VALID_OBSERVATION = {"sweep-point", "acceptance-observation", "correctness-check", "matched-ab"}
 VALID_SOURCE = {"local-measurement", "external-published"}
 VALID_COMPARABILITY = {"prompt-matched", "historical-only", "external",
-                       "capacity-metric"}
+                       "capacity-metric", "matched-one-variable"}
 THROUGHPUT_METRICS = ("decode_tok_s", "aggregate_tok_s")
 
 failures = []
