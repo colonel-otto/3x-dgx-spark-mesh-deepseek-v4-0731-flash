@@ -133,14 +133,15 @@ def run_turn(url: str, model: str, messages: list, max_tokens: int) -> dict:
                 details = usage.get("prompt_tokens_details") or {}
                 cached = details.get("cached_tokens", 0) or 0
             for choice in event.get("choices", []):
-                piece = choice.get("delta", {}).get("content")
+                delta = choice.get("delta", {})
+                piece = delta.get("content") or delta.get("reasoning_content")
                 if piece:
                     if first_content is None:
                         first_content = time.perf_counter()
                     content_parts.append(piece)
     finished = time.perf_counter()
     if first_content is None:
-        raise RuntimeError("stream completed without content")
+        first_content = finished
     if completion_tokens is None:
         raise RuntimeError("server did not return completion token usage")
     if completion_tokens != max_tokens:

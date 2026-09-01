@@ -38,11 +38,11 @@ def get_spec_metrics(url: str = METRICS_URL) -> dict[str, float]:
                 metrics[name] = val
     return metrics
 
-def run_generation_probe(prompt: str, max_tokens: int, url: str = CHAT_URL) -> dict:
+def run_generation_probe(prompt: str, max_tokens: int, model: str = "deepseek-v4-flash-dspark-abliterated", url: str = CHAT_URL) -> dict:
     m_before = get_spec_metrics()
     
     payload = {
-        "model": "deepseek-v4-flash-0731",
+        "model": model,
         "messages": [
             {"role": "system", "content": "You are a precise technical writer. Respond in detail."},
             {"role": "user", "content": prompt}
@@ -97,6 +97,8 @@ def run_generation_probe(prompt: str, max_tokens: int, url: str = CHAT_URL) -> d
 
 def main():
     parser = argparse.ArgumentParser(description="Probe DSpark acceptance rate across generation horizons.")
+    parser.add_argument("--model", type=str, default="deepseek-v4-flash-dspark-abliterated", help="Model name.")
+    parser.add_argument("--url", type=str, default=CHAT_URL, help="Chat completions URL.")
     parser.add_argument("--lengths", type=str, default="256,512,1024,1536", help="Comma-separated max_tokens horizons.")
     parser.add_argument("--out-exclusivity", type=str, default=None, help="Path to write exclusivity.json")
     parser.add_argument("--allow-foreign", action="store_true", help="Warn instead of error on foreign traffic")
@@ -125,7 +127,7 @@ def main():
     results = []
     for h in horizons:
         print(f"\n--- Testing Target Length: {h} tokens ---")
-        res = run_generation_probe(prompt, max_tokens=h)
+        res = run_generation_probe(prompt, max_tokens=h, model=args.model, url=args.url)
         print(f"Generated: {res['completion_tokens']} tokens in {res['elapsed_sec']}s ({res['tok_per_sec']} tok/s)")
         print(f"Acceptance Rate: {res['acceptance_rate']*100:.1f}% ({res['accepted_tokens']}/{res['draft_tokens']} draft tokens)")
         print(f"Mean Accepted / Step: {res['mean_accepted_per_step']} (Pos0: {res['pos0_accepted']}, Pos1: {res['pos1_accepted']})")
