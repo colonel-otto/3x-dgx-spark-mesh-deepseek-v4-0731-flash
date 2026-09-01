@@ -42,11 +42,13 @@ under passing fabric gates.
 
 ## Start here
 
-1. [**RESULT: cross-engine 2v3 parity**](docs/RESULT-2V3-CROSS-ENGINE-PARITY.md) — **Full $2 \times 2$ parity matrix.**
-   MiaAB vs Eugr across 2 nodes and 3 nodes; Eugr wins 3-node decode (+37.7%) and peak aggregate (+61.4%). **Read this first.**
-2. [**RESULT: matched 2v3 comparison**](docs/RESULT-2V3-MATCHED-2026-08-30.md) — the
+1. [**RESULT: end-to-end eugr 3-node validation & multi-turn APC**](docs/RESULT-EUGR-3NODE-END-TO-END-2026-09-01.md) — **Complete European Image validation.**
+   Multi-turn APC prefix caching sweeps (up to 15.3x TTFT acceleration), long-horizon 1,536-token generation stability, 100% RULER-lite needle retrieval (16/16), logprob perplexity (1.7975), and community image comparison (bjk110, eugr, NVIDIA 25.11). **Read this for latest production state.**
+2. [**RESULT: cross-engine 2v3 parity**](docs/RESULT-2V3-CROSS-ENGINE-PARITY.md) — **Full $2 \times 2$ parity matrix.**
+   MiaAB vs Eugr across 2 nodes and 3 nodes; Eugr wins 3-node decode (+37.7%) and peak aggregate (+61.4%).
+3. [**RESULT: matched 2v3 comparison**](docs/RESULT-2V3-MATCHED-2026-08-30.md) — the
    settled node-count answer on the Anemll baseline. Node count as the only variable, n=30 per cell.
-3. [**RESULT: independent llama-benchy 2v3**](docs/RESULT-LLAMA-BENCHY-2V3-2026-08-30.md) —
+4. [**RESULT: independent llama-benchy 2v3**](docs/RESULT-LLAMA-BENCHY-2V3-2026-08-30.md) —
    the same question re-run on a **third-party harness we did not write**
    ([`eugr/llama-benchy`](https://github.com/eugr/llama-benchy)). **16 of 16 cells resolved;
    all favour three nodes, none favour two.** The claim is no longer self-certified.
