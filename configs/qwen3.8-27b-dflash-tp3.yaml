@@ -1,0 +1,38 @@
+recipe_version: "1"
+name: Qwen3.8-27B-DFlash2-TP3
+description: vLLM serving RadixArk/Qwen3.8-27B-NVFP4 with z-lab DFlash2 speculative decoding on 3x DGX Spark (TP=3)
+
+model: RadixArk/Qwen3.8-27B-NVFP4
+container: vllm-node
+
+defaults:
+  port: 8100
+  host: 0.0.0.0
+  tensor_parallel: 3
+  gpu_memory_utilization: 0.82
+  max_model_len: 131072
+  block_size: 256
+  max_num_seqs: 16
+  max_num_batched_tokens: 8192
+  num_speculative_tokens: 7
+
+command: |
+  vllm serve RadixArk/Qwen3.8-27B-NVFP4 \
+    --served-model-name qwen3.8-27b-nvfp4,qwen3.8,qwen-3.8-flash \
+    --host {host} \
+    --port {port} \
+    --trust-remote-code \
+    --tensor-parallel-size {tensor_parallel} \
+    --mm-encoder-tp-mode data \
+    --speculative-config '{{"method":"dflash","model":"z-lab/Qwen3.8-27B-DFlash2","num_speculative_tokens":{num_speculative_tokens}}}' \
+    --kv-cache-dtype fp8 \
+    --block-size {block_size} \
+    --max-model-len {max_model_len} \
+    --max-num-seqs {max_num_seqs} \
+    --max-num-batched-tokens {max_num_batched_tokens} \
+    --gpu-memory-utilization {gpu_memory_utilization} \
+    --enable-prefix-caching \
+    --load-format instanttensor \
+    --reasoning-parser qwen3 \
+    --tool-call-parser qwen3_xml \
+    --enable-auto-tool-choice
