@@ -9,18 +9,18 @@ fully benchmarked with a forced 256-token assertion against matched two-node bas
 under passing fabric gates.
 
 > [!IMPORTANT]
-> **Two engines appear on this page. Read this before quoting any number.**
+> **Two engine recipes are organized inside this repository under [`recipes/`](recipes/):**
 >
-> The **serving** engine is [`eugr/spark-vllm-b12x`](https://github.com/eugr/spark-vllm-docker)
-> (vLLM main), which carries DeepSeek-V4 TP=3 natively via its virtual-TP plan.
-> **Our attention-group padding patch is NOT applied to it and must not be** — the image
-> already generalizes what the patch fixes, and applying it on top is harmful.
+> 1. **Active Serving Recipe:** [`recipes/eugr-b12x/`](recipes/eugr-b12x/) — [`eugr/spark-vllm-b12x`](https://github.com/eugr/spark-vllm-docker) (vLLM main), which carries DeepSeek-V4 TP=3 natively via virtual-TP sharding.
+>    *Our attention-group padding patch is NOT applied to it and must not be* — the image generalizes the fix internally.
+> 2. **Baseline Reference Recipe:** [`recipes/anemll-v0.25/`](recipes/anemll-v0.25/) — Anemll v0.25.1 overlay with explicit attention-group padding.
 >
-> **Almost every number below was measured on the retired Anemll engine.** That engine is
-> kept as the reference arm and its history is frozen in
-> [`3x-dgx-spark-deepseek-v4-v0.25-anemll-baseline`](https://github.com/colonel-otto/3x-dgx-spark-deepseek-v4-v0.25-anemll-baseline).
-> **Unless a row says otherwise, numbers on this page are anemll-engine numbers.** Every
-> benchmark row carries an `engine` column so the two can never be silently mixed.
+> **Unless a row says otherwise, older baseline numbers on this page are anemll-engine numbers.** Every benchmark row carries an `engine` column so the two can never be silently mixed.
+>
+> **Related Model Ecosystems:**
+> For Qwen benchmarks on this 3x DGX Spark mesh cluster, see the dedicated canonical repositories:
+> - [`colonel-otto/3x-dgx-spark-mesh-qwen-3.8-27b-dense`](https://github.com/colonel-otto/3x-dgx-spark-mesh-qwen-3.8-27b-dense) (Qwen 3.8-27B Dense & DFlash2)
+> - [`colonel-otto/3x-dgx-spark-mesh-qwen-3.8-flash-next`](https://github.com/colonel-otto/3x-dgx-spark-mesh-qwen-3.8-flash-next) (Qwen 3.8 Flash Next ~180B MoE)
 >
 > **Where the two engines have been compared** (warm kernel caches, same harness and prompt, across both 2-node and 3-node topologies):
 >

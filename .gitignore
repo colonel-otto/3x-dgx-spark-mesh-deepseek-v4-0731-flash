@@ -4,7 +4,10 @@ __pycache__/
 .env
 config/*.env
 configs/*.env
+recipes/**/*.env
+!config/*.env.example
 !configs/*.env.example
+!recipes/**/*.env.example
 artifacts/*/environment-unredacted.txt
 vendor/
 .venv/

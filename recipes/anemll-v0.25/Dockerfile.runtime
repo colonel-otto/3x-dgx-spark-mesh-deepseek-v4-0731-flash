@@ -1,0 +1,11 @@
+FROM ghcr.io/anemll/dspark-vllm-gx10:0.1.1
+
+LABEL org.opencontainers.image.source="https://github.com/colonel-otto/3spark-dsv4"
+LABEL org.opencontainers.image.description="DeepSeek-V4 Flash 3-Node DGX Spark Runtime with TP=3 and DSpark hotfixes"
+
+COPY patches/ /opt/dsv4-tp3/
+
+RUN python3 /opt/dsv4-tp3/apply_tp3_patch.py && \
+    python3 /opt/dsv4-tp3/hotfix-dsv4-issue26-hybrid-swa-min.py && \
+    python3 /opt/dsv4-tp3/hotfix-dsv4-issue27-partial-prefill-concurrency.py && \
+    python3 /opt/dsv4-tp3/apply_tp3_patch.py --check

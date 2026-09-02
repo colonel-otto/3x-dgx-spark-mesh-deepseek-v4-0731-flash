@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# eugr-service-start — systemd entry point: boot the engine, then BLOCK until it
+# actually serves. Type=oneshot + RemainAfterExit means systemd treats ExecStart
+# returning 0 as "up", so returning early would report a healthy unit while the
+# engine is still compiling — the "init success != health" trap.
+set -uo pipefail
+
+NST="${EUGR_NST:-2}"
+MNBT="${EUGR_MNBT:-8192}"
+LOG="$HOME/eugr-service-nst${NST}-mnbt${MNBT}.log"
+
+"$HOME/eugr-boot.sh" "$NST" "$MNBT" "$LOG" || exit 1
+
+# Wait for the local endpoint to answer with the eugr served name.
+for _ in $(seq 1 180); do   # 180 x 10s = 30 min ceiling
+  if curl -fsS -m 5 http://127.0.0.1:8100/v1/models 2>/dev/null \
+       | grep -q 'deepseek-v4-flash-dspark-abliterated'; then
+    echo "eugr-start: serving on :8100 (nst=$NST mnbt=$MNBT)"
+    exit 0
+  fi
+  # Fail fast if the launcher died rather than burning the full timeout.
+  if ! pgrep -f 'run-recipe\.py' >/dev/null 2>&1; then
+    echo "eugr-start: launcher exited before serving; see $LOG" >&2
+    tail -30 "$LOG" >&2
+    exit 1
+  fi
+  sleep 10
+done
+echo "eugr-start: timed out waiting for :8100; see $LOG" >&2
+exit 1
