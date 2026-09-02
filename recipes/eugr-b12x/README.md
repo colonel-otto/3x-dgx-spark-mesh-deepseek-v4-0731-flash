@@ -16,12 +16,18 @@ This recipe packages the B12X virtual tensor parallel sharding engine for DeepSe
 
 ## Directory Contents
 
-* **`configs/`**: Parameter sweeps and production configs for 2-node and 3-node clusters:
-  * `dsv4-flash-0731-local-tp3.yaml`: Baseline 3-node TP=3 config ($nst=5$, $mnbt=8192$).
-  * `dsv4-flash-0731-local-tp2.yaml`: 2-node TP=2 comparison config.
-  * `dsv4-tp3-nst{2,3,5,7}-mnbt8192.yaml`: Speculative token sweep configurations.
-  * `dsv4-tp3-nst5-mnbt16384.yaml`: High batch token limit configuration.
-  * `deepseek-v4-flash-0731.yaml`: Upstream base template.
+* **`configs/`**: Nine YAML recipe configurations (seven operational configs plus two base templates):
+  * **Operational Configurations (7):**
+    * `dsv4-flash-0731-local-tp3.yaml`: Baseline 3-node TP=3 config ($nst=5$, $mnbt=8192$).
+    * `dsv4-flash-0731-local-tp2.yaml`: 2-node TP=2 comparison config ($nst=5$, $mnbt=8192$).
+    * `dsv4-tp3-nst2-mnbt8192.yaml`: Speculative token sweep ($nst=2$, $mnbt=8192$).
+    * `dsv4-tp3-nst3-mnbt8192.yaml`: Speculative token sweep ($nst=3$, $mnbt=8192$).
+    * `dsv4-tp3-nst5-mnbt8192.yaml`: Speculative token sweep ($nst=5$, $mnbt=8192$).
+    * `dsv4-tp3-nst7-mnbt8192.yaml`: Speculative token sweep ($nst=7$, $mnbt=8192$).
+    * `dsv4-tp3-nst5-mnbt16384.yaml`: High batch token limit config ($nst=5$, $mnbt=16384$).
+  * **Base Templates (2):**
+    * `deepseek-v4-flash-0731.yaml`: Upstream base template for 0731 snapshot.
+    * `deepseek-v4-flash.yaml`: Upstream generic base template.
 * **`systemd/`**: Systemd unit files and service control scripts:
   * `eugr.service`: Unit definition for systemd management.
   * `eugr-service-start` / `eugr-service-stop`: Service lifecycle scripts.

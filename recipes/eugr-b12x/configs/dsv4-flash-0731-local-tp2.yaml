@@ -1,9 +1,9 @@
-# Recipe: DeepSeek V4 Flash 0731 — LOCAL checkpoint, 3-node TP=3
+# Recipe: DeepSeek V4 Flash 0731 — LOCAL checkpoint, 2-node TP=2
 # Engine A/B arm for colonel-otto/3x-dgx-spark-mesh-deepseek-v4-0731-flash
 # (docs/ENGINE-AB-3NODE.md). Derived from deepseek-v4-flash-0731.yaml with:
 #   - model served from the local snapshot (mount -v /tmp/dsv4:/models/dsv4host)
-#   - tensor_parallel 3 (image's b12x virtual-TP pads 64->72 heads, 8->9 groups)
-#   - max_num_seqs 16 to match the tp3-seqs16 reference config
+#   - tensor_parallel 2 (2-node DGX Spark partition)
+#   - max_num_seqs 16 to match the tp2-seqs16 reference config
 # Deltas vs our anemll engine to record with any measurement:
 #   kv-cache-dtype fp8 (ours: nvfp4_ds_mla), speculative dspark nst=5
 #   probabilistic (ours: MTP K=2). /tmp/dsv4 symlinks vanish on reboot —
@@ -11,7 +11,7 @@
 
 recipe_version: "1"
 name: DSV4-Flash-0731-local-TP2
-description: Engine A/B arm — local 0731 snapshot on 3x DGX Spark, TP=3
+description: Engine A/B arm — local 0731 snapshot on 2x DGX Spark, TP=2
 
 model: /models/dsv4host/hf-DeepSeek-V4-Flash-0731
 container: vllm-node-b12x

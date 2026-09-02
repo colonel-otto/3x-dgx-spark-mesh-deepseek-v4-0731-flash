@@ -1,12 +1,12 @@
-# `config/` — engine environment (runs ON the Sparks)
+# `env/` — engine environment (runs ON the Sparks)
 
 > [!IMPORTANT]
 > **There are two config directories and they are not interchangeable.**
 >
 > | Directory | Contains | Lives on | Consumed by |
 > |---|---|---|---|
-> | **`config/`** ← you are here | vLLM engine + NCCL env, per rank | **each Spark**, at `~/localai/dspark-vllm-gx10/config/` | `docker compose` / `dsv4.service` |
-> | [`../configs/`](../configs/) | benchmark harness targets (SSH, fabric addrs, thresholds) | **your workstation** | `scripts/fabric_gate.sh`, `Makefile` |
+> | **`recipes/anemll-v0.25/env/`** ← you are here | vLLM engine + NCCL env, per rank | **each Spark**, at `~/localai/dspark-vllm-gx10/config/` | `docker compose` / `dsv4.service` |
+> | [`../../../configs/`](../../../configs/) | benchmark harness targets (SSH, fabric addrs, thresholds) | **your workstation** | `scripts/fabric_gate.sh`, `Makefile` |
 >
 > A file from one will not work in the other.
 
@@ -42,4 +42,4 @@ docker compose --env-file config/node0.env -f docker-compose.yml config \
 After **any** restart, run a correctness check (17×23 → 391). The TP=3 padding patch means
 a broken config serves *fluent nonsense*, not an error.
 
-Reasoning behind every value: [`../docs/DECISIONS.md`](../docs/DECISIONS.md).
+Reasoning behind every value: [`../../../docs/DECISIONS.md`](../../../docs/DECISIONS.md).
