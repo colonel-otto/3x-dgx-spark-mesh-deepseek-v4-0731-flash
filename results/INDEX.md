@@ -11,12 +11,12 @@ and diagnostic baseline values.
 
 | Item | Count |
 |---|---:|
-| Result bundles | 49 |
-| `CURRENT` | 33 |
+| Result bundles | 50 |
+| `CURRENT` | 34 |
 | `VOID` | 11 |
 | `SUPERSEDED` | 5 |
 | Own passing fabric gate | 19 |
-| Gate absent | 24 |
+| Gate absent | 25 |
 | Predates the gate | 5 |
 
 `CURRENT` means useful within the caveats recorded for that bundle. An absent
@@ -60,6 +60,7 @@ quality evidence or a methodology-only control.
 | [20260831T1000Z-matched-engine-ab](20260831T1000Z-matched-engine-ab/) | 2026-08-31 | 3 / 3 | `ABSENT` | The first MATCHED cross-engine A/B. Both engines measured back-to-back on the same day, same three nodes, same harness, same prompt, same 128-token window, median-of-5, max_num_seqs=16 on BOTH arms -- one variable, the engine. Supersedes the cross-engine table whose anemll column was quoted from 2026-08-21 rows. |
 | [20260831T0525Z-eugr-remaining-cells-matched](20260831T0525Z-eugr-remaining-cells-matched/) | 2026-08-31 | 3 / 3 | `PRESENT-PASS` | Remaining engine-A/B cells re-measured on MATCHED harness and EXACT prompts: 131K decode 90.5 vs anemll 83.5 (+8%, TTFT 53.7s vs 138.1s) on bench-miaai --prompt 131072, superseding the 42.3 that measured the driver's own filler prompt; dense-prose 49.2 vs 49.4 (parity) on the original prompt recovered from git commit b078eb4, ratio 1.85x vs 1.65x; code-brief 91.0 vs 81.8; deep 4x200K TTFT 224s, 1.26 tok/s (confirms). |
 | [20260831T0601Z-staggered-spec-acceptance](20260831T0601Z-staggered-spec-acceptance/) | 2026-08-31 | 3 / 3 | `PRESENT-PASS` | Staggered ragged-context load gate on the eugr serving config: 150 Poisson-arrival requests (30 per tier at c=1,4,8,16,32) with prompt lengths drawn log-uniformly from a tiered mixture spanning 1.1K-128K tokens. PASS - 0 errors, 0 window failures, 0 preemptions; MTP acceptance flat at 40.0-41.6% from c=1 to c=32 against a 30% floor. Settles three production questions: MTP acceptance under async continuous batching, KV allocator correctness under ragged churn, and virtual-TP zero-fill sink stability under dynamic compaction. This is a CORRECTNESS gate, not a throughput result - the workload is prefill-bound by construction (58-132x prefill:decode) and its per-request decode figures must not be quoted as engine throughput. |
+| [20260901T174000Z-eugr-tp2-2node](20260901T174000Z-eugr-tp2-2node/) | 2026-09-01 | 2 / 2 | `ABSENT` | 2-node TP=2 Eugr benchmark run on eugr/spark-vllm-b12x:latest (vLLM main dev g b5f995e73). Full concurrency sweep (c=1,4,8,16), prompt-effect comparison (code-brief vs dense-prose), and 8K context depth. |
 
 ## Superseded evidence
 

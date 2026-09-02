@@ -70,9 +70,9 @@ meta:
   fabric_gate_tally:
     PRESENT-PASS: 19
     PRESENT-FAIL: 1
-    ABSENT: 24
+    ABSENT: 25
     PRE-DATES-GATE: 5
-    total: 49
+    total: 50
   fabric_gate_tally_detail:
     PRESENT-PASS:
       - 20260831T0601Z-staggered-spec-acceptance # inherited sweep pre-boot gate 30/30
@@ -109,6 +109,7 @@ meta:
       - 20260828-issue33-deep-prefill-bt-sweep
       - 20260828-issue35-guidellm-concurrency
       - 20260831T1000Z-matched-engine-ab # engine-swap A/B; no gate run, see note
+      - 20260901T174000Z-eugr-tp2-2node
     PRE-DATES-GATE:
       - 20260821T001024Z-2spark-baseline
       - 20260821T031300Z-3spark-ep3
@@ -2902,3 +2903,40 @@ directories:
       figures are prefill-bound and must not be cited as throughput.
       Supersedes the 131K and dense-prose cells of
       20260831T0030Z-eugr-remaining-cells (rows relabeled, not deleted).
+
+  - dir: 20260901T174000Z-eugr-tp2-2node
+    date: 2026-09-01
+    description: >
+      2-node TP=2 Eugr benchmark run on eugr/spark-vllm-b12x:latest (vLLM main dev g b5f995e73).
+      Full concurrency sweep (c=1,4,8,16), prompt-effect comparison (code-brief vs dense-prose),
+      and 8K context depth.
+    readme_h1: 2-Node TP=2 Eugr Benchmark Run — eugr-spark-vllm-b12x (2026-09-01)
+    has_readme: true
+    nodes: 2
+    nodes_evidence: "sparkmain + spark1, TP=2, PP=1 in engine-config.txt"
+    tp_size: 2
+    kv_pool_tokens: 13107
+    kv_pool_source: "engine-config.txt"
+    harness: scripts/eugr-ab/bench-miaai.py and scripts/eugr-ab/eugr-remaining-cells-v2.py
+    harness_committed: true
+    output_tokens_requested: 256
+    output_tokens_actual: 256
+    output_tokens_field: "completion_tokens per request"
+    output_tokens_note: "5 repetitions per cell, warm-up discarded"
+    reps: 5
+    reps_verified: true
+    statistic: median
+    fabric_gate: ABSENT
+    fabric_gate_artifact: null
+    fabric_gate_evidence: "Run executed on healthy 2-node partition"
+    fabric_gate_note: "Gate artifact not committed in bundle"
+    fabric_gated: false
+    fabric_state: healthy
+    raw_data_committed: true
+    raw_files: [bench-c1.log, bench-c4.log, bench-c8.log, bench-c16.log, context-8k.tsv, engine-config.txt, jit-miss-counter.txt, prompt-effect.tsv, rows.tsv, warmup-c1.log, warmup-c4.log, warmup-c8.log, warmup-c16.log, warmup-extra.log]
+    status: CURRENT
+    void_reasons: []
+    superseded_by: null
+    note: >
+      2-node TP=2 baseline for the Eugr engine cross-comparison.
+
